@@ -1,0 +1,10 @@
+alpaca-trade-api
+quiverquant
+dash
+pandas
+numpy
+matplotlib
+plotly
+psycopg2-binary
+backtrader
+websocket-client
