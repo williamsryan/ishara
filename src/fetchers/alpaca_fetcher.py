@@ -1,10 +1,11 @@
+import pandas as pd
 import alpaca_trade_api as tradeapi
 from src.utils.database import insert_stock_data
 from src.utils.config import ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL
 
 api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL)
 
-def fetch_and_store_historical_data(symbols, start, end, timeframe="1Day"):
+def insert_historical_data(symbols, start, end, timeframe="1Day"):
     """
     Fetch and store historical stock data for multiple symbols.
 
@@ -33,7 +34,36 @@ def fetch_and_store_historical_data(symbols, start, end, timeframe="1Day"):
         insert_stock_data(data)
         print(f"Data for {symbol} inserted successfully.")
 
+def fetch_historical_data(symbols, start_date, end_date, timeframe="1Day"):
+    """
+    Fetch historical stock data from Alpaca and return it as a DataFrame.
+
+    Args:
+        symbols (list): List of stock symbols.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
+        timeframe (str): Timeframe for data ('1Day', '1Min', etc.).
+
+    Returns:
+        pd.DataFrame: Historical stock data with columns ['symbol', 'datetime', 'open', 'high', 'low', 'close', 'volume'].
+    """
+    all_data = []
+    for symbol in symbols:
+        print(f"Fetching historical data for {symbol}...")
+        bars = api.get_bars(symbol, timeframe, start=start_date, end=end_date).df
+        bars.index = bars.index.tz_convert(None)  # Remove timezone info
+
+        # Prepare data for DataFrame
+        fetched_data = [
+            [symbol, row.name, row["open"], row["high"], row["low"], row["close"], row["volume"]]
+            for _, row in bars.iterrows()
+        ]
+        all_data.extend(fetched_data)
+
+    # Convert to DataFrame
+    columns = ["symbol", "datetime", "open", "high", "low", "close", "volume"]
+    return pd.DataFrame(all_data, columns=columns)
+
 if __name__ == "__main__":
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]  # Example symbols
-    fetch_and_store_historical_data(symbols, "2020-01-01", "2022-12-31")
-    
+    insert_historical_data(symbols, "2020-01-01", "2022-12-31")
