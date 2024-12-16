@@ -1,11 +1,75 @@
 import backtrader as bt
-from datetime import datetime
 from src.utils.data_loader import load_data_from_db
 from src.utils.database import connect_to_db
 from src.backtesting.strategies.moving_avg import MovingAverageCrossover
 from src.backtesting.strategies.momentum import MomentumStrategy
+import plotly.graph_objects as go
 
 from sqlalchemy import text
+
+def run_portfolio_backtest(portfolio, start_date, end_date, strategy_name):
+    """
+    Run backtests for a portfolio of stocks and aggregate results.
+
+    Args:
+        portfolio (dict): Portfolio stocks and weights, e.g., {"AAPL": 0.5, "MSFT": 0.5}.
+        start_date (str): Start date for backtesting.
+        end_date (str): End date for backtesting.
+        strategy_name (str): Strategy to apply (e.g., "MovingAverageCrossover").
+
+    Returns:
+        dict: Results containing equity curves and portfolio value over time.
+    """
+    strategies = {
+        "MovingAverageCrossover": MovingAverageCrossover,
+        "MomentumStrategy": MomentumStrategy,
+    }
+
+    if strategy_name not in strategies:
+        raise ValueError(f"Invalid strategy: {strategy_name}")
+
+    # Initialize Backtrader engine
+    cerebro = bt.Cerebro()
+    cerebro.addstrategy(strategies[strategy_name])
+
+    # Add data and weights for each stock in the portfolio
+    for symbol, weight in portfolio.items():
+        print(f"Adding {symbol} to portfolio with weight {weight}...")
+        data = load_data_from_db(symbol, start_date, end_date)
+        data_feed = bt.feeds.PandasData(dataname=data)
+        cerebro.adddata(data_feed, name=symbol)
+
+    # Set broker starting cash
+    cerebro.broker.set_cash(100000)
+
+    # Store portfolio value over time
+    portfolio_values = []
+    timestamps = []
+
+    # Custom analyzer to track portfolio value
+    class ValueTracker(bt.Analyzer):
+        def __init__(self):
+            self.values = []
+            self.timestamps = []
+
+        def notify_timer(self, broker):
+            self.values.append(broker.getvalue())
+            # Extract timestamp from the data
+            self.timestamps.append(broker.datetime.datetime())
+
+        def get_analysis(self):
+            return self.values, self.timestamps
+
+    cerebro.addanalyzer(ValueTracker, _name="value_tracker")
+
+    # Run backtest
+    results = cerebro.run()
+    portfolio_values, timestamps = results[0].analyzers.value_tracker.get_analysis()
+
+    return {
+        "portfolio_value": portfolio_values,
+        "time_series": timestamps,
+    }
 
 def store_backtest_result(strategy_name, symbol, start_date, end_date, initial_value, final_value):
     """
