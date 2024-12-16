@@ -56,7 +56,7 @@ def fetch_data_to_backtrader(symbol, start_date, end_date):
         end_date (str): End date (YYYY-MM-DD).
 
     Returns:
-        bt.feeds.PandasData: Backtrader-compatible data feed.
+        bt.feeds.PandasData: Backtrader-compatible data feed with symbol attached.
     """
     data = fetch_historical_data([symbol], start_date, end_date)
     data["datetime"] = pd.to_datetime(data["datetime"])
@@ -69,6 +69,7 @@ def fetch_data_to_backtrader(symbol, start_date, end_date):
         low="low",
         close="close",
         volume="volume",
+        name=symbol  # Attach the symbol here
     )
     return data_feed
 
@@ -109,7 +110,7 @@ def log_backtesting_results(cerebro, strategy_name):
     pnl = final_value - starting_cash
     print(f"Final Portfolio Value: ${final_value:.2f}")
     print(f"Total PnL: ${pnl:.2f}")
-    
+
 def backtest():
     """
     Run a Backtrader backtest for a moving average crossover strategy.
