@@ -15,7 +15,7 @@ CREATE TABLE alternative_data (
     id SERIAL PRIMARY KEY,
     data_source TEXT NOT NULL,       -- Name of the source (e.g., "QuiverQuant")
     symbol TEXT,                     -- Stock symbol
-    date TIMESTAMP NOT NULL,         -- Date of the record
+    date TIMESTAMP,                  -- Date of the record
     key_metric TEXT NOT NULL,        -- Metric name (e.g., "Sentiment Score")
     value TEXT NOT NULL              -- Metric value (as string for flexibility)
 );

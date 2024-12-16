@@ -8,3 +8,4 @@ plotly
 psycopg2-binary
 backtrader
 websocket-client
+yfinance
