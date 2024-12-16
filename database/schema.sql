@@ -31,3 +31,15 @@ CREATE TABLE trade_logs (
     datetime TIMESTAMP NOT NULL,     -- Execution timestamp
     pnl DOUBLE PRECISION             -- Profit and loss (for tracking results)
 );
+
+CREATE TABLE backtest_results (
+    id SERIAL PRIMARY KEY,
+    strategy_name VARCHAR(255) NOT NULL,
+    symbol VARCHAR(10) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    initial_value NUMERIC NOT NULL,
+    final_value NUMERIC NOT NULL,
+    return_percentage NUMERIC NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
