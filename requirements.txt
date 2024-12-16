@@ -5,7 +5,6 @@ pandas
 numpy
 matplotlib
 plotly
-psycopg2-binary
 backtrader
 websocket-client
 yfinance

@@ -1,140 +1,92 @@
 import backtrader as bt
-import pandas as pd
 from datetime import datetime
-from src.fetchers.alpaca_fetcher import fetch_historical_data
-from src.utils.database import insert_trade_logs
+from src.utils.data_loader import load_data_from_db
+from src.utils.database import connect_to_db
+from src.backtesting.strategies.moving_avg import MovingAverageCrossover
+from src.backtesting.strategies.momentum import MomentumStrategy
 
-class MovingAverageCrossover(bt.Strategy):
+from sqlalchemy import text
+
+def store_backtest_result(strategy_name, symbol, start_date, end_date, initial_value, final_value):
     """
-    Backtrader strategy for moving average crossover.
-    """
-    params = (
-        ("short_window", 10),  # Short moving average period
-        ("long_window", 50),  # Long moving average period
-        ("quantity", 10),     # Number of shares to trade
-    )
-
-    def __init__(self):
-        # Initialize short and long moving averages
-        self.sma_short = bt.indicators.SimpleMovingAverage(
-            self.data.close, period=self.params.short_window
-        )
-        self.sma_long = bt.indicators.SimpleMovingAverage(
-            self.data.close, period=self.params.long_window
-        )
-
-        self.orders = []  # To track completed orders
-
-    def next(self):
-        # Check for crossover signals
-        if self.sma_short > self.sma_long and not self.position:
-            self.buy(size=self.params.quantity)
-        elif self.sma_short < self.sma_long and self.position:
-            self.sell(size=self.params.quantity)
-
-    def notify_order(self, order):
-        """
-        Track the lifecycle of orders and record completed ones.
-        """
-        if order.status == order.Completed:
-            self.orders.append({
-                "symbol": self.data._name,
-                "action": "BUY" if order.isbuy() else "SELL",
-                "quantity": order.executed.size,
-                "price_per_share": order.executed.price,
-                "datetime": bt.num2date(order.executed.dt),  # Convert to datetime
-                "pnl": order.executed.pnl
-            })
-
-def fetch_data_to_backtrader(symbol, start_date, end_date):
-    """
-    Fetch historical data using Alpaca and format for Backtrader.
+    Store backtest results in the database.
 
     Args:
-        symbol (str): Stock symbol.
-        start_date (str): Start date (YYYY-MM-DD).
-        end_date (str): End date (YYYY-MM-DD).
-
-    Returns:
-        bt.feeds.PandasData: Backtrader-compatible data feed with symbol attached.
-    """
-    data = fetch_historical_data([symbol], start_date, end_date)
-    data["datetime"] = pd.to_datetime(data["datetime"])
-    data.set_index("datetime", inplace=True)
-    data_feed = bt.feeds.PandasData(
-        dataname=data,
-        datetime=None,
-        open="open",
-        high="high",
-        low="low",
-        close="close",
-        volume="volume",
-        name=symbol  # Attach the symbol here
-    )
-    return data_feed
-
-def log_backtesting_results(cerebro, strategy_name):
-    """
-    Log trades and performance metrics after backtesting.
-
-    Args:
-        cerebro (bt.Cerebro): Backtrader engine after backtesting.
         strategy_name (str): Name of the strategy.
+        symbol (str): Stock ticker.
+        start_date (str): Start date of the backtest.
+        end_date (str): End date of the backtest.
+        initial_value (float): Starting portfolio value.
+        final_value (float): Ending portfolio value.
     """
-    trades = []
-    for strat in cerebro.runstrats:
-        for order in strat[0].orders:  # Access orders logged in the strategy
-            trades.append((
-                strategy_name,
-                order["symbol"],
-                order["action"],
-                order["quantity"],
-                order["price_per_share"],
-                order["datetime"],
-                order["pnl"],
-            ))
+    engine = connect_to_db()
+    return_percentage = ((final_value - initial_value) / initial_value) * 100
 
-    # Insert trades into the database
-    if trades:
-        try:
-            insert_trade_logs(trades)
-            print(f"Logged {len(trades)} trades into trade_logs.")
-        except Exception as e:
-            print(f"Error inserting trade logs: {e}")
-    else:
-        print("No trades to log.")
+    query = text("""
+    INSERT INTO backtest_results (strategy_name, symbol, start_date, end_date, initial_value, final_value, return_percentage)
+    VALUES (:strategy_name, :symbol, :start_date, :end_date, :initial_value, :final_value, :return_percentage)
+    """)
 
-    # Performance Metrics
-    final_value = cerebro.broker.getvalue()
-    starting_cash = cerebro.broker.startingcash
-    pnl = final_value - starting_cash
-    print(f"Final Portfolio Value: ${final_value:.2f}")
-    print(f"Total PnL: ${pnl:.2f}")
+    params = {
+        "strategy_name": strategy_name,
+        "symbol": symbol,
+        "start_date": start_date,
+        "end_date": end_date,
+        "initial_value": initial_value,
+        "final_value": final_value,
+        "return_percentage": return_percentage,
+    }
 
-def backtest():
+    try:
+        with engine.begin() as conn:  # Use `begin()` to auto-commit
+            conn.execute(query, params)
+            print(f"Results for {strategy_name} on {symbol} stored successfully.")
+    except Exception as e:
+        print(f"Error storing backtest result: {e}")
+
+def run_backtests(symbols, start_date=None, end_date=None):
     """
-    Run a Backtrader backtest for a moving average crossover strategy.
+    Run multiple backtests for different strategies using data from the database.
+
+    Args:
+        symbols (list): List of stock tickers to backtest.
+        start_date (str): Start date for backtesting.
+        end_date (str): End date for backtesting.
     """
-    cerebro = bt.Cerebro()
-    cerebro.broker.set_cash(100000)  # Initial cash
-    cerebro.broker.setcommission(commission=0.001)  # 0.1% commission
+    strategies = {
+        "MovingAverageCrossover": MovingAverageCrossover,
+        "MomentumStrategy": MomentumStrategy,
+    }
 
-    # Fetch data for AAPL
-    data_feed = fetch_data_to_backtrader("AAPL", "2020-01-01", "2022-12-31")
-    cerebro.adddata(data_feed)
+    for symbol in symbols:
+        print(f"Running backtests for {symbol}...")
 
-    # Add strategy
-    cerebro.addstrategy(MovingAverageCrossover)
+        for strategy_name, strategy_class in strategies.items():
+            print(f" - Testing strategy: {strategy_name}")
 
-    # Run backtest
-    cerebro.run()
+            # Initialize Backtrader engine
+            cerebro = bt.Cerebro()
+            cerebro.addstrategy(strategy_class)
 
-    # Log results
-    log_backtesting_results(cerebro, "Moving Average Crossover")
+            # Load data
+            data = load_data_from_db(symbol, start_date, end_date)
+            data_feed = bt.feeds.PandasData(dataname=data)
+            cerebro.adddata(data_feed)
 
-    # Show the portfolio's final value and plot the results
-    cerebro.plot()
+            # Set broker starting cash
+            initial_cash = 100000
+            cerebro.broker.set_cash(initial_cash)
 
+            # Run backtest
+            cerebro.run()
+
+            # Calculate final portfolio value
+            final_cash = cerebro.broker.getvalue()
+
+            # Store results in the database
+            store_backtest_result(strategy_name, symbol, start_date, end_date, initial_cash, final_cash)
 
 if __name__ == "__main__":
-    backtest()
+    stock_symbols = ["AAPL", "MSFT", "GOOGL"]
+    run_backtests(stock_symbols, start_date="2020-01-01", end_date="2022-12-31")
+    

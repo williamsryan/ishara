@@ -1,17 +1,11 @@
-import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
 from src.utils.config import DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
 
 def connect_to_db():
-    """Establish a connection to the PostgreSQL database."""
-    return psycopg2.connect(
-        dbname=DATABASE_NAME,
-        user=DATABASE_USER,
-        password=DATABASE_PASSWORD,
-        host="localhost",
-        port=5432
-    )
+    """Create an SQLAlchemy engine."""
+    db_url = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@localhost:5432/{DATABASE_NAME}"
+    return create_engine(db_url)
 
 def insert_stock_data(data):
     """
@@ -29,9 +23,7 @@ def insert_stock_data(data):
     try:
         cursor.executemany(query, data)
         conn.commit()
-        print(f"{len(data)} rows inserted into stock_data.")
     except Exception as e:
-        print(f"Error inserting stock data: {e}")
         conn.rollback()
     finally:
         cursor.close()
@@ -53,9 +45,7 @@ def insert_alternative_data(data):
     try:
         cursor.executemany(query, data)
         conn.commit()
-        print(f"{len(data)} rows inserted into alternative_data.")
     except Exception as e:
-        print(f"Error inserting alternative data: {e}")
         conn.rollback()
     finally:
         cursor.close()
@@ -77,9 +67,7 @@ def insert_trade_logs(data):
     try:
         cursor.executemany(query, data)
         conn.commit()
-        print(f"{len(data)} rows inserted into trade_logs.")
     except Exception as e:
-        print(f"Error inserting trade logs: {e}")
         conn.rollback()
     finally:
         cursor.close()
@@ -102,3 +90,4 @@ def insert_backtest_results(db_connection_string, results_file):
     # Insert into the backtest_results table
     results.to_sql("backtest_results", engine, if_exists="append", index=False)
     print("Backtest results inserted successfully!")
+    
