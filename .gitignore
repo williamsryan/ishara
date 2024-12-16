@@ -163,4 +163,5 @@ cython_debug/
 
 src/utils/config.py
 
-lean/
+lean/data/
+lean/lean.json

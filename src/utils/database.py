@@ -1,4 +1,6 @@
 import psycopg2
+import pandas as pd
+from sqlalchemy import create_engine
 from src.utils.config import DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
 
 def connect_to_db():
@@ -35,7 +37,6 @@ def insert_stock_data(data):
         cursor.close()
         conn.close()
 
-
 def insert_alternative_data(data):
     """
     Insert rows into the alternative_data table.
@@ -59,7 +60,6 @@ def insert_alternative_data(data):
     finally:
         cursor.close()
         conn.close()
-
 
 def insert_trade_logs(data):
     """
@@ -85,3 +85,20 @@ def insert_trade_logs(data):
         cursor.close()
         conn.close()
         
+def insert_backtest_results(db_connection_string, results_file):
+    """
+    Insert backtest results into the database.
+
+    Args:
+        db_connection_string (str): SQLAlchemy connection string.
+        results_file (str): JSON file with backtest results.
+    """
+    # Load results
+    results = pd.read_json(results_file)
+
+    # Connect to the database
+    engine = create_engine(db_connection_string)
+
+    # Insert into the backtest_results table
+    results.to_sql("backtest_results", engine, if_exists="append", index=False)
+    print("Backtest results inserted successfully!")
