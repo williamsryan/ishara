@@ -1,139 +1,139 @@
+import backtrader as bt
 import pandas as pd
-from src.utils.database import insert_trade_logs
+from datetime import datetime
 from src.fetchers.alpaca_fetcher import fetch_historical_data
+from src.utils.database import insert_trade_logs
 
-def moving_average_crossover_strategy(data, short_window=10, long_window=50):
+class MovingAverageCrossover(bt.Strategy):
     """
-    Simulate a simple moving average crossover strategy.
-    
+    Backtrader strategy for moving average crossover.
+    """
+    params = (
+        ("short_window", 10),  # Short moving average period
+        ("long_window", 50),  # Long moving average period
+        ("quantity", 10),     # Number of shares to trade
+    )
+
+    def __init__(self):
+        # Initialize short and long moving averages
+        self.sma_short = bt.indicators.SimpleMovingAverage(
+            self.data.close, period=self.params.short_window
+        )
+        self.sma_long = bt.indicators.SimpleMovingAverage(
+            self.data.close, period=self.params.long_window
+        )
+
+        self.orders = []  # To track completed orders
+
+    def next(self):
+        # Check for crossover signals
+        if self.sma_short > self.sma_long and not self.position:
+            self.buy(size=self.params.quantity)
+        elif self.sma_short < self.sma_long and self.position:
+            self.sell(size=self.params.quantity)
+
+    def notify_order(self, order):
+        """
+        Track the lifecycle of orders and record completed ones.
+        """
+        if order.status == order.Completed:
+            self.orders.append({
+                "symbol": self.data._name,
+                "action": "BUY" if order.isbuy() else "SELL",
+                "quantity": order.executed.size,
+                "price_per_share": order.executed.price,
+                "datetime": bt.num2date(order.executed.dt),  # Convert to datetime
+                "pnl": order.executed.pnl
+            })
+
+def fetch_data_to_backtrader(symbol, start_date, end_date):
+    """
+    Fetch historical data using Alpaca and format for Backtrader.
+
     Args:
-        data (pd.DataFrame): Historical stock data with columns ['datetime', 'close'].
-        short_window (int): Window size for the short moving average.
-        long_window (int): Window size for the long moving average.
+        symbol (str): Stock symbol.
+        start_date (str): Start date (YYYY-MM-DD).
+        end_date (str): End date (YYYY-MM-DD).
 
     Returns:
-        list: List of trades, where each trade is a dict with keys:
-            - symbol
-            - action (BUY/SELL)
-            - quantity
-            - price_per_share
-            - datetime
-            - pnl
+        bt.feeds.PandasData: Backtrader-compatible data feed.
     """
-    data['SMA_Short'] = data['close'].rolling(window=short_window).mean()
-    data['SMA_Long'] = data['close'].rolling(window=long_window).mean()
-    
-    trades = []
-    position = 0  # 1 for long, -1 for short, 0 for no position
-    quantity = 10  # Fixed quantity for each trade
+    data = fetch_historical_data([symbol], start_date, end_date)
+    data["datetime"] = pd.to_datetime(data["datetime"])
+    data.set_index("datetime", inplace=True)
+    data_feed = bt.feeds.PandasData(
+        dataname=data,
+        datetime=None,
+        open="open",
+        high="high",
+        low="low",
+        close="close",
+        volume="volume",
+    )
+    return data_feed
 
-    for i in range(len(data)):
-        if i == 0:
-            continue
-        row = data.iloc[i]
-        prev_row = data.iloc[i - 1]
-        
-        # Buy Signal: Short MA crosses above Long MA
-        if row['SMA_Short'] > row['SMA_Long'] and prev_row['SMA_Short'] <= prev_row['SMA_Long']:
-            if position == 0:
-                price = row['close']
-                trades.append({
-                    "symbol": "AAPL",
-                    "action": "BUY",
-                    "quantity": quantity,
-                    "price_per_share": price,
-                    "datetime": row['datetime'],
-                    "pnl": 0,  # Unrealized PnL
-                })
-                position = 1
-
-        # Sell Signal: Short MA crosses below Long MA
-        elif row['SMA_Short'] < row['SMA_Long'] and prev_row['SMA_Short'] >= prev_row['SMA_Long']:
-            if position == 1:
-                price = row['close']
-                entry_trade = trades[-1]
-                pnl = (price - entry_trade['price_per_share']) * quantity
-                trades.append({
-                    "symbol": "AAPL",
-                    "action": "SELL",
-                    "quantity": quantity,
-                    "price_per_share": price,
-                    "datetime": row['datetime'],
-                    "pnl": pnl,
-                })
-                position = 0
-
-    return trades
-
-def log_backtesting_trades(strategy_name, trades):
+def log_backtesting_results(cerebro, strategy_name):
     """
-    Log trades from a backtesting session.
+    Log trades and performance metrics after backtesting.
 
     Args:
+        cerebro (bt.Cerebro): Backtrader engine after backtesting.
         strategy_name (str): Name of the strategy.
-        trades (list): List of trades, where each trade is a dict with keys:
-            - symbol
-            - action (BUY/SELL)
-            - quantity
-            - price_per_share
-            - datetime
-            - pnl
     """
-    # Convert data to Python-native types
-    data = [
-        (
-            strategy_name,
-            trade["symbol"],
-            trade["action"],
-            trade["quantity"],
-            float(trade["price_per_share"]),  # Convert np.float64 to float
-            trade["datetime"],
-            float(trade["pnl"]),  # Convert np.float64 to float
-        )
-        for trade in trades
-    ]
-    try:
-        insert_trade_logs(data)
-        print(f"Logged {len(trades)} trades into trade_logs.")
-    except Exception as e:
-        print(f"Error inserting trade logs: {e}")
+    trades = []
+    for strat in cerebro.runstrats:
+        for order in strat[0].orders:  # Access orders logged in the strategy
+            trades.append((
+                strategy_name,
+                order["symbol"],
+                order["action"],
+                order["quantity"],
+                order["price_per_share"],
+                order["datetime"],
+                order["pnl"],
+            ))
 
+    # Insert trades into the database
+    if trades:
+        try:
+            insert_trade_logs(trades)
+            print(f"Logged {len(trades)} trades into trade_logs.")
+        except Exception as e:
+            print(f"Error inserting trade logs: {e}")
+    else:
+        print("No trades to log.")
+
+    # Performance Metrics
+    final_value = cerebro.broker.getvalue()
+    starting_cash = cerebro.broker.startingcash
+    pnl = final_value - starting_cash
+    print(f"Final Portfolio Value: ${final_value:.2f}")
+    print(f"Total PnL: ${pnl:.2f}")
+    
 def backtest():
     """
-    Backtest a strategy and print key performance metrics.
+    Run a Backtrader backtest for a moving average crossover strategy.
     """
-    # Example: Fetch historical data for AAPL
-    data = fetch_historical_data(["AAPL"], "2020-01-01", "2022-12-31")
+    cerebro = bt.Cerebro()
+    cerebro.broker.set_cash(100000)  # Initial cash
+    cerebro.broker.setcommission(commission=0.001)  # 0.1% commission
 
-    # Debugging: Print the fetched data
-    print(f"Fetched data: {data}")
+    # Fetch data for AAPL
+    data_feed = fetch_data_to_backtrader("AAPL", "2020-01-01", "2022-12-31")
+    cerebro.adddata(data_feed)
 
-    # Convert to DataFrame if not already in the correct format
-    if not isinstance(data, pd.DataFrame):
-        data = pd.DataFrame(data)
+    # Add strategy
+    cerebro.addstrategy(MovingAverageCrossover)
 
-    # Check if data is empty
-    if data.empty:
-        print("Error: No data fetched. Ensure fetch_and_store_historical_data is returning valid results.")
-        return
+    # Run backtest
+    cerebro.run()
 
-    data.columns = ["symbol", "datetime", "open", "high", "low", "close", "volume"]
+    # Log results
+    log_backtesting_results(cerebro, "Moving Average Crossover")
 
-    # Run the strategy
-    trades = moving_average_crossover_strategy(data)
+    # Show the portfolio's final value and plot the results
+    cerebro.plot()
 
-    # Log trades into the database
-    log_backtesting_trades("Moving Average Crossover", trades)
-
-    # Calculate performance metrics
-    total_pnl = sum(trade['pnl'] for trade in trades if trade['action'] == "SELL")
-    win_trades = len([trade for trade in trades if trade['pnl'] > 0])
-    total_trades = len([trade for trade in trades if trade['action'] == "SELL"])
-    win_rate = (win_trades / total_trades) * 100 if total_trades > 0 else 0
-
-    print(f"Total PnL: ${total_pnl:.2f}")
-    print(f"Win Rate: {win_rate:.2f}%")
-    print(f"Total Trades: {total_trades}")
 
 if __name__ == "__main__":
     backtest()
