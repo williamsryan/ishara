@@ -34,7 +34,7 @@ def fetch_alternative_data():
     """
     symbols = ["AAPL", "MSFT"]
     keywords = ["AAPL", "MSFT"]
-    subreddit = "stocks"
+    subreddits = ["stocks", "wallstreetbets"]
 
     print("🔍 Fetching alternative data...")
 
@@ -44,8 +44,9 @@ def fetch_alternative_data():
 
     # Fetch Reddit sentiment
     print("📰 Fetching Reddit sentiment data...")
-    for keyword in keywords:
-        fetch_reddit_sentiment(subreddit, keyword)
+    for subreddit in subreddits:
+        for keyword in keywords:
+            fetch_reddit_sentiment(subreddit, keyword)
 
     print("✅ Alternative data fetch complete.")
 
