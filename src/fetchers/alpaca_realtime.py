@@ -68,9 +68,16 @@ def on_message(ws, message):
         # Process incoming trade data
         for entry in parsed_message:
             if entry.get("T") == "t":  # 't' indicates trade data
-                # Parse and convert data
+                # Parse and truncate nanoseconds in ISO 8601 timestamp
+                timestamp_str = entry["t"]
+                if "." in timestamp_str:
+                    timestamp_str = timestamp_str[:timestamp_str.index(".") + 7] + "Z"
+
+                # Parse the adjusted timestamp
+                timestamp = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+                # Extract and parse other fields
                 symbol = entry["S"]
-                timestamp = datetime.utcfromtimestamp(int(entry["t"]) / 1e9)  # Convert nanoseconds to seconds
                 price = float(entry["p"])  # Trade price
                 volume = int(entry["s"])  # Trade volume
 
