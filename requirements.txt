@@ -1,11 +1,13 @@
 alpaca-trade-api
+websocket-client
 quiverquant
 dash
 pandas
+requests
+fastapi
 numpy
 matplotlib
 plotly
 backtrader
-websocket-client
 yfinance
 sqlalchemy

@@ -1,12 +1,24 @@
-import pandas as pd
-from sqlalchemy import create_engine
-from src.utils.config import DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import sessionmaker
+from src.utils.config import DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
+
+DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
+
+engine = create_engine(DATABASE_URL, echo=False)  # echo=True for debug logs
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+metadata = MetaData()
 
 def connect_to_db():
-    """Create an SQLAlchemy engine."""
-    db_url = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@localhost:5432/{DATABASE_NAME}"
-    return create_engine(db_url)
-
+    """
+    Returns a new session for interacting with the database.
+    """
+    try:
+        session = SessionLocal()
+        return session
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return None
+    
 def insert_stock_data(data):
     """
     Insert rows into the stock_data table.
@@ -90,4 +102,3 @@ def insert_backtest_results(db_connection_string, results_file):
     # Insert into the backtest_results table
     results.to_sql("backtest_results", engine, if_exists="append", index=False)
     print("Backtest results inserted successfully!")
-    
