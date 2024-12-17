@@ -1,10 +1,11 @@
 import argparse
 from src.fetchers.alpaca_historical import insert_historical_data
+from src.fetchers.alpaca_realtime import start_stream as stream_alpaca_realtime
 from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
 from src.fetchers.google_trends_fetcher import fetch_google_trends_data
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.processors.alternative_data_streamer import stream_alternative_data
-from src.dashboard.app import run_dashboard
+from src.dashboard.app import run_dashboard_with_stream
 from src.utils.database import connect_to_db
 
 def setup_database():
@@ -55,21 +56,24 @@ def fetch_alternative_data():
 
     print("✅ Alternative data fetch complete.")
 
-def stream_data():
+def stream_real_time_data():
     """
-    Stream alternative data periodically for real-time predictions.
+    Stream real-time Alpaca market data.
     """
-    symbols = ["AAPL", "MSFT"]
-    keywords = ["AAPL", "MSFT"]
-    print("🚀 Starting real-time alternative data stream...")
-    stream_alternative_data(symbols, keywords, subreddit="stocks", interval=300)
+    print("🚀 Starting Alpaca real-time data streaming...")
+    stream_alpaca_realtime()
+
+    # symbols = ["AAPL", "MSFT"]
+    # keywords = ["AAPL", "MSFT"]
+    # print("🚀 Starting real-time alternative data stream...")
+    # stream_alternative_data(symbols, keywords, subreddit="stocks", interval=300)
 
 def launch_dashboard():
     """
     Launch the interactive UI dashboard for viewing data.
     """
     print("🚀 Launching the Ishara Trading Dashboard...")
-    run_dashboard()
+    run_dashboard_with_stream()
 
 def main():
     parser = argparse.ArgumentParser(description="Ishara Data Pipeline and Dashboard")
@@ -88,7 +92,7 @@ def main():
     elif args.fetch_alternative:
         fetch_alternative_data()
     elif args.stream_data:
-        stream_data()
+        stream_real_time_data()
     elif args.launch_ui:
         launch_dashboard()
     else:

@@ -6,20 +6,29 @@ from src.utils.config import ALPACA_API_KEY, ALPACA_SECRET_KEY
 
 def insert_real_time_data(data):
     """
-    Inserts real-time market data into the database.
+    Insert real-time market data into the database.
+    """
+    query = """
+        INSERT INTO real_time_market_data (symbol, datetime, price, volume)
+        VALUES (%s, %s, %s, %s)
     """
     conn = connect_to_db()
+    if not conn:
+        print("❌ Failed to connect to the database.")
+        return
+
     try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO real_time_market_data (symbol, datetime, price, volume)
-            VALUES (%s, %s, %s, %s);
-        """, (data['symbol'], data['timestamp'], data['price'], data['volume']))
+        with conn.cursor() as cursor:
+            for item in data:
+                cursor.execute(
+                    query, (item['symbol'], item['datetime'], item['price'], item['volume'])
+                )
         conn.commit()
+        print(f"✅ Successfully inserted {len(data)} records into real_time_market_data.")
     except Exception as e:
-        print(f"Error inserting real-time data: {e}")
+        conn.rollback()
+        print(f"❌ Error inserting real-time data: {e}")
     finally:
-        cursor.close()
         conn.close()
 
 def on_open(ws):
@@ -45,39 +54,31 @@ def on_open(ws):
     print(f"✅ Subscribed to symbols: {subscribe_payload['bars']}")
 
 def on_message(ws, message):
-    """
-    Handles incoming WebSocket messages and inserts data into the database.
-    """
-    try:
-        data = json.loads(message)
-        if isinstance(data, list):
-            for item in data:
-                parse_and_insert(item)
-        elif isinstance(data, dict):
-            parse_and_insert(data)
-        else:
-            print(f"Unexpected message format: {data}")
-    except Exception as e:
-        print(f"Error processing message: {e}")
-
-def parse_and_insert(item):
-    """
-    Parses a single WebSocket message and inserts it into the database.
-    """
-    if "T" in item and item["T"] == "b":  # "b" stands for bar (market data)
         try:
-            record = {
-                'symbol': item['S'],  # Symbol
-                'timestamp': datetime.fromtimestamp(item['t'] / 1e9),  # Timestamp
-                'price': item['c'],  # Close price
-                'volume': item['v']   # Volume
-            }
-            insert_real_time_data(record)
-            print(f"Inserted real-time data: {record}")
-        except KeyError as e:
-            print(f"Missing field in bar data: {e}")
-    elif "T" in item and item["T"] in ["success", "error"]:
-        print(f"WebSocket message: {item}")
+            parsed_message = json.loads(message)
+            data_to_insert = []
+
+            for entry in parsed_message:
+                if entry.get("T") == "t":  # 'T' indicates trade data
+                    # Parse and convert data
+                    symbol = entry["S"]
+                    timestamp = datetime.utcfromtimestamp(int(entry["t"]) / 1e9)  # Nanoseconds to seconds
+                    price = float(entry["p"])  # Convert price to float
+                    volume = int(entry["s"])  # Convert size to integer
+
+                    data_to_insert.append({
+                        "symbol": symbol,
+                        "datetime": timestamp,
+                        "price": price,
+                        "volume": volume
+                    })
+
+            if data_to_insert:
+                insert_real_time_data(data_to_insert)
+
+        except Exception as e:
+            print(f"Error processing message: {e}")
+            print(f"Message causing error: {message}")
 
 def start_stream():
     """
