@@ -2,14 +2,14 @@ import dash
 from dash import dcc, html, Input, Output, State
 import pandas as pd
 import plotly.graph_objs as go
+import dash_bootstrap_components as dbc
 from src.utils.database import connect_to_db
 from threading import Thread
 from src.fetchers.alpaca_realtime import start_stream
+import time
 
-# Initialize the Dash app with Bootstrap for better aesthetics
-import dash_bootstrap_components as dbc
-
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+# Initialize the Dash app with Bootstrap for styling
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Ishara Trading Dashboard"
 
 # Fetch data helper
@@ -31,23 +31,21 @@ def fetch_data(table):
 
 # App Layout
 app.layout = dbc.Container([
-    # Title
     dbc.Row([
-        dbc.Col(html.H1("📊 Ishara Trading Dashboard", className="text-center my-4"))
+        dbc.Col(html.H1("📊 Ishara Trading Dashboard", className="text-center my-4"), width=12)
     ]),
 
-    # Explanation Section
+    # Feedback Row
     dbc.Row([
-        dbc.Col(
-            dcc.Markdown("""
-            **Welcome to Ishara Dashboard**  
-            This dashboard displays real-time, historical, and alternative data sources.  
-            - Use the **Dropdowns** to filter data by symbols or sources.  
-            - Toggle **Data Sources** for better insights.  
-            - Select specific **metrics** to visualize trends.  
-            """, className="mb-4"),
-            width=12
-        )
+        dbc.Col([
+            dcc.Loading(
+                id="loading-feedback",
+                type="circle",
+                children=[
+                    dcc.Markdown(id="search-feedback", children="🔍 Start by selecting a ticker and data source.")
+                ]
+            )
+        ], width=12)
     ]),
 
     # Controls
@@ -72,25 +70,31 @@ app.layout = dbc.Container([
         ], width=4),
 
         dbc.Col([
-            html.Label("Select Data Metric (for Alternative Data):"),
+            html.Label("Overlay Alternative Data:"),
             dcc.Dropdown(
-                id="metric-selector",
+                id="overlay-selector",
                 options=[
                     {'label': 'Sentiment Score', 'value': 'sentiment_score'}
                 ],
-                multi=False
+                multi=True,
+                placeholder="Select overlays (optional)"
             )
         ], width=4),
     ]),
 
-    # Graph Display
+    html.Hr(),
+
+    # Graph Panes
     dbc.Row([
         dbc.Col([
-            dcc.Graph(id='data-graph', style={"height": "500px"})
-        ], width=12),
+            dcc.Graph(id='main-graph', style={"height": "500px"})
+        ], width=8),
+        dbc.Col([
+            dcc.Graph(id='overlay-graph', style={"height": "500px"})
+        ], width=4)
     ]),
 
-    # Refresh Interval
+    # Interval for refresh
     dcc.Interval(
         id='interval-component',
         interval=5000,  # Refresh every 5 seconds
@@ -98,91 +102,78 @@ app.layout = dbc.Container([
     ),
 ], fluid=True)
 
-# Callback to update graph dynamically
+# Callbacks
 @app.callback(
-    Output('data-graph', 'figure'),
+    [Output('main-graph', 'figure'),
+     Output('overlay-graph', 'figure'),
+     Output('search-feedback', 'children')],
     [
         Input('data-source', 'value'),
-        Input('interval-component', 'n_intervals'),
         Input('ticker-input', 'value'),
-        Input('metric-selector', 'value')
+        Input('overlay-selector', 'value'),
+        Input('interval-component', 'n_intervals')
     ]
 )
-def update_graph(table, n_intervals, ticker_input, selected_metric):
+def update_graphs(table, ticker_input, overlays, n_intervals):
     """
-    Update graph based on user inputs and selected data source.
+    Update the main and overlay graphs dynamically.
     """
+    feedback = "🔍 Searching..."
+    time.sleep(0.5)  # Simulate a short loading time
     data = fetch_data(table)
-    if data.empty:
-        return {"layout": {"title": "No Data Available"}}
 
-    # Filter by ticker symbols if provided
+    if data.empty:
+        return {"layout": {"title": "No Data Available"}}, {}, "❌ No data available. Check the source."
+
+    # Filter tickers
     if ticker_input:
         tickers = [t.strip().upper() for t in ticker_input.split(",")]
         data = data[data['symbol'].isin(tickers)]
+        feedback = f"✅ Showing data for: {', '.join(tickers)}"
 
-    # Dynamic rendering for Alternative Data
-    if table == "alternative_data":
-        if selected_metric and selected_metric in data['metric'].unique():
-            data = data[data['metric'] == selected_metric]
-        figure = {
+    # Prepare main graph
+    main_fig = {
+        'data': [
+            go.Scatter(
+                x=data['datetime'],
+                y=data['price'] if 'price' in data.columns else data[data.columns[1]],
+                mode='lines+markers',
+                name=f"{symbol} Price"
+            )
+            for symbol in data['symbol'].unique()
+        ],
+        'layout': go.Layout(
+            title="Price Data",
+            xaxis={'title': 'Datetime'},
+            yaxis={'title': 'Price'},
+            template="plotly_dark"
+        )
+    }
+
+    # Prepare overlay graph
+    overlay_fig = {"data": [], "layout": go.Layout(title="Overlay Data", template="plotly_dark")}
+    if overlays and table == 'alternative_data':
+        overlay_data = fetch_data('alternative_data')
+        overlay_data = overlay_data[overlay_data['metric'].isin(overlays)]
+        overlay_fig = {
             'data': [
                 go.Scatter(
-                    x=data['datetime'],
-                    y=data['value'],
+                    x=overlay_data['datetime'],
+                    y=overlay_data['value'],
                     mode='lines+markers',
-                    text=data['details'],  # Add tooltips for details
-                    name=f"{row['source']} ({row['symbol']})"
-                ) for _, row in data.iterrows()
+                    name=f"{row['metric']} ({row['source']})"
+                )
+                for _, row in overlay_data.iterrows()
             ],
             'layout': go.Layout(
-                title="Alternative Data Trends",
+                title="Overlay: Alternative Data",
                 xaxis={'title': 'Datetime'},
                 yaxis={'title': 'Metric Value'},
-                hovermode="closest",
                 template="plotly_dark"
             )
         }
-    elif table == "real_time_market_data":
-        # Resample for OHLC
-        ohlc_data = data.resample('1T', on='datetime')['price'].ohlc()
-        ohlc_data.reset_index(inplace=True)
-        figure = {
-            'data': [
-                go.Candlestick(
-                    x=ohlc_data['datetime'],
-                    open=ohlc_data['open'],
-                    high=ohlc_data['high'],
-                    low=ohlc_data['low'],
-                    close=ohlc_data['close'],
-                    name="OHLC"
-                )
-            ],
-            'layout': go.Layout(
-                title="Real-Time OHLC Data",
-                xaxis={'title': 'Datetime'},
-                yaxis={'title': 'Price'},
-                template="plotly_dark"
-            )
-        }
-    else:
-        figure = {
-            'data': [
-                go.Scatter(
-                    x=data['datetime'],
-                    y=data[data.columns[1]],
-                    mode='lines+markers',
-                    name=data.columns[1]
-                )
-            ],
-            'layout': go.Layout(
-                title="Historical Market Data",
-                xaxis={'title': 'Datetime'},
-                yaxis={'title': data.columns[1]},
-                template="plotly_dark"
-            )
-        }
-    return figure
+
+    return main_fig, overlay_fig, feedback
 
 def run_dashboard_with_stream():
     """
