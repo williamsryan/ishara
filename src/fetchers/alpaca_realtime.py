@@ -46,39 +46,47 @@ def on_open(ws):
 
     # Subscribe to market data
     print("📡 Subscribing to symbols...")
+    symbols = ["AAPL", "MSFT", "GOOGL"] 
     subscribe_payload = {
         "action": "subscribe",
-        "bars": ["AAPL", "MSFT", "GOOGL"]  # Replace with desired symbols
+        "trades": symbols,  # Trade updates
+        "bars": symbols     # Minute bar updates
     }
     ws.send(json.dumps(subscribe_payload))
-    print(f"✅ Subscribed to symbols: {subscribe_payload['bars']}")
+    print(f"✅ Subscribed to trades and bars for: {', '.join(symbols)}")
 
 def on_message(ws, message):
-        try:
-            parsed_message = json.loads(message)
-            data_to_insert = []
+    """
+    Processes incoming messages from Alpaca's WebSocket.
+    """
+    print(f"📩 Raw Message Received: {message}")  # Debug raw messages for now
 
-            for entry in parsed_message:
-                if entry.get("T") == "t":  # 'T' indicates trade data
-                    # Parse and convert data
-                    symbol = entry["S"]
-                    timestamp = datetime.utcfromtimestamp(int(entry["t"]) / 1e9)  # Nanoseconds to seconds
-                    price = float(entry["p"])  # Convert price to float
-                    volume = int(entry["s"])  # Convert size to integer
+    try:
+        parsed_message = json.loads(message)
+        data_to_insert = []
 
-                    data_to_insert.append({
-                        "symbol": symbol,
-                        "datetime": timestamp,
-                        "price": price,
-                        "volume": volume
-                    })
+        # Process incoming trade data
+        for entry in parsed_message:
+            if entry.get("T") == "t":  # 't' indicates trade data
+                # Parse and convert data
+                symbol = entry["S"]
+                timestamp = datetime.utcfromtimestamp(int(entry["t"]) / 1e9)  # Convert nanoseconds to seconds
+                price = float(entry["p"])  # Trade price
+                volume = int(entry["s"])  # Trade volume
 
-            if data_to_insert:
-                insert_real_time_data(data_to_insert)
+                data_to_insert.append({
+                    "symbol": symbol,
+                    "datetime": timestamp,
+                    "price": price,
+                    "volume": volume
+                })
 
-        except Exception as e:
-            print(f"Error processing message: {e}")
-            print(f"Message causing error: {message}")
+        if data_to_insert:
+            insert_real_time_data(data_to_insert)
+
+    except Exception as e:
+        print(f"❌ Error processing message: {e}")
+        print(f"Message causing error: {message}")
 
 def start_stream():
     """
