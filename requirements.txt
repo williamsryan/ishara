@@ -32,3 +32,4 @@ matplotlib
 plotly
 backtrader
 praw
+dash-bootstrap-components

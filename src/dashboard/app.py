@@ -1,41 +1,27 @@
 import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash import dcc, html, Input, Output, State
 import pandas as pd
 import plotly.graph_objs as go
 from src.utils.database import connect_to_db
 from threading import Thread
 from src.fetchers.alpaca_realtime import start_stream
 
-# Initialize the Dash app
-app = dash.Dash(__name__)
+# Initialize the Dash app with Bootstrap for better aesthetics
+import dash_bootstrap_components as dbc
+
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 app.title = "Ishara Trading Dashboard"
 
+# Fetch data helper
 def fetch_data(table):
-    """
-    Fetch data from the specified database table and handle missing columns gracefully.
-    """
     try:
         conn = connect_to_db()
         query = f"SELECT * FROM {table} ORDER BY datetime DESC LIMIT 1000"
         data = pd.read_sql(query, conn)
-
         if not data.empty:
-            # Ensure 'datetime' column is a datetime object
             data['datetime'] = pd.to_datetime(data['datetime'])
-
-            # Check for 'price' column for OHLC computation
-            if 'price' in data.columns:
-                # Resample to generate OHLC data for 1-minute intervals
-                ohlc_data = data.resample('1T', on='datetime')['price'].ohlc()
-                ohlc_data.reset_index(inplace=True)  # Reset index to expose 'datetime'
-                return ohlc_data
-
-            # If 'price' is not available, return raw data
-            print(f"⚠️ No 'price' column found in {table}. Returning raw data.")
             return data
-        else:
-            return pd.DataFrame()
+        return pd.DataFrame()
     except Exception as e:
         print(f"❌ Error fetching data: {e}")
         return pd.DataFrame()
@@ -44,74 +30,153 @@ def fetch_data(table):
             conn.close()
 
 # App Layout
-app.layout = html.Div([
-    html.H1("📊 Ishara Trading Dashboard", style={'textAlign': 'center'}),
+app.layout = dbc.Container([
+    # Title
+    dbc.Row([
+        dbc.Col(html.H1("📊 Ishara Trading Dashboard", className="text-center my-4"))
+    ]),
 
-    dcc.Dropdown(
-        id="data-source",
-        options=[
-            {'label': 'Alpaca Real-Time Data', 'value': 'real_time_market_data'},
-            {'label': 'Yahoo Finance Historical', 'value': 'yahoo_finance_data'},
-            {'label': 'Alternative Data (Google/Reddit)', 'value': 'alternative_data'}
-        ],
-        value='real_time_market_data',  # Default value
-        style={"width": "50%", "margin": "auto"}
-    ),
+    # Explanation Section
+    dbc.Row([
+        dbc.Col(
+            dcc.Markdown("""
+            **Welcome to Ishara Dashboard**  
+            This dashboard displays real-time, historical, and alternative data sources.  
+            - Use the **Dropdowns** to filter data by symbols or sources.  
+            - Toggle **Data Sources** for better insights.  
+            - Select specific **metrics** to visualize trends.  
+            """, className="mb-4"),
+            width=12
+        )
+    ]),
 
-    dcc.Graph(id='data-graph'),
+    # Controls
+    dbc.Row([
+        dbc.Col([
+            html.Label("Select Data Source:"),
+            dcc.Dropdown(
+                id="data-source",
+                options=[
+                    {'label': 'Alpaca Real-Time Data', 'value': 'real_time_market_data'},
+                    {'label': 'Yahoo Finance Historical', 'value': 'yahoo_finance_data'},
+                    {'label': 'Alternative Data (Google/Reddit)', 'value': 'alternative_data'}
+                ],
+                value='real_time_market_data',
+                style={"margin-bottom": "15px"}
+            ),
+        ], width=4),
 
+        dbc.Col([
+            html.Label("Enter Ticker Symbols (comma-separated):"),
+            dcc.Input(id="ticker-input", type="text", placeholder="e.g., AAPL, MSFT", debounce=True)
+        ], width=4),
+
+        dbc.Col([
+            html.Label("Select Data Metric (for Alternative Data):"),
+            dcc.Dropdown(
+                id="metric-selector",
+                options=[
+                    {'label': 'Sentiment Score', 'value': 'sentiment_score'}
+                ],
+                multi=False
+            )
+        ], width=4),
+    ]),
+
+    # Graph Display
+    dbc.Row([
+        dbc.Col([
+            dcc.Graph(id='data-graph', style={"height": "500px"})
+        ], width=12),
+    ]),
+
+    # Refresh Interval
     dcc.Interval(
         id='interval-component',
         interval=5000,  # Refresh every 5 seconds
         n_intervals=0
-    )
-])
+    ),
+], fluid=True)
 
+# Callback to update graph dynamically
 @app.callback(
     Output('data-graph', 'figure'),
-    [Input('data-source', 'value'), Input('interval-component', 'n_intervals')]
+    [
+        Input('data-source', 'value'),
+        Input('interval-component', 'n_intervals'),
+        Input('ticker-input', 'value'),
+        Input('metric-selector', 'value')
+    ]
 )
-def update_graph(table, n_intervals):
+def update_graph(table, n_intervals, ticker_input, selected_metric):
     """
-    Update the graph based on the selected data source and refresh interval.
+    Update graph based on user inputs and selected data source.
     """
     data = fetch_data(table)
     if data.empty:
         return {"layout": {"title": "No Data Available"}}
 
-    # Check for OHLC data
-    if {'open', 'high', 'low', 'close'}.issubset(data.columns):
+    # Filter by ticker symbols if provided
+    if ticker_input:
+        tickers = [t.strip().upper() for t in ticker_input.split(",")]
+        data = data[data['symbol'].isin(tickers)]
+
+    # Dynamic rendering for Alternative Data
+    if table == "alternative_data":
+        if selected_metric and selected_metric in data['metric'].unique():
+            data = data[data['metric'] == selected_metric]
+        figure = {
+            'data': [
+                go.Scatter(
+                    x=data['datetime'],
+                    y=data['value'],
+                    mode='lines+markers',
+                    text=data['details'],  # Add tooltips for details
+                    name=f"{row['source']} ({row['symbol']})"
+                ) for _, row in data.iterrows()
+            ],
+            'layout': go.Layout(
+                title="Alternative Data Trends",
+                xaxis={'title': 'Datetime'},
+                yaxis={'title': 'Metric Value'},
+                hovermode="closest",
+                template="plotly_dark"
+            )
+        }
+    elif table == "real_time_market_data":
+        # Resample for OHLC
+        ohlc_data = data.resample('1T', on='datetime')['price'].ohlc()
+        ohlc_data.reset_index(inplace=True)
         figure = {
             'data': [
                 go.Candlestick(
-                    x=data['datetime'],
-                    open=data['open'],
-                    high=data['high'],
-                    low=data['low'],
-                    close=data['close'],
+                    x=ohlc_data['datetime'],
+                    open=ohlc_data['open'],
+                    high=ohlc_data['high'],
+                    low=ohlc_data['low'],
+                    close=ohlc_data['close'],
                     name="OHLC"
                 )
             ],
             'layout': go.Layout(
-                title=f"{table.replace('_', ' ').title()} Data",
+                title="Real-Time OHLC Data",
                 xaxis={'title': 'Datetime'},
                 yaxis={'title': 'Price'},
                 template="plotly_dark"
             )
         }
     else:
-        # For non-OHLC data (like alternative_data)
         figure = {
             'data': [
                 go.Scatter(
                     x=data['datetime'],
-                    y=data[data.columns[1]],  # Use the second column dynamically
+                    y=data[data.columns[1]],
                     mode='lines+markers',
                     name=data.columns[1]
                 )
             ],
             'layout': go.Layout(
-                title=f"{table.replace('_', ' ').title()} Data",
+                title="Historical Market Data",
                 xaxis={'title': 'Datetime'},
                 yaxis={'title': data.columns[1]},
                 template="plotly_dark"
@@ -121,11 +186,11 @@ def update_graph(table, n_intervals):
 
 def run_dashboard_with_stream():
     """
-    Launch the WebSocket streamer and the dashboard together.
+    Launch WebSocket streamer and dashboard together.
     """
     print("🚀 Starting Alpaca real-time streamer in the background...")
     stream_thread = Thread(target=start_stream)
-    stream_thread.daemon = True  # Daemon thread to stop when the main thread stops
+    stream_thread.daemon = True
     stream_thread.start()
 
     print("🚀 Launching the Ishara Trading Dashboard...")
