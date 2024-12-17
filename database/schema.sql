@@ -41,3 +41,13 @@ CREATE TABLE backtest_results (
     return_percentage NUMERIC NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS alternative_data (
+    id SERIAL PRIMARY KEY,
+    source VARCHAR(50),        -- Source of the data (e.g., 'yfinance', 'google_trends')
+    symbol VARCHAR(10),        -- Stock symbol (if applicable)
+    datetime TIMESTAMP,        -- Date and time of data
+    metric VARCHAR(50),        -- Metric name (e.g., 'search_volume', 'sentiment_score')
+    value NUMERIC,             -- Metric value
+    details TEXT               -- Optional extra information (e.g., JSON payload)
+);
