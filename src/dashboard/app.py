@@ -16,6 +16,10 @@ def fetch_data(table, limit=1000):
     try:
         engine = connect_to_db()
         query = f"SELECT * FROM {table} ORDER BY datetime DESC LIMIT {limit}"
+        
+        # Debugging: Print the SQL query
+        print(f"🔍 Running query: {query}")
+        
         data = pd.read_sql(query, con=engine)  # Ensure engine is SQLAlchemy compatible
         if not data.empty:
             data["datetime"] = pd.to_datetime(data["datetime"])
@@ -112,22 +116,27 @@ def update_symbols(source):
      Input("overlay-toggle", "value")]
 )
 def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
+    # Always ensure symbols are selected
     if not symbols:
         return html.Div("⚠️ Please select symbols to display data.")
 
-    # Fetch data
-    data = fetch_data(source, limit=1000)
-    alt_data = fetch_data("alternative_data", limit=1000) if overlay_toggle else pd.DataFrame()
-
     # Handle default date range
-    if not start_date or not end_date:
-        start_date = data["datetime"].min()
-        end_date = data["datetime"].max()
+    def get_default_date_range(df):
+        return df["datetime"].min(), df["datetime"].max()
 
-    start_date = pd.to_datetime(start_date)
-    end_date = pd.to_datetime(end_date)
+    # Handle fetching price or overlay data
+    data = fetch_data(source, limit=1000) if tab in ["price-chart", "table-view"] else pd.DataFrame()
+    alt_data = fetch_data("alternative_data", limit=1000) if tab == "alternative-data" or overlay_toggle else pd.DataFrame()
 
     if tab == "price-chart":
+        # Default date range
+        if data.empty:
+            return html.Div("⚠️ No data available for the selected source or symbols.")
+
+        start_date = start_date or get_default_date_range(data)[0]
+        end_date = end_date or get_default_date_range(data)[1]
+        start_date, end_date = pd.to_datetime(start_date), pd.to_datetime(end_date)
+
         # Build Price Chart
         figure = go.Figure()
 
@@ -136,16 +145,11 @@ def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
                                (data["datetime"] >= start_date) &
                                (data["datetime"] <= end_date)]
 
-            # Determine the price column dynamically
             price_column = next((col for col in ["close", "price", "value", "last"] if col in symbol_data.columns), None)
-
-            if not price_column:
-                return html.Div("⚠️ No price column found in the data. Please check the data source.")
-
-            # Plot the data
-            figure.add_trace(go.Scatter(
-                x=symbol_data["datetime"], y=symbol_data[price_column], mode="lines", name=f"{symbol} Price"
-            ))
+            if price_column:
+                figure.add_trace(go.Scatter(
+                    x=symbol_data["datetime"], y=symbol_data[price_column], mode="lines", name=f"{symbol} Price"
+                ))
 
             # Overlay Alternative Data
             if not alt_data.empty:
@@ -153,8 +157,8 @@ def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
                                            (alt_data["datetime"] >= start_date) &
                                            (alt_data["datetime"] <= end_date)]
                 figure.add_trace(go.Scatter(
-                    x=alt_symbol_data["datetime"], y=alt_symbol_data["value"], mode="lines", 
-                    name=f"{symbol} Alt Data", yaxis="y2"
+                    x=alt_symbol_data["datetime"], y=alt_symbol_data["value"],
+                    mode="lines", name=f"{symbol} Alt Data", yaxis="y2"
                 ))
 
         figure.update_layout(
@@ -166,22 +170,44 @@ def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
         return dcc.Graph(figure=figure)
 
     elif tab == "alternative-data":
+        # Fetch and display Alternative Data Table
         if alt_data.empty:
-            return html.Div("⚠️ No alternative data available.")
-        
-        # Alternative Data Table
-        return dash_table.DataTable(
-            columns=[{"name": col, "id": col} for col in alt_data.columns],
-            data=alt_data.to_dict("records"),
-            style_table={"overflowX": "auto"},
-            style_cell={"textAlign": "left", "padding": "5px"},
-            style_header={"backgroundColor": "rgb(230, 230, 230)", "fontWeight": "bold"},
-            filter_action="native",
-            sort_action="native",
-            page_size=10
-        )
+            return html.Div("⚠️ No alternative data available for the selected symbols.")
+
+        alt_data_display = alt_data.rename(columns={
+            "source": "Source",
+            "symbol": "Symbol",
+            "datetime": "Datetime",
+            "metric": "Metric",
+            "value": "Value",
+            "details": "Details"
+        })
+        alt_data_display["Datetime"] = alt_data_display["Datetime"].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        return html.Div([
+            html.H5("Alternative Data Table", className="mb-3"),
+            dash_table.DataTable(
+                columns=[{"name": col, "id": col} for col in alt_data_display.columns],
+                data=alt_data_display.to_dict("records"),
+                style_table={"overflowX": "auto"},
+                style_cell={
+                    "textAlign": "left", "padding": "5px", "whiteSpace": "normal", "height": "auto"
+                },
+                style_header={"backgroundColor": "rgb(230, 230, 230)", "fontWeight": "bold"},
+                style_data_conditional=[
+                    {"if": {"column_id": "Value", "filter_query": "{Value} < 0"}, "color": "red"},
+                    {"if": {"column_id": "Value", "filter_query": "{Value} >= 0"}, "color": "green"}
+                ],
+                filter_action="native",
+                sort_action="native",
+                page_size=10
+            )
+        ])
 
     elif tab == "table-view":
+        if data.empty:
+            return html.Div("⚠️ No data available for the selected source or symbols.")
+
         return dash_table.DataTable(
             columns=[{"name": col, "id": col} for col in data.columns],
             data=data.to_dict("records"),
@@ -204,4 +230,3 @@ def run_dashboard_with_stream():
 
 if __name__ == "__main__":
     run_dashboard_with_stream()
-    
