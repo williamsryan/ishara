@@ -12,11 +12,17 @@ import time
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 app.title = "Ishara Trading Dashboard"
 
+# Theme settings
+THEMES = {
+    "dark": dbc.themes.CYBORG,
+    "light": dbc.themes.FLATLY
+}
+
 # Fetch data helper
-def fetch_data(table):
+def fetch_data(table, limit=1000):
     try:
         conn = connect_to_db()
-        query = f"SELECT * FROM {table} ORDER BY datetime DESC LIMIT 1000"
+        query = f"SELECT * FROM {table} ORDER BY datetime DESC LIMIT {limit}"
         data = pd.read_sql(query, conn)
         if not data.empty:
             data['datetime'] = pd.to_datetime(data['datetime'])
@@ -31,21 +37,9 @@ def fetch_data(table):
 
 # App Layout
 app.layout = dbc.Container([
+    # Title Row
     dbc.Row([
         dbc.Col(html.H1("📊 Ishara Trading Dashboard", className="text-center my-4"), width=12)
-    ]),
-
-    # Feedback Row
-    dbc.Row([
-        dbc.Col([
-            dcc.Loading(
-                id="loading-feedback",
-                type="circle",
-                children=[
-                    dcc.Markdown(id="search-feedback", children="🔍 Start by selecting a ticker and data source.")
-                ]
-            )
-        ], width=12)
     ]),
 
     # Controls
@@ -62,36 +56,59 @@ app.layout = dbc.Container([
                 value='real_time_market_data',
                 style={"margin-bottom": "15px"}
             ),
+
+            html.Label("Choose Graph Style:"),
+            dcc.RadioItems(
+                id="graph-style",
+                options=[
+                    {'label': 'Line Graph', 'value': 'line'},
+                    {'label': 'Candlestick', 'value': 'candlestick'},
+                    {'label': 'Bar Chart', 'value': 'bar'}
+                ],
+                value='line',
+                inline=True
+            ),
+
+            html.Label("Select Theme:"),
+            dcc.RadioItems(
+                id="theme-toggle",
+                options=[
+                    {'label': 'Light Theme', 'value': 'light'},
+                    {'label': 'Dark Theme', 'value': 'dark'}
+                ],
+                value='dark',
+                inline=True
+            ),
         ], width=4),
 
         dbc.Col([
             html.Label("Enter Ticker Symbols (comma-separated):"),
-            dcc.Input(id="ticker-input", type="text", placeholder="e.g., AAPL, MSFT", debounce=True)
-        ], width=4),
-
-        dbc.Col([
-            html.Label("Overlay Alternative Data:"),
+            dcc.Input(id="ticker-input", type="text", placeholder="e.g., AAPL, MSFT", debounce=True),
+            
+            html.Label("Specify Timeframe:"),
             dcc.Dropdown(
-                id="overlay-selector",
+                id="timeframe-selector",
                 options=[
-                    {'label': 'Sentiment Score', 'value': 'sentiment_score'}
+                    {"label": "Last 1 Day", "value": 1},
+                    {"label": "Last 7 Days", "value": 7},
+                    {"label": "Last 30 Days", "value": 30}
                 ],
-                multi=True,
-                placeholder="Select overlays (optional)"
-            )
-        ], width=4),
+                value=7
+            ),
+
+            html.Br(),
+            html.Button("Export as CSV", id="export-csv", className="btn btn-primary", style={"margin-right": "5px"}),
+            html.Button("Export as JSON", id="export-json", className="btn btn-secondary")
+        ], width=8)
     ]),
 
     html.Hr(),
 
-    # Graph Panes
+    # Graph
     dbc.Row([
         dbc.Col([
             dcc.Graph(id='main-graph', style={"height": "500px"})
-        ], width=8),
-        dbc.Col([
-            dcc.Graph(id='overlay-graph', style={"height": "500px"})
-        ], width=4)
+        ], width=12),
     ]),
 
     # Interval for refresh
@@ -100,80 +117,105 @@ app.layout = dbc.Container([
         interval=5000,  # Refresh every 5 seconds
         n_intervals=0
     ),
+
+    # Hidden Div for data export
+    dcc.Download(id="download-data")
 ], fluid=True)
 
 # Callbacks
 @app.callback(
     [Output('main-graph', 'figure'),
-     Output('overlay-graph', 'figure'),
-     Output('search-feedback', 'children')],
+     Output('download-data', 'data')],
     [
         Input('data-source', 'value'),
         Input('ticker-input', 'value'),
-        Input('overlay-selector', 'value'),
+        Input('graph-style', 'value'),
+        Input('timeframe-selector', 'value'),
+        Input('export-csv', 'n_clicks'),
+        Input('export-json', 'n_clicks'),
         Input('interval-component', 'n_intervals')
-    ]
+    ],
+    prevent_initial_call="initial_duplicate"
 )
-def update_graphs(table, ticker_input, overlays, n_intervals):
+def update_dashboard(table, ticker_input, graph_style, timeframe, export_csv, export_json, n_intervals):
     """
-    Update the main and overlay graphs dynamically.
+    Update the main graph dynamically and handle data export.
     """
-    feedback = "🔍 Searching..."
-    time.sleep(0.5)  # Simulate a short loading time
-    data = fetch_data(table)
-
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    
+    # Fetch Data
+    data = fetch_data(table, limit=5000)
     if data.empty:
-        return {"layout": {"title": "No Data Available"}}, {}, "❌ No data available. Check the source."
+        return {"layout": {"title": "No Data Available"}}, None
 
-    # Filter tickers
+    # Filter by ticker and timeframe
     if ticker_input:
         tickers = [t.strip().upper() for t in ticker_input.split(",")]
         data = data[data['symbol'].isin(tickers)]
-        feedback = f"✅ Showing data for: {', '.join(tickers)}"
+    data = data[data['datetime'] > pd.Timestamp.now() - pd.Timedelta(days=timeframe)]
 
-    # Prepare main graph
-    main_fig = {
-        'data': [
-            go.Scatter(
-                x=data['datetime'],
-                y=data['price'] if 'price' in data.columns else data[data.columns[1]],
-                mode='lines+markers',
-                name=f"{symbol} Price"
-            )
-            for symbol in data['symbol'].unique()
-        ],
-        'layout': go.Layout(
-            title="Price Data",
-            xaxis={'title': 'Datetime'},
-            yaxis={'title': 'Price'},
-            template="plotly_dark"
-        )
-    }
-
-    # Prepare overlay graph
-    overlay_fig = {"data": [], "layout": go.Layout(title="Overlay Data", template="plotly_dark")}
-    if overlays and table == 'alternative_data':
-        overlay_data = fetch_data('alternative_data')
-        overlay_data = overlay_data[overlay_data['metric'].isin(overlays)]
-        overlay_fig = {
-            'data': [
-                go.Scatter(
-                    x=overlay_data['datetime'],
-                    y=overlay_data['value'],
-                    mode='lines+markers',
-                    name=f"{row['metric']} ({row['source']})"
+    # Prepare Graph
+    if graph_style == "candlestick":
+        graph_figure = {
+            "data": [
+                go.Candlestick(
+                    x=data['datetime'],
+                    open=data['open'],
+                    high=data['high'],
+                    low=data['low'],
+                    close=data['close'],
+                    name=symbol
                 )
-                for _, row in overlay_data.iterrows()
+                for symbol in data['symbol'].unique()
             ],
-            'layout': go.Layout(
-                title="Overlay: Alternative Data",
-                xaxis={'title': 'Datetime'},
-                yaxis={'title': 'Metric Value'},
-                template="plotly_dark"
+            "layout": go.Layout(
+                title=f"{table} - Candlestick Chart",
+                xaxis={"title": "Datetime"},
+                yaxis={"title": "Price"}
+            )
+        }
+    elif graph_style == "bar":
+        graph_figure = {
+            "data": [
+                go.Bar(
+                    x=data['datetime'],
+                    y=data['price'],
+                    name=symbol
+                )
+                for symbol in data['symbol'].unique()
+            ],
+            "layout": go.Layout(
+                title=f"{table} - Bar Chart",
+                xaxis={"title": "Datetime"},
+                yaxis={"title": "Price"}
+            )
+        }
+    else:
+        graph_figure = {
+            "data": [
+                go.Scatter(
+                    x=data['datetime'],
+                    y=data['price'] if "price" in data.columns else data[data.columns[1]],
+                    mode="lines",
+                    name=symbol
+                )
+                for symbol in data['symbol'].unique()
+            ],
+            "layout": go.Layout(
+                title=f"{table} - Line Graph",
+                xaxis={"title": "Datetime"},
+                yaxis={"title": "Price"}
             )
         }
 
-    return main_fig, overlay_fig, feedback
+    # Export Logic
+    if trigger_id == "export-csv":
+        return graph_figure, dcc.send_data_frame(data.to_csv, "exported_data.csv")
+    elif trigger_id == "export-json":
+        return graph_figure, dcc.send_data_frame(data.to_json, "exported_data.json")
+
+    return graph_figure, None
 
 def run_dashboard_with_stream():
     """
