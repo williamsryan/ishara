@@ -93,6 +93,33 @@ def insert_alternative_data(data):
     finally:
         conn.close()
 
+def insert_yahoo_finance_data(data):
+    """
+    Insert rows into the yahoo_finance_data table.
+
+    Args:
+        data (list): List of tuples [(symbol, datetime, open, high, low, close, volume), ...].
+    """
+    query = """
+        INSERT INTO yahoo_finance_data (symbol, datetime, open, high, low, close, volume)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """
+    conn = connect_to_db()
+    if not conn:
+        print("❌ Failed to connect to the database.")
+        return
+
+    try:
+        with conn.cursor() as cursor:
+            execute_batch(cursor, query, data)
+        conn.commit()
+        print(f"✅ Successfully inserted {len(data)} records into yahoo_finance_data.")
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Error inserting Yahoo Finance data: {e}")
+    finally:
+        conn.close()
+
 def insert_trade_logs(data):
     """
     Insert rows into the trade_logs table.

@@ -1,21 +1,32 @@
 import yfinance as yf
 from datetime import datetime
-from src.utils.database import insert_alternative_data
+from src.utils.database import insert_yahoo_finance_data
 
-def fetch_yfinance_data(symbols):
+def fetch_yahoo_finance_data(symbols):
     """
-    Fetch Yahoo Finance data and store it using insert_alternative_data.
+    Fetch historical data from Yahoo Finance and insert into the database.
     """
     data_to_insert = []
-    for symbol in symbols:
-        print(f"Fetching Yahoo Finance data for {symbol}...")
-        stock = yf.Ticker(symbol)
-        history = stock.history(period="1d")
 
-        if not history.empty:
-            latest_close = history['Close'].iloc[-1]
-            data_to_insert.append(("yfinance", symbol, datetime.now(), "close_price", latest_close))
+    try:
+        for symbol in symbols:
+            print(f"📊 Fetching Yahoo Finance data for {symbol}...")
+            stock = yf.Ticker(symbol)
+            history = stock.history(period="1y", interval="1d")
 
-    if data_to_insert:
-        insert_alternative_data(data_to_insert)
-        
+            # Prepare data for insertion
+            for date, row in history.iterrows():
+                data_to_insert.append((symbol, date, row['Open'], row['High'], row['Low'], row['Close'], row['Volume']))
+
+        # Insert data into the database
+        if data_to_insert:
+            insert_yahoo_finance_data(data_to_insert)
+        else:
+            print("⚠️ No data fetched to insert.")
+
+    except Exception as e:
+        print(f"❌ Error fetching Yahoo Finance data: {e}")
+
+if __name__ == "__main__":
+    fetch_yahoo_finance_data(["AAPL", "MSFT", "GOOGL", "AMZN"])
+    
