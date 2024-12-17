@@ -1,6 +1,6 @@
 import pandas as pd
 import alpaca_trade_api as tradeapi
-from src.utils.database import insert_stock_data
+from src.utils.database import insert_historical_market_data
 from src.utils.config import ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL
 
 api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL)
@@ -31,7 +31,7 @@ def insert_historical_data(symbols, start, end, timeframe="1Day"):
             )
             for _, row in bars.iterrows()
         ]
-        insert_stock_data(data)
+        insert_historical_market_data(data)
         print(f"Data for {symbol} inserted successfully.")
 
 def fetch_historical_data(symbols, start_date, end_date, timeframe="1Day"):

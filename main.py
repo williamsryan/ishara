@@ -1,5 +1,5 @@
 import argparse
-from src.fetchers.alpaca_historical import fetch_historical_data
+from src.fetchers.alpaca_historical import insert_historical_data
 from src.fetchers.alpaca_realtime import start_stream
 from src.fetchers.quiverquant_fetcher import process_congressional_trades
 from src.fetchers.yf_fetcher import fetch_yahoo_key_stats
@@ -26,7 +26,7 @@ def fetch_alpaca_historical():
     start_date = "2023-01-01"
     end_date = "2024-01-01"
     print(f"📊 Fetching historical data for symbols: {symbols}")
-    fetch_historical_data(symbols, start_date, end_date)
+    insert_historical_data(symbols, start_date, end_date)
     print("✅ Historical data fetch complete.")
 
 def stream_alpaca_realtime():
