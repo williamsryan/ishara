@@ -1,234 +1,222 @@
 import dash
-from dash import dcc, html, Input, Output, State
+from dash import dcc, html, Input, Output, State, ctx
 import pandas as pd
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
-from src.utils.database import connect_to_db
 from threading import Thread
+from src.utils.database import connect_to_db
 from src.fetchers.alpaca_realtime import start_stream
-import time
 
-# Initialize the Dash app with Bootstrap for styling
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
-app.title = "Ishara Trading Dashboard"
+# Initialize app
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app.title = "📊 Ishara Trading Platform"
 
-# Theme settings
-THEMES = {
-    "dark": dbc.themes.CYBORG,
-    "light": dbc.themes.FLATLY
-}
-
-# Fetch data helper
+# Fetch Data Helper
 def fetch_data(table, limit=1000):
     try:
-        conn = connect_to_db()
+        engine = connect_to_db()
+        if not table:
+            raise ValueError("No table name provided.")
         query = f"SELECT * FROM {table} ORDER BY datetime DESC LIMIT {limit}"
-        data = pd.read_sql(query, conn)
+        data = pd.read_sql(query, engine)
         if not data.empty:
-            data['datetime'] = pd.to_datetime(data['datetime'])
+            data["datetime"] = pd.to_datetime(data["datetime"])
             return data
         return pd.DataFrame()
     except Exception as e:
-        print(f"❌ Error fetching data: {e}")
+        print(f"❌ Error: {e}")
         return pd.DataFrame()
-    finally:
-        if conn:
-            conn.close()
 
-# App Layout
-app.layout = dbc.Container([
-    # Title Row
+# Layout
+app.layout = dbc.Container(fluid=True, children=[
+    # Navbar
     dbc.Row([
-        dbc.Col(html.H1("📊 Ishara Trading Dashboard", className="text-center my-4"), width=12)
+        dbc.Col(html.H2("Ishara Trading Dashboard", className="text-center text-light bg-dark p-3"), width=12)
     ]),
 
-    # Controls
+    # Main Row
     dbc.Row([
+        # Sidebar
         dbc.Col([
-            html.Label("Select Data Source:"),
-            dcc.Dropdown(
-                id="data-source",
-                options=[
-                    {'label': 'Alpaca Real-Time Data', 'value': 'real_time_market_data'},
-                    {'label': 'Yahoo Finance Historical', 'value': 'yahoo_finance_data'},
-                    {'label': 'Alternative Data (Google/Reddit)', 'value': 'alternative_data'}
-                ],
-                value='real_time_market_data',
-                style={"margin-bottom": "15px"}
-            ),
+            html.Div([
+                html.H4("Controls", className="mb-3"),
 
-            html.Label("Choose Graph Style:"),
-            dcc.RadioItems(
-                id="graph-style",
-                options=[
-                    {'label': 'Line Graph', 'value': 'line'},
-                    {'label': 'Candlestick', 'value': 'candlestick'},
-                    {'label': 'Bar Chart', 'value': 'bar'}
-                ],
-                value='line',
-                inline=True
-            ),
+                # Data Source Dropdown
+                html.Label("Data Source"),
+                dcc.Dropdown(
+                    id="data-source",
+                    options=[
+                        {"label": "Real-Time Data", "value": "real_time_market_data"},
+                        {"label": "Yahoo Finance", "value": "yahoo_finance_data"},
+                        {"label": "Alternative Data", "value": "alternative_data"}
+                    ],
+                    value="real_time_market_data"
+                ),
 
-            html.Label("Select Theme:"),
-            dcc.RadioItems(
-                id="theme-toggle",
-                options=[
-                    {'label': 'Light Theme', 'value': 'light'},
-                    {'label': 'Dark Theme', 'value': 'dark'}
-                ],
-                value='dark',
-                inline=True
-            ),
-        ], width=4),
+                # Symbol Selector
+                html.Label("Select Symbols"),
+                dcc.Dropdown(
+                    id="symbol-selector",
+                    multi=True,
+                    placeholder="e.g., AAPL, MSFT, GOOGL"
+                ),
 
+                # Time Range Selector
+                html.Label("Select Time Range"),
+                dcc.Slider(
+                    id="time-range",
+                    min=1, max=30, step=1,
+                    marks={1: "1D", 7: "7D", 14: "14D", 30: "30D"},
+                    value=7
+                ),
+
+                # Graph Style
+                html.Label("Graph Style"),
+                dcc.RadioItems(
+                    id="graph-style",
+                    options=[
+                        {"label": "Line", "value": "line"},
+                        {"label": "Candlestick", "value": "candlestick"}
+                    ],
+                    value="line", inline=True
+                ),
+
+                # Buttons
+                html.Div([
+                    html.Button("Run Backtest", id="run-backtest", className="btn btn-primary mt-3"),
+                ]),
+            ], className="bg-light p-3 rounded"),
+        ], width=2),
+
+        # Main Content Area
         dbc.Col([
-            html.Label("Enter Ticker Symbols (comma-separated):"),
-            dcc.Input(id="ticker-input", type="text", placeholder="e.g., AAPL, MSFT", debounce=True),
-            
-            html.Label("Specify Timeframe:"),
-            dcc.Dropdown(
-                id="timeframe-selector",
-                options=[
-                    {"label": "Last 1 Day", "value": 1},
-                    {"label": "Last 7 Days", "value": 7},
-                    {"label": "Last 30 Days", "value": 30}
-                ],
-                value=7
-            ),
+            dbc.Row([
+                dbc.Col([
+                    html.Div("Streaming Status: ", style={"fontWeight": "bold", "display": "inline-block"}),
+                    html.Div(id="stream-status", style={"display": "inline-block", "color": "green", "marginLeft": "10px"})
+                ])
+            ], className="mb-3"),
 
-            html.Br(),
-            html.Button("Export as CSV", id="export-csv", className="btn btn-primary", style={"margin-right": "5px"}),
-            html.Button("Export as JSON", id="export-json", className="btn btn-secondary")
-        ], width=8)
+            dbc.Row([
+                dcc.Tabs(id="tabs", value="price-tab", children=[
+                    dcc.Tab(label="Price & Volume", value="price-tab"),
+                    dcc.Tab(label="Portfolio Overview", value="portfolio-tab"),
+                    dcc.Tab(label="Alternative Data", value="alt-tab"),
+                ]),
+                html.Div(id="tab-content")
+            ])
+        ], width=10),
     ]),
 
-    html.Hr(),
-
-    # Graph
-    dbc.Row([
-        dbc.Col([
-            dcc.Graph(id='main-graph', style={"height": "500px"})
-        ], width=12),
-    ]),
-
-    # Interval for refresh
-    dcc.Interval(
-        id='interval-component',
-        interval=5000,  # Refresh every 5 seconds
-        n_intervals=0
-    ),
-
-    # Hidden Div for data export
-    dcc.Download(id="download-data")
-], fluid=True)
+    # Interval for updates
+    dcc.Interval(id="interval", interval=5000, n_intervals=0)
+])
 
 # Callbacks
 @app.callback(
-    [Output('main-graph', 'figure'),
-     Output('download-data', 'data')],
-    [
-        Input('data-source', 'value'),
-        Input('ticker-input', 'value'),
-        Input('graph-style', 'value'),
-        Input('timeframe-selector', 'value'),
-        Input('export-csv', 'n_clicks'),
-        Input('export-json', 'n_clicks'),
-        Input('interval-component', 'n_intervals')
-    ],
-    prevent_initial_call="initial_duplicate"
+    [Output("symbol-selector", "options"),
+     Output("symbol-selector", "value")],
+    Input("data-source", "value")
 )
-def update_dashboard(table, ticker_input, graph_style, timeframe, export_csv, export_json, n_intervals):
-    """
-    Update the main graph dynamically and handle data export.
-    """
-    ctx = dash.callback_context
-    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    
-    # Fetch Data
-    data = fetch_data(table, limit=5000)
+def update_symbols(source):
+    data = fetch_data(source, limit=1000)
     if data.empty:
-        return {"layout": {"title": "No Data Available"}}, None
+        return [], None
+    symbols = [{"label": symbol, "value": symbol} for symbol in data["symbol"].unique()]
+    return symbols, symbols[0]["value"] if symbols else None
 
-    # Filter by ticker and timeframe
-    if ticker_input:
-        tickers = [t.strip().upper() for t in ticker_input.split(",")]
-        data = data[data['symbol'].isin(tickers)]
-    data = data[data['datetime'] > pd.Timestamp.now() - pd.Timedelta(days=timeframe)]
+@app.callback(
+    Output("tab-content", "children"),
+    [Input("tabs", "value"),
+     Input("data-source", "value"),
+     Input("symbol-selector", "value"),
+     Input("graph-style", "value"),
+     Input("time-range", "value"),
+     Input("interval", "n_intervals")]
+)
+def update_tab_content(tab, source, symbols, graph_style, days, n_intervals):
+    # Ensure symbols is a list
+    if isinstance(symbols, str):
+        symbols = [symbols]
+    if not symbols:
+        return html.Div("⚠️ No symbols selected. Please choose symbols to display data.")
 
-    # Prepare Graph
-    if graph_style == "candlestick":
-        graph_figure = {
-            "data": [
-                go.Candlestick(
-                    x=data['datetime'],
-                    open=data['open'],
-                    high=data['high'],
-                    low=data['low'],
-                    close=data['close'],
-                    name=symbol
-                )
-                for symbol in data['symbol'].unique()
-            ],
-            "layout": go.Layout(
-                title=f"{table} - Candlestick Chart",
-                xaxis={"title": "Datetime"},
-                yaxis={"title": "Price"}
-            )
-        }
-    elif graph_style == "bar":
-        graph_figure = {
-            "data": [
-                go.Bar(
-                    x=data['datetime'],
-                    y=data['price'],
-                    name=symbol
-                )
-                for symbol in data['symbol'].unique()
-            ],
-            "layout": go.Layout(
-                title=f"{table} - Bar Chart",
-                xaxis={"title": "Datetime"},
-                yaxis={"title": "Price"}
-            )
-        }
-    else:
-        graph_figure = {
-            "data": [
-                go.Scatter(
-                    x=data['datetime'],
-                    y=data['price'] if "price" in data.columns else data[data.columns[1]],
-                    mode="lines",
-                    name=symbol
-                )
-                for symbol in data['symbol'].unique()
-            ],
-            "layout": go.Layout(
-                title=f"{table} - Line Graph",
-                xaxis={"title": "Datetime"},
-                yaxis={"title": "Price"}
-            )
-        }
+    # Fetch and filter data
+    data = fetch_data(source, limit=1000)
+    if data.empty:
+        return html.Div("⚠️ No data available for the selected source.")
 
-    # Export Logic
-    if trigger_id == "export-csv":
-        return graph_figure, dcc.send_data_frame(data.to_csv, "exported_data.csv")
-    elif trigger_id == "export-json":
-        return graph_figure, dcc.send_data_frame(data.to_json, "exported_data.json")
+    # Validate required columns exist
+    required_columns = ["datetime", "symbol", "price"]
+    for col in required_columns:
+        if col not in data.columns:
+            return html.Div(f"⚠️ The selected data source is missing the '{col}' column. Please check the source.")
 
-    return graph_figure, None
+    filtered_data = data[data["symbol"].isin(symbols)]
+    filtered_data = filtered_data[filtered_data["datetime"] > pd.Timestamp.now() - pd.Timedelta(days=days)]
 
+    if filtered_data.empty:
+        return html.Div("⚠️ No data found for the selected symbols and time range.")
+
+    # Price & Volume Tab
+    if tab == "price-tab":
+        figure = go.Figure()
+
+        # Graph style
+        if graph_style == "candlestick" and all(col in filtered_data.columns for col in ["open", "high", "low", "close"]):
+            for symbol in symbols:
+                sym_data = filtered_data[filtered_data["symbol"] == symbol]
+                figure.add_trace(go.Candlestick(
+                    x=sym_data["datetime"], open=sym_data["open"], high=sym_data["high"],
+                    low=sym_data["low"], close=sym_data["close"], name=symbol
+                ))
+        else:
+            for idx, symbol in enumerate(symbols):  # Add enumerate to track idx
+                sym_data = filtered_data[filtered_data["symbol"] == symbol]
+                figure.add_trace(go.Scatter(
+                    x=sym_data["datetime"], y=sym_data["price"], mode="lines", name=symbol,
+                    yaxis="y2" if idx > 0 else "y"  # Alternate between primary and secondary axes
+                ))
+
+        # Update layout to handle separate y-axes for multiple symbols
+        figure.update_layout(
+            title="Price & Volume",
+            yaxis={"title": "Price", "side": "left"},
+            yaxis2={"title": "Price (Secondary)", "overlaying": "y", "side": "right"},
+            legend_title="Symbols",
+            xaxis={"title": "Datetime"}
+        )
+        return dcc.Graph(figure=figure)
+
+    # Portfolio Overview Tab
+    elif tab == "portfolio-tab":
+        stats = filtered_data.groupby("symbol").agg({"price": "last", "volume": "sum"})
+        return html.Div([
+            html.H4("Portfolio Overview"),
+            html.Table([
+                html.Tr([html.Th("Symbol"), html.Th("Latest Price"), html.Th("Total Volume")]),
+                *[html.Tr([html.Td(symbol), html.Td(f"${row['price']:.2f}"), html.Td(f"{row['volume']:,}")])
+                  for symbol, row in stats.iterrows()]
+            ], className="table table-bordered table-striped")
+        ])
+
+    # Alternative Data Tab
+    elif tab == "alt-tab":
+        return html.Div("Alternative Data Visualization Coming Soon!")
+
+@app.callback(
+    Output("stream-status", "children"),
+    Input("interval", "n_intervals")
+)
+def update_stream_status(n_intervals):
+    return "Connected" if n_intervals % 2 == 0 else "Disconnected"
+
+# Start Streamer
 def run_dashboard_with_stream():
-    """
-    Launch WebSocket streamer and dashboard together.
-    """
-    print("🚀 Starting Alpaca real-time streamer in the background...")
     stream_thread = Thread(target=start_stream)
     stream_thread.daemon = True
     stream_thread.start()
-
-    print("🚀 Launching the Ishara Trading Dashboard...")
     app.run_server(debug=True)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run_dashboard_with_stream()
-    
