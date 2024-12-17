@@ -1,5 +1,6 @@
 import argparse
-from src.fetchers.alpaca_fetcher import insert_historical_data
+from src.fetchers.alpaca_historical import fetch_historical_data
+from src.fetchers.alpaca_realtime import start_stream
 from src.fetchers.quiverquant_fetcher import process_congressional_trades
 from src.fetchers.yf_fetcher import fetch_yahoo_key_stats
 from src.utils.database import connect_to_db
@@ -10,19 +11,30 @@ def setup_database():
     """
     Test database connection to ensure everything is set up correctly.
     """
-    try:
-        engine = connect_to_db()
-        with engine.connect() as conn:  # Use the connection object
-            print("Database connection successful.")
-    except Exception as e:
-        print(f"Database connection failed: {e}")
+    session = connect_to_db()
+    if session:
+        print("✅ Database connection successful.")
+        session.close()
+    else:
+        print("❌ Database connection failed.")
 
-def fetch_alpaca_data():
+def fetch_alpaca_historical():
     """
     Fetch historical stock data from Alpaca and store it in the database.
     """
-    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]  # Example symbols
-    insert_historical_data(symbols, "2020-01-01", "2022-12-31")
+    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
+    start_date = "2023-01-01"
+    end_date = "2024-01-01"
+    print(f"📊 Fetching historical data for symbols: {symbols}")
+    fetch_historical_data(symbols, start_date, end_date)
+    print("✅ Historical data fetch complete.")
+
+def stream_alpaca_realtime():
+    """
+    Stream real-time stock market data from Alpaca and store it in the database.
+    """
+    print("🚀 Starting real-time Alpaca data stream...")
+    start_stream()
 
 def fetch_yahoo_finance_data():
     """
@@ -62,36 +74,29 @@ def run_backtest():
 
 def main():
     """
-    Main entry point for the Ishara project.
+    Main entry point for the data pipeline.
     """
-    parser = argparse.ArgumentParser(description="Ishara Data Pipeline Entrypoint")
+    parser = argparse.ArgumentParser(description="Ishara Data Pipeline")
     parser.add_argument(
-        "--setup-db", action="store_true", help="Set up and verify database connectivity"
+        "--setup-db", action="store_true", help="Test database connection setup."
     )
     parser.add_argument(
-        "--fetch-alpaca", action="store_true", help="Fetch and store historical stock data from Alpaca"
+        "--fetch-historical", action="store_true", help="Fetch historical Alpaca data."
     )
     parser.add_argument(
-        "--fetch-quiverquant", action="store_true", help="Fetch and store alternative data from QuiverQuant"
+        "--stream-realtime", action="store_true", help="Stream real-time Alpaca data."
     )
-    parser.add_argument(
-        "--fetch-yahoo", action="store_true", help="Fetch and store alternative data from Yahoo Finance"
-    )
-    parser.add_argument(
-        "--run-backtest", action="store_true", help="Run portfolio backtesting and visualization"
-    )
+
     args = parser.parse_args()
 
     if args.setup_db:
         setup_database()
-    if args.fetch_alpaca:
-        fetch_alpaca_data()
-    if args.fetch_quiverquant:
-        fetch_quiverquant_data()
-    if args.fetch_yahoo:
-        fetch_yahoo_finance_data()
-    if args.run_backtest:
-        run_backtest()
+    elif args.fetch_historical:
+        fetch_alpaca_historical()
+    elif args.stream_realtime:
+        stream_alpaca_realtime()
+    else:
+        print("❓ No valid arguments provided. Use --help for available options.")
 
 if __name__ == "__main__":
     main()

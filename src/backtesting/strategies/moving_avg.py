@@ -1,7 +1,7 @@
 import backtrader as bt
 import pandas as pd
 from datetime import datetime
-from src.fetchers.alpaca_fetcher import fetch_historical_data
+from src.fetchers.alpaca_historical import fetch_historical_data
 from src.utils.database import insert_trade_logs
 
 class MovingAverageCrossover(bt.Strategy):

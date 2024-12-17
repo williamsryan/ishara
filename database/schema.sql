@@ -1,23 +1,21 @@
 -- Historical and real-time stock market data
-CREATE TABLE stock_data (
+CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
-    symbol TEXT NOT NULL,
-    datetime TIMESTAMP NOT NULL,
-    open DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close DOUBLE PRECISION,
+    symbol VARCHAR(10),
+    datetime TIMESTAMP,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
     volume BIGINT
 );
 
--- Alternative data (e.g., QuiverQuant's congressional trades)
-CREATE TABLE alternative_data (
+CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
-    data_source TEXT NOT NULL,       -- Name of the source (e.g., "QuiverQuant")
-    symbol TEXT,                     -- Stock symbol
-    date TIMESTAMP,                  -- Date of the record
-    key_metric TEXT NOT NULL,        -- Metric name (e.g., "Sentiment Score")
-    value TEXT NOT NULL              -- Metric value (as string for flexibility)
+    symbol VARCHAR(10),
+    datetime TIMESTAMP,
+    price NUMERIC,
+    volume BIGINT
 );
 
 -- Trade execution logs for analysis and backtesting
