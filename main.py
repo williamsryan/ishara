@@ -1,24 +1,23 @@
 import argparse
 from src.fetchers.alpaca_historical import insert_historical_data
-from src.fetchers.alpaca_realtime import start_stream
-from src.fetchers.quiverquant_fetcher import process_congressional_trades
-from src.fetchers.yf_fetcher import fetch_yahoo_key_stats
+from src.fetchers.yf_fetcher import fetch_yfinance_data
+from src.fetchers.google_trends_fetcher import fetch_google_trends_data
+from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
+from src.processors.alternative_data_streamer import stream_alternative_data
 from src.utils.database import connect_to_db
-from src.backtesting.backtester import run_portfolio_backtest
-from src.backtesting.visualization import plot_portfolio_performance
 
 def setup_database():
     """
-    Test database connection to ensure everything is set up correctly.
+    Test the database connection to ensure everything is working.
     """
-    session = connect_to_db()
-    if session:
+    conn = connect_to_db()
+    if conn:
         print("✅ Database connection successful.")
-        session.close()
+        conn.close()
     else:
         print("❌ Database connection failed.")
 
-def fetch_alpaca_historical():
+def fetch_historical_data():
     """
     Fetch historical stock data from Alpaca and store it in the database.
     """
@@ -29,74 +28,55 @@ def fetch_alpaca_historical():
     insert_historical_data(symbols, start_date, end_date)
     print("✅ Historical data fetch complete.")
 
-def stream_alpaca_realtime():
+def fetch_alternative_data():
     """
-    Stream real-time stock market data from Alpaca and store it in the database.
+    Fetch alternative data sources: Google Trends, Reddit sentiment, Yahoo Finance.
     """
-    print("🚀 Starting real-time Alpaca data stream...")
-    start_stream()
+    symbols = ["AAPL", "MSFT"]
+    keywords = ["AAPL", "MSFT"]
+    subreddit = "stocks"
 
-def fetch_yahoo_finance_data():
-    """
-    Fetch alternative key statistics data from Yahoo Finance and store it in the database.
-    """
-    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
-    data = fetch_yahoo_key_stats(symbols)
-    print(f"Inserted {len(data)} rows into alternative_data table.")
+    print("🔍 Fetching alternative data...")
 
-def fetch_quiverquant_data():
-    """
-    Fetch congressional trades data from QuiverQuant and store it in the database.
-    """
-    data = process_congressional_trades()
-    print("Fetched and stored QuiverQuant data.")
+    # Fetch Google Trends
+    print("📈 Fetching Google Trends data...")
+    fetch_google_trends_data(keywords)
 
-def run_backtest():
-    """
-    Run a backtest on a portfolio of stocks with a specified strategy and visualize results.
-    """
-    portfolio = {
-        "AAPL": 0.4,  # 40% allocation
-        "MSFT": 0.3,  # 30% allocation
-        "GOOGL": 0.2,  # 20% allocation
-        "TSLA": 0.1,  # 10% allocation
-    }
-    start_date = "2020-01-01"
-    end_date = "2022-12-31"
-    strategy_name = "MovingAverageCrossover"  # Change this to test other strategies
+    # Fetch Reddit sentiment
+    print("📰 Fetching Reddit sentiment data...")
+    for keyword in keywords:
+        fetch_reddit_sentiment(subreddit, keyword)
 
-    print("Running backtest...")
-    results = run_portfolio_backtest(portfolio, start_date, end_date, strategy_name)
-    print("Backtest completed. Generating visualization...")
+    print("✅ Alternative data fetch complete.")
 
-    plot_portfolio_performance(results, portfolio)
-    print("Visualization complete.")
+def stream_data():
+    """
+    Stream alternative data periodically for real-time predictions.
+    """
+    symbols = ["AAPL", "MSFT"]
+    keywords = ["AAPL", "MSFT"]
+    print("🚀 Starting real-time alternative data stream...")
+    stream_alternative_data(symbols, keywords, subreddit="stocks", interval=300)
 
 def main():
-    """
-    Main entry point for the data pipeline.
-    """
     parser = argparse.ArgumentParser(description="Ishara Data Pipeline")
-    parser.add_argument(
-        "--setup-db", action="store_true", help="Test database connection setup."
-    )
-    parser.add_argument(
-        "--fetch-historical", action="store_true", help="Fetch historical Alpaca data."
-    )
-    parser.add_argument(
-        "--stream-realtime", action="store_true", help="Stream real-time Alpaca data."
-    )
+    parser.add_argument("--setup-db", action="store_true", help="Test database connection.")
+    parser.add_argument("--fetch-historical", action="store_true", help="Fetch historical market data.")
+    parser.add_argument("--fetch-alternative", action="store_true", help="Fetch alternative data sources.")
+    parser.add_argument("--stream-data", action="store_true", help="Stream alternative data in real-time.")
 
     args = parser.parse_args()
 
     if args.setup_db:
         setup_database()
     elif args.fetch_historical:
-        fetch_alpaca_historical()
-    elif args.stream_realtime:
-        stream_alpaca_realtime()
+        fetch_historical_data()
+    elif args.fetch_alternative:
+        fetch_alternative_data()
+    elif args.stream_data:
+        stream_data()
     else:
-        print("❓ No valid arguments provided. Use --help for available options.")
+        print("❓ No valid arguments provided. Use --help for options.")
 
 if __name__ == "__main__":
     main()

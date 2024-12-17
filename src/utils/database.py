@@ -52,24 +52,41 @@ def insert_historical_market_data(data):
 
 def insert_alternative_data(data):
     """
-    Insert rows into the alternative_data table.
+    Insert rows into the alternative_data table with validation.
 
     Args:
-        data (list): List of tuples [(data_source, symbol, date, key_metric, value), ...].
+        data (list): List of tuples (source, symbol, datetime, metric, value, details).
     """
     query = """
-        INSERT INTO alternative_data (data_source, symbol, date, key_metric, value)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO alternative_data (source, symbol, datetime, metric, value, details)
+        VALUES (%s, %s, %s, %s, %s, %s)
     """
     conn = connect_to_db()
     if not conn:
+        print("❌ Failed to connect to database.")
         return
 
     try:
-        with conn.cursor() as cursor:
-            execute_batch(cursor, query, data)
-        conn.commit()
-        print("✅ Alternative data inserted successfully.")
+        # Validate and log incoming data
+        clean_data = []
+        for record in data:
+            if len(record) != 6:
+                print(f"⚠️ Skipping invalid record (wrong length): {record}")
+                continue
+            if not record[0] or not record[3] or record[4] is None:  # Required fields
+                print(f"⚠️ Skipping incomplete record: {record}")
+                continue
+            clean_data.append(record)
+
+        # Insert validated data
+        if clean_data:
+            with conn.cursor() as cursor:
+                execute_batch(cursor, query, clean_data)
+            conn.commit()
+            print(f"✅ Successfully inserted {len(clean_data)} records into alternative_data.")
+        else:
+            print("⚠️ No valid data to insert.")
+
     except Exception as e:
         conn.rollback()
         print(f"❌ Error inserting alternative data: {e}")
