@@ -59,7 +59,7 @@ def on_message(ws, message):
     """
     Processes incoming messages from Alpaca's WebSocket.
     """
-    print(f"📩 Raw Message Received: {message}")  # Debug raw messages for now
+    # print(f"📩 Raw Message Received: {message}")  # Debug raw messages for now
 
     try:
         parsed_message = json.loads(message)
