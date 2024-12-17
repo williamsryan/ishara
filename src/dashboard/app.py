@@ -13,21 +13,35 @@ app.title = "Ishara Trading Dashboard"
 
 def fetch_data(table):
     """
-    Fetch data from the specified database table.
+    Fetch data from the specified database table and handle missing columns gracefully.
     """
-    if not table:  # Check for invalid table names
-        print("⚠️ Invalid table name provided.")
-        return pd.DataFrame()
-
-    conn = connect_to_db()
     try:
+        conn = connect_to_db()
         query = f"SELECT * FROM {table} ORDER BY datetime DESC LIMIT 1000"
-        return pd.read_sql(query, conn)
+        data = pd.read_sql(query, conn)
+
+        if not data.empty:
+            # Ensure 'datetime' column is a datetime object
+            data['datetime'] = pd.to_datetime(data['datetime'])
+
+            # Check for 'price' column for OHLC computation
+            if 'price' in data.columns:
+                # Resample to generate OHLC data for 1-minute intervals
+                ohlc_data = data.resample('1T', on='datetime')['price'].ohlc()
+                ohlc_data.reset_index(inplace=True)  # Reset index to expose 'datetime'
+                return ohlc_data
+
+            # If 'price' is not available, return raw data
+            print(f"⚠️ No 'price' column found in {table}. Returning raw data.")
+            return data
+        else:
+            return pd.DataFrame()
     except Exception as e:
-        print(f"❌ Error fetching data from {table}: {e}")
+        print(f"❌ Error fetching data: {e}")
         return pd.DataFrame()
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 # App Layout
 app.layout = html.Div([
@@ -65,30 +79,8 @@ def update_graph(table, n_intervals):
     if data.empty:
         return {"layout": {"title": "No Data Available"}}
 
-    if table == 'alternative_data':
-        # Plot multiple lines for different sources
-        figure = {
-            'data': [],
-            'layout': go.Layout(
-                title="Alternative Data Trends",
-                xaxis={'title': 'Datetime'},
-                yaxis={'title': 'Value'},
-                template="plotly_dark"
-            )
-        }
-
-        for metric in data['metric'].unique():
-            filtered = data[data['metric'] == metric]
-            figure['data'].append(
-                go.Scatter(
-                    x=filtered['datetime'],
-                    y=filtered['value'],
-                    mode='lines+markers',
-                    name=metric
-                )
-            )
-    else:
-        # Default candlestick chart for real-time and Yahoo Finance
+    # Check for OHLC data
+    if {'open', 'high', 'low', 'close'}.issubset(data.columns):
         figure = {
             'data': [
                 go.Candlestick(
@@ -104,6 +96,24 @@ def update_graph(table, n_intervals):
                 title=f"{table.replace('_', ' ').title()} Data",
                 xaxis={'title': 'Datetime'},
                 yaxis={'title': 'Price'},
+                template="plotly_dark"
+            )
+        }
+    else:
+        # For non-OHLC data (like alternative_data)
+        figure = {
+            'data': [
+                go.Scatter(
+                    x=data['datetime'],
+                    y=data[data.columns[1]],  # Use the second column dynamically
+                    mode='lines+markers',
+                    name=data.columns[1]
+                )
+            ],
+            'layout': go.Layout(
+                title=f"{table.replace('_', ' ').title()} Data",
+                xaxis={'title': 'Datetime'},
+                yaxis={'title': data.columns[1]},
                 template="plotly_dark"
             )
         }
