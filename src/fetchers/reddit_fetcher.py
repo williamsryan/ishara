@@ -2,17 +2,14 @@ import praw
 from datetime import datetime
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from src.utils.database import insert_alternative_data
+from src.utils.config import REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT
 
 def fetch_reddit_sentiment(subreddit, keyword):
     """
     Fetch Reddit posts and analyze sentiment using the official Reddit API.
     """
-    # Reddit API credentials (add these to config.py)
-    CLIENT_ID = "your_client_id"
-    CLIENT_SECRET = "your_client_secret"
-    USER_AGENT = "your_user_agent"
 
-    reddit = praw.Reddit(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent=USER_AGENT)
+    reddit = praw.Reddit(client_id=REDDIT_CLIENT_ID, client_secret=REDDIT_CLIENT_SECRET, user_agent=REDDIT_USER_AGENT)
     analyzer = SentimentIntensityAnalyzer()
 
     data_to_insert = []
@@ -26,7 +23,7 @@ def fetch_reddit_sentiment(subreddit, keyword):
             sentiment = analyzer.polarity_scores(text)["compound"]
             timestamp = datetime.utcfromtimestamp(submission.created_utc)
 
-            data_to_insert.append(("reddit", keyword, timestamp, "sentiment_score", sentiment, text[:500]))
+            data_to_insert.append(("reddit", keyword, timestamp, "sentiment_score", sentiment, text[:50]))
         
         if data_to_insert:
             print(f"✅ Inserting {len(data_to_insert)} Reddit records into the database...")
@@ -38,4 +35,3 @@ def fetch_reddit_sentiment(subreddit, keyword):
 
 if __name__ == "__main__":
     fetch_reddit_sentiment("stocks", "AAPL")
-    
