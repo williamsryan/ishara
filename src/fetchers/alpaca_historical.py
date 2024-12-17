@@ -66,4 +66,4 @@ def fetch_historical_data(symbols, start_date, end_date, timeframe="1Day"):
 
 if __name__ == "__main__":
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]  # Example symbols
-    insert_historical_data(symbols, "2020-01-01", "2022-12-31")
+    insert_historical_data(symbols, "2023-12-01", "2024-12-16")

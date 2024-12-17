@@ -2,6 +2,7 @@ import dash
 from dash import dcc, html, Input, Output, State, ctx, dash_table
 import pandas as pd
 import plotly.graph_objs as go
+from plotly.subplots import make_subplots
 import dash_bootstrap_components as dbc
 from src.utils.database import connect_to_db
 from threading import Thread
@@ -137,36 +138,93 @@ def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
         end_date = end_date or get_default_date_range(data)[1]
         start_date, end_date = pd.to_datetime(start_date), pd.to_datetime(end_date)
 
-        # Build Price Chart
-        figure = go.Figure()
+        # Create subplots: Rows = 2 (Price/Moving Avg + Volume)
+        figure = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                            vertical_spacing=0.1,
+                            subplot_titles=("Price & Moving Averages", "Volume Trends"))
 
         for symbol in symbols:
+            # Filter the data for this symbol and time range
             symbol_data = data[(data["symbol"] == symbol) &
-                               (data["datetime"] >= start_date) &
-                               (data["datetime"] <= end_date)]
+                            (data["datetime"] >= start_date) &
+                            (data["datetime"] <= end_date)]
 
+            # Determine the price column dynamically
             price_column = next((col for col in ["close", "price", "value", "last"] if col in symbol_data.columns), None)
-            if price_column:
-                figure.add_trace(go.Scatter(
-                    x=symbol_data["datetime"], y=symbol_data[price_column], mode="lines", name=f"{symbol} Price"
-                ))
+            if not price_column:
+                continue
 
-            # Overlay Alternative Data
-            if not alt_data.empty:
-                alt_symbol_data = alt_data[(alt_data["symbol"] == symbol) &
-                                           (alt_data["datetime"] >= start_date) &
-                                           (alt_data["datetime"] <= end_date)]
-                figure.add_trace(go.Scatter(
-                    x=alt_symbol_data["datetime"], y=alt_symbol_data["value"],
-                    mode="lines", name=f"{symbol} Alt Data", yaxis="y2"
-                ))
+            # Calculate Moving Averages for Buy/Sell Signals
+            symbol_data["SMA_50"] = symbol_data[price_column].rolling(window=50).mean()
+            symbol_data["SMA_200"] = symbol_data[price_column].rolling(window=200).mean()
 
+            # Plot Price Line
+            figure.add_trace(
+                go.Scatter(
+                    x=symbol_data["datetime"], 
+                    y=symbol_data[price_column],
+                    mode="lines", 
+                    name=f"{symbol} Price",
+                    line=dict(color="blue")
+                ), row=1, col=1
+            )
+
+            # Plot Moving Averages
+            figure.add_trace(
+                go.Scatter(
+                    x=symbol_data["datetime"], 
+                    y=symbol_data["SMA_50"],
+                    mode="lines", 
+                    name=f"{symbol} SMA 50",
+                    line=dict(color="orange", dash="dot")
+                ), row=1, col=1
+            )
+
+            figure.add_trace(
+                go.Scatter(
+                    x=symbol_data["datetime"], 
+                    y=symbol_data["SMA_200"],
+                    mode="lines", 
+                    name=f"{symbol} SMA 200",
+                    line=dict(color="red", dash="dot")
+                ), row=1, col=1
+            )
+
+            # Add Buy/Sell Markers (SMA crossover)
+            crossover = symbol_data[(symbol_data["SMA_50"] > symbol_data["SMA_200"])]
+            figure.add_trace(
+                go.Scatter(
+                    x=crossover["datetime"], 
+                    y=crossover[price_column],
+                    mode="markers",
+                    name=f"{symbol} Buy Signal",
+                    marker=dict(color="green", size=10, symbol="triangle-up")
+                ), row=1, col=1
+            )
+
+            # Add Volume Chart
+            if "volume" in symbol_data.columns:
+                figure.add_trace(
+                    go.Bar(
+                        x=symbol_data["datetime"],
+                        y=symbol_data["volume"],
+                        name=f"{symbol} Volume",
+                        marker=dict(color="gray", opacity=0.6)
+                    ), row=2, col=1
+                )
+
+        # Layout Improvements
         figure.update_layout(
-            title="Price and Alternative Data Overlay",
-            yaxis=dict(title="Price"),
-            yaxis2=dict(title="Alternative Data", overlaying="y", side="right"),
-            legend=dict(title="Symbols")
+            title="Price, Moving Averages, and Volume Trends",
+            height=700,
+            xaxis=dict(title="DateTime", rangeslider=dict(visible=True)),
+            yaxis=dict(title="Price", showgrid=True),
+            yaxis2=dict(title="Volume"),
+            hovermode="x unified",
+            legend=dict(x=0, y=1.2, orientation="h"),
+            template="plotly_dark"  # Switch to a sleek dark theme
         )
+
         return dcc.Graph(figure=figure)
 
     elif tab == "alternative-data":
