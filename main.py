@@ -1,9 +1,10 @@
 import argparse
 from src.fetchers.alpaca_historical import insert_historical_data
-from src.fetchers.yf_fetcher import fetch_yfinance_data
+from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
 from src.fetchers.google_trends_fetcher import fetch_google_trends_data
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.processors.alternative_data_streamer import stream_alternative_data
+from src.dashboard.app import run_dashboard
 from src.utils.database import connect_to_db
 
 def setup_database():
@@ -38,6 +39,10 @@ def fetch_alternative_data():
 
     print("🔍 Fetching alternative data...")
 
+    # Fetch Yahoo Finance
+    print("📊 Fetching Yahoo Finance data...")
+    fetch_yahoo_finance_data(symbols)
+
     # Fetch Google Trends
     print("📈 Fetching Google Trends data...")
     fetch_google_trends_data(keywords)
@@ -59,12 +64,20 @@ def stream_data():
     print("🚀 Starting real-time alternative data stream...")
     stream_alternative_data(symbols, keywords, subreddit="stocks", interval=300)
 
+def launch_dashboard():
+    """
+    Launch the interactive UI dashboard for viewing data.
+    """
+    print("🚀 Launching the Ishara Trading Dashboard...")
+    run_dashboard()
+
 def main():
-    parser = argparse.ArgumentParser(description="Ishara Data Pipeline")
+    parser = argparse.ArgumentParser(description="Ishara Data Pipeline and Dashboard")
     parser.add_argument("--setup-db", action="store_true", help="Test database connection.")
     parser.add_argument("--fetch-historical", action="store_true", help="Fetch historical market data.")
     parser.add_argument("--fetch-alternative", action="store_true", help="Fetch alternative data sources.")
     parser.add_argument("--stream-data", action="store_true", help="Stream alternative data in real-time.")
+    parser.add_argument("--launch-ui", action="store_true", help="Launch the interactive UI dashboard.")
 
     args = parser.parse_args()
 
@@ -76,6 +89,8 @@ def main():
         fetch_alternative_data()
     elif args.stream_data:
         stream_data()
+    elif args.launch_ui:
+        launch_dashboard()
     else:
         print("❓ No valid arguments provided. Use --help for options.")
 

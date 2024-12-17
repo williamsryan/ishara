@@ -10,6 +10,17 @@ CREATE TABLE IF NOT EXISTS historical_market_data (
     volume BIGINT
 );
 
+CREATE TABLE IF NOT EXISTS yahoo_finance_data (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
+    volume BIGINT
+);
+
 CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10),
@@ -19,7 +30,7 @@ CREATE TABLE IF NOT EXISTS real_time_market_data (
 );
 
 -- Trade execution logs for analysis and backtesting
-CREATE TABLE trade_logs (
+CREATE TABLE IF NOT EXISTS trade_logs (
     id SERIAL PRIMARY KEY,
     strategy_name TEXT NOT NULL,     -- Name of the trading strategy
     symbol TEXT NOT NULL,            -- Stock symbol
@@ -30,7 +41,7 @@ CREATE TABLE trade_logs (
     pnl DOUBLE PRECISION             -- Profit and loss (for tracking results)
 );
 
-CREATE TABLE backtest_results (
+CREATE TABLE IF NOT EXISTS backtest_results (
     id SERIAL PRIMARY KEY,
     strategy_name VARCHAR(255) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
