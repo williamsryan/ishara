@@ -24,8 +24,8 @@ def fetch_historical_data():
     Fetch historical stock data from Alpaca and store it in the database.
     """
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
-    start_date = "2023-12-01"
-    end_date = "2024-12-16"
+    start_date = "2015-01-01"
+    end_date = "2024-12-17"
     print(f"📊 Fetching historical data for symbols: {symbols}")
     insert_historical_data(symbols, start_date, end_date)
     print("✅ Historical data fetch complete.")
@@ -34,8 +34,8 @@ def fetch_alternative_data():
     """
     Fetch alternative data sources: Google Trends, Reddit sentiment, Yahoo Finance.
     """
-    symbols = ["AAPL", "MSFT"]
-    keywords = ["AAPL", "MSFT"]
+    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
+    keywords = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
     subreddits = ["stocks", "wallstreetbets"]
 
     print("🔍 Fetching alternative data...")

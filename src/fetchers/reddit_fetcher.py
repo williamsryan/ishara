@@ -15,7 +15,7 @@ def fetch_reddit_sentiment(subreddit, keyword):
     data_to_insert = []
     try:
         print(f"🔍 Fetching Reddit posts from subreddit '{subreddit}' for keyword '{keyword}'...")
-        for submission in reddit.subreddit(subreddit).search(keyword, limit=100):
+        for submission in reddit.subreddit(subreddit).search(keyword, limit=1000):
             text = (submission.title + " " + submission.selftext).strip()
             if not text:
                 continue

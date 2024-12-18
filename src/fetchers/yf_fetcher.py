@@ -12,7 +12,7 @@ def fetch_yahoo_finance_data(symbols):
         for symbol in symbols:
             print(f"📊 Fetching Yahoo Finance data for {symbol}...")
             stock = yf.Ticker(symbol)
-            history = stock.history(period="1y", interval="1d")
+            history = stock.history(period="1y", interval="1h")
 
             # Prepare data for insertion
             for date, row in history.iterrows():
