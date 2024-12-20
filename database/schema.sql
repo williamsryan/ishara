@@ -1,12 +1,25 @@
 -- Historical and real-time stock market data
+-- Historical market data table
 CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10),
-    datetime TIMESTAMP,
-    open DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close DOUBLE PRECISION,
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
+    volume BIGINT
+);
+
+-- Real-time market data table
+CREATE TABLE IF NOT EXISTS real_time_market_data (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
     volume BIGINT
 );
 
@@ -18,17 +31,6 @@ CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     high NUMERIC,
     low NUMERIC,
     close NUMERIC,
-    volume BIGINT
-);
-
-CREATE TABLE IF NOT EXISTS real_time_market_data (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10),
-    datetime TIMESTAMP,
-    open DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close DOUBLE PRECISION,
     volume BIGINT
 );
 
@@ -66,13 +68,19 @@ CREATE TABLE IF NOT EXISTS alternative_data (
     details TEXT               -- Optional extra information (e.g., JSON payload)
 );
 
-CREATE TABLE company_analysis (
+CREATE TABLE IF NOT EXISTS company_analysis (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
     datetime TIMESTAMP NOT NULL,
     log_returns DOUBLE PRECISION,
     pe_ratio DOUBLE PRECISION,
     market_cap BIGINT,
+    pnl DOUBLE PRECISION,
     cluster_id INT DEFAULT NULL,
-    regime_label INT DEFAULT NULL
+    regime_label INT DEFAULT NULL,
+    delta NUMERIC,
+    gamma NUMERIC,
+    theta NUMERIC,
+    vega NUMERIC,
+    iv NUMERIC
 );
