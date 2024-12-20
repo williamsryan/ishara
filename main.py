@@ -5,6 +5,8 @@ from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
 from src.fetchers.google_trends_fetcher import fetch_google_trends_data
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.processors.alternative_data_streamer import stream_alternative_data
+from src.processors.clustering_analysis import perform_clustering_analysis
+from src.processors.regime_analysis import perform_regime_analysis
 from src.dashboard.app import run_dashboard_with_stream
 from src.utils.database import connect_to_db
 
@@ -68,6 +70,22 @@ def stream_real_time_data():
     # print("🚀 Starting real-time alternative data stream...")
     # stream_alternative_data(symbols, keywords, subreddit="stocks", interval=300)
 
+def perform_clustering():
+    """
+    Perform clustering analysis on historical and alternative data.
+    """
+    print("🔍 Performing clustering analysis...")
+    perform_clustering_analysis()
+    print("✅ Clustering analysis complete.")
+
+def perform_regime_analysis():
+    """
+    Perform regime detection analysis on historical data.
+    """
+    print("🔍 Performing regime detection analysis...")
+    perform_regime_detection()
+    print("✅ Regime detection analysis complete.")
+
 def launch_dashboard():
     """
     Launch the interactive UI dashboard for viewing data.
@@ -80,7 +98,9 @@ def main():
     parser.add_argument("--setup-db", action="store_true", help="Test database connection.")
     parser.add_argument("--fetch-historical", action="store_true", help="Fetch historical market data.")
     parser.add_argument("--fetch-alternative", action="store_true", help="Fetch alternative data sources.")
-    parser.add_argument("--stream-data", action="store_true", help="Stream alternative data in real-time.")
+    parser.add_argument("--stream-data", action="store_true", help="Stream real-time market data.")
+    parser.add_argument("--perform-clustering", action="store_true", help="Perform clustering analysis.")
+    parser.add_argument("--perform-regime", action="store_true", help="Perform regime detection analysis.")
     parser.add_argument("--launch-ui", action="store_true", help="Launch the interactive UI dashboard.")
 
     args = parser.parse_args()
@@ -93,6 +113,10 @@ def main():
         fetch_alternative_data()
     elif args.stream_data:
         stream_real_time_data()
+    elif args.perform_clustering:
+        perform_clustering()
+    elif args.perform_regime:
+        perform_regime_analysis()
     elif args.launch_ui:
         launch_dashboard()
     else:
