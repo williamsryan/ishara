@@ -83,12 +83,14 @@ def populate_clustering_data(conn):
     """
     # Fetch raw data from historical and real-time tables
     historical_query = """
-    SELECT symbol, datetime, close, open, pe_ratio, market_cap
+    SELECT symbol, datetime, close, open, 
+           (market_cap / pe_ratio) AS pe_ratio, market_cap
     FROM historical_market_data
     WHERE close IS NOT NULL AND open IS NOT NULL
     """
     real_time_query = """
-    SELECT symbol, datetime, close, open, pe_ratio, market_cap
+    SELECT symbol, datetime, close, open, 
+           (market_cap / pe_ratio) AS pe_ratio, market_cap
     FROM real_time_market_data
     WHERE close IS NOT NULL AND open IS NOT NULL
     """
@@ -118,3 +120,4 @@ def populate_clustering_data(conn):
         """, (row["symbol"], row["datetime"], row["log_returns"], row["pe_ratio"], row["market_cap"]))
     conn.commit()
     print("✅ Populated company_analysis table with data from historical and real-time tables.")
+    

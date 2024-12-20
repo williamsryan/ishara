@@ -18,6 +18,7 @@ websocket-client
 
 # Data Processing and Serialization
 numpy
+scipy
 
 # Optional for JSON Parsing/Backtesting Extensions
 python-dateutil
