@@ -70,9 +70,9 @@ CREATE TABLE company_analysis (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
     datetime TIMESTAMP NOT NULL,
-    log_returns FLOAT,
-    pe_ratio FLOAT,
-    market_cap FLOAT,
-    cluster_id INT,             -- Clustering results
-    regime_label VARCHAR(20)    -- Regime analysis results (e.g., Bearish, Neutral, Bullish)
+    log_returns DOUBLE PRECISION,
+    pe_ratio DOUBLE PRECISION,
+    market_cap BIGINT,
+    cluster_id INT DEFAULT NULL,
+    regime_label INT DEFAULT NULL
 );

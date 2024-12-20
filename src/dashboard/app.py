@@ -133,11 +133,13 @@ def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
         return html.Div("⚠️ Please select symbols to display data.")
 
     data = fetch_data(source, symbols=symbols, limit=1000)
-    alt_data = fetch_data("alternative_data", symbols=symbols, limit=1000) if overlay_toggle else pd.DataFrame()
 
-    if data.empty and tab != "analyses":
+    # Separate fetching for alternative data (independent of overlay toggle)
+    alt_data = fetch_data("alternative_data", symbols=symbols, limit=1000) if tab == "alternative-data" else None
+
+    if data.empty and tab not in ["analyses", "alternative-data"]:
         return html.Div("⚠️ No data available for the selected criteria.", className="error-message")
-    
+
     start_date = start_date or data["datetime"].min() if not data.empty else None
     end_date = end_date or data["datetime"].max() if not data.empty else None
     start_date, end_date = pd.to_datetime(start_date), pd.to_datetime(end_date)
@@ -156,55 +158,154 @@ def update_content(tab, source, symbols, start_date, end_date, overlay_toggle):
         return dcc.Graph(figure=figure)
 
     elif tab == "alternative-data":
-        # Fetch the alternative data
-        data = fetch_data("alternative_data", symbols=symbols)
-        if data.empty:
+        if alt_data is None or alt_data.empty:
             return html.Div("⚠️ No alternative data available for the selected symbols.")
 
-        # Layout: Tabs for Table View and Trend Visualization
+        sentiment_data = alt_data[alt_data["metric"] == "sentiment_score"]
+        mentions_data = alt_data[alt_data["metric"] == "mentions"]
+
+        sentiment_figure = go.Figure()
+        mentions_figure = go.Figure()
+
+        # Sentiment Graph
+        for symbol in symbols:
+            symbol_sentiment = sentiment_data[sentiment_data["symbol"] == symbol]
+            sentiment_figure.add_trace(go.Scatter(
+                x=symbol_sentiment["datetime"], y=symbol_sentiment["value"],
+                mode="lines", name=f"{symbol} Sentiment"
+            ))
+        sentiment_figure.update_layout(
+            title="Sentiment Trend Over Time", xaxis_title="Datetime", yaxis_title="Sentiment Score",
+            template="seaborn"
+        )
+
+        # Mentions Graph
+        for symbol in symbols:
+            symbol_mentions = mentions_data[mentions_data["symbol"] == symbol]
+            mentions_figure.add_trace(go.Bar(
+                x=symbol_mentions["datetime"], y=symbol_mentions["value"],
+                name=f"{symbol} Mentions"
+            ))
+        mentions_figure.update_layout(
+            title="Google Mentions Over Time", xaxis_title="Datetime", yaxis_title="Mentions",
+            template="plotly_white"
+        )
+
+        # Display graphs and table
         return html.Div([
-            dcc.Tabs(id="alt-data-tabs", value="table-view", children=[
-                dcc.Tab(label="📋 Table View", value="table-view"),
-                dcc.Tab(label="📈 Trend Visualization", value="trend-view")
-            ]),
-            html.Div(id="alt-data-tab-content", className="mt-3")
-        ])
-    
-    elif tab == "table_view":
+            dcc.Graph(figure=sentiment_figure),
+            dcc.Graph(figure=mentions_figure),
+            dash_table.DataTable(
+                id="alt-data-table",
+                columns=[{"name": col, "id": col} for col in alt_data.columns],
+                data=alt_data.to_dict("records"),
+                style_table={"overflowX": "auto"},
+                style_header={"backgroundColor": "#f8f9fa", "fontWeight": "bold"},
+                style_cell={"textAlign": "left", "whiteSpace": "normal"},
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                row_selectable="multi",
+                page_size=10,
+                selected_rows=[],
+            )
+        ], className="p-3")
+
+    elif tab == "table-view":
+        # Historical Data Table
         data = fetch_data("historical_market_data", symbols=symbols)
-
-        if data.empty:
-            return html.Div("⚠️ No data available for the selected symbols.")
-
         return dash_table.DataTable(
             id="historical_data_table",
             columns=[{"name": col, "id": col} for col in data.columns],
             data=data.to_dict("records"),
             style_table={"overflowX": "auto"},
-            style_header={"backgroundColor": "rgb(30, 30, 30)", "color": "white"},
-            style_cell={"backgroundColor": "rgb(50, 50, 50)", "color": "white"}
+            style_header={"backgroundColor": "#f8f9fa", "fontWeight": "bold"},
+            style_cell={"textAlign": "left", "whiteSpace": "normal"},
+            filter_action="native",
+            sort_action="native",
+            sort_mode="multi",
+            row_selectable="multi",
+            page_size=10,
+            selected_rows=[],
         )
 
     elif tab == "analyses":
         # Analyses Tab
-        print("🔍 Running analyses on the selected data...")
-
-        # Clustering Analysis
-        cluster_result = perform_clustering_analysis(symbols=symbols)
-
-        # Regime Analysis
-        regime_result = perform_regime_analysis(data=data, symbols=symbols)
-
         return html.Div([
-            html.Div([
-                html.H4("📐 Clustering Analysis"),
-                dcc.Graph(figure=cluster_result)
+            dbc.Row([
+                dbc.Col([
+                    html.H4("Clustering Analysis", className="mt-3"),
+                    dcc.Graph(id="clustering-result")
+                ], width=6),
+                dbc.Col([
+                    html.H4("Regime Analysis", className="mt-3"),
+                    dcc.Graph(id="regime-result")
+                ], width=6),
             ]),
-            html.Div([
-                html.H4("📊 Regime Analysis"),
-                dcc.Graph(figure=regime_result)
-            ]),
-        ], className="p-3")
+            dbc.Row([
+                dbc.Col([
+                    dbc.Button("Run Analyses", id="run-analyses", color="primary", className="mt-3"),
+                ], width=12, className="d-flex justify-content-center")
+            ])
+        ])
+    
+# Callbacks to Trigger Analyses
+@app.callback(
+    [Output("clustering-result", "figure"), Output("regime-result", "figure")],
+    [Input("run-analyses", "n_clicks")],
+    [dash.dependencies.State("symbol-selector", "value"),
+     dash.dependencies.State("data-source", "value")]
+)
+def run_analyses(n_clicks, symbols, source):
+    if not n_clicks or not symbols:
+        return go.Figure(), go.Figure()
+
+    try:
+        # Perform Clustering Analysis
+        clustering_results = perform_clustering_analysis(symbols=symbols)
+        clustering_fig = go.Figure()
+
+        # Visualize Clustering Results
+        for cluster_id, cluster_data in clustering_results.groupby("cluster"):
+            clustering_fig.add_trace(go.Scatter(
+                x=cluster_data["x"],
+                y=cluster_data["y"],
+                mode="markers",
+                name=f"Cluster {cluster_id}",
+                marker=dict(size=10)
+            ))
+
+        clustering_fig.update_layout(
+            title="Clustering Analysis Results",
+            xaxis_title="Feature 1",
+            yaxis_title="Feature 2",
+            template="plotly_white"
+        )
+
+        # Perform Regime Analysis
+        regime_results = perform_regime_analysis(symbols=symbols)
+        regime_fig = go.Figure()
+
+        # Visualize Regime Results
+        for regime_id, regime_data in regime_results.groupby("regime"):
+            regime_fig.add_trace(go.Scatter(
+                x=regime_data["datetime"],
+                y=regime_data["value"],
+                mode="lines",
+                name=f"Regime {regime_id}"
+            ))
+
+        regime_fig.update_layout(
+            title="Regime Analysis Results",
+            xaxis_title="Datetime",
+            yaxis_title="Metric Value",
+            template="plotly_white"
+        )
+
+        return clustering_fig, regime_fig
+    except Exception as e:
+        print(f"❌ Error performing analyses: {e}")
+        return go.Figure(), go.Figure()
 
 # Run Streamer
 def run_dashboard_with_stream():
