@@ -1,5 +1,4 @@
 -- Historical and real-time stock market data
--- Historical market data table
 CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
@@ -8,10 +7,11 @@ CREATE TABLE IF NOT EXISTS historical_market_data (
     high NUMERIC,
     low NUMERIC,
     close NUMERIC,
-    volume BIGINT
+    volume BIGINT,
+    pe_ratio NUMERIC,              -- Price-to-earnings ratio
+    market_cap BIGINT              -- Market capitalization
 );
 
--- Real-time market data table
 CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS real_time_market_data (
     high NUMERIC,
     low NUMERIC,
     close NUMERIC,
-    volume BIGINT
+    volume BIGINT,
+    pe_ratio NUMERIC,              -- Price-to-earnings ratio
+    market_cap BIGINT              -- Market capitalization
 );
 
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
