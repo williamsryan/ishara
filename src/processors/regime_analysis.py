@@ -1,31 +1,45 @@
 import pandas as pd
-import numpy as np
-from plotly.graph_objs import Box, Figure
+from sklearn.preprocessing import StandardScaler
+from sklearn.mixture import GaussianMixture
+from plotly.graph_objs import Scatter, Figure
 from src.utils.database import connect_to_db
 
-def perform_regime_analysis(data, symbols=None):
+def perform_regime_analysis(symbols=None):
     """
-    Identifies market regimes and returns a visualization.
+    Performs regime analysis on company data and returns a visualization.
+    Updates regime labels back to the database.
     """
+    conn = connect_to_db()
+    query = """
+    SELECT symbol, datetime, log_returns
+    FROM company_analysis
+    """
+    if symbols:
+        symbol_filter = ",".join([f"'{s}'" for s in symbols])
+        query += f" WHERE symbol IN ({symbol_filter}) ORDER BY datetime"
+
+    # Fetch data
+    data = pd.read_sql_query(query, conn)
     if data.empty:
         print("⚠️ No data available for regime analysis.")
-        return Figure()
+        conn.close()
+        return Figure()  # Return an empty figure for the dashboard
 
-    # Define regimes based on log returns
-    data["Regime"] = pd.cut(
-        data["log_returns"],
-        bins=[-np.inf, -0.02, 0.02, np.inf],
-        labels=["Bearish", "Neutral", "Bullish"]
-    )
+    # Preprocessing: Scale log returns
+    scaler = StandardScaler()
+    data["log_returns_scaled"] = scaler.fit_transform(data[["log_returns"]])
 
-    # Save regime labels to the database
-    conn = connect_to_db()
+    # Apply Gaussian Mixture Model (GMM) for regime analysis
+    gmm = GaussianMixture(n_components=3, random_state=42)
+    data["regime"] = gmm.fit_predict(data[["log_returns_scaled"]])
+
+    # Save regime results back to the database
     for _, row in data.iterrows():
         conn.execute("""
         UPDATE company_analysis
         SET regime_label = %s
-        WHERE symbol = %s
-        """, (row["Regime"], row["symbol"]))
+        WHERE symbol = %s AND datetime = %s
+        """, (int(row["regime"]), row["symbol"], row["datetime"]))
     conn.commit()
     conn.close()
 
@@ -33,17 +47,19 @@ def perform_regime_analysis(data, symbols=None):
 
     # Generate visualization
     figure = Figure()
-    for regime in data["Regime"].unique():
-        regime_data = data[data["Regime"] == regime]
-        figure.add_trace(Box(
+    for regime in data["regime"].unique():
+        regime_data = data[data["regime"] == regime]
+        figure.add_trace(Scatter(
+            x=regime_data["datetime"],
             y=regime_data["log_returns"],
-            name=f"{regime} Regime",
-            boxmean=True
+            mode="lines",
+            name=f"Regime {regime}"
         ))
 
     figure.update_layout(
         title="Regime Analysis",
+        xaxis_title="Datetime",
         yaxis_title="Log Returns",
-        template="plotly_dark"
+        template="plotly_white"
     )
     return figure

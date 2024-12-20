@@ -75,7 +75,7 @@ def perform_clustering():
     Perform clustering analysis on historical and alternative data.
     """
     print("🔍 Performing clustering analysis...")
-    perform_clustering_analysis()
+    perform_clustering_analysis(["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"])
     print("✅ Clustering analysis complete.")
 
 def perform_regime_analysis():
