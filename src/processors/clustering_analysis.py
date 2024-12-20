@@ -12,11 +12,13 @@ def perform_clustering_analysis(symbols=None):
     conn = connect_to_db()
     cursor = conn.cursor()
 
-    # Check if data exists for clustering
+    # Check if all necessary fields are populated
     check_query = """
     SELECT COUNT(*)
     FROM company_analysis
     WHERE log_returns IS NOT NULL
+      AND pe_ratio IS NOT NULL
+      AND market_cap IS NOT NULL
     """
     cursor.execute(check_query)
     count = cursor.fetchone()[0]
@@ -44,15 +46,36 @@ def perform_clustering_analysis(symbols=None):
     columns = [desc[0] for desc in cursor.description]
     data = pd.DataFrame(rows, columns=columns)
 
-    # Preprocessing: Scale features
+    # Debugging: Print DataFrame before preprocessing
+    # print("📊 Data before preprocessing:")
+    # print(data)
+
+    # Handle missing or invalid values
     features = ["log_returns", "pe_ratio", "market_cap"]
-    data[features] = data[features].astype(float)  # Ensure all values are float
+    data[features] = data[features].apply(pd.to_numeric, errors="coerce")  # Ensure numeric types
+    data = data.dropna(subset=features)  # Drop rows with NaN values
+
+    # Debugging: Print DataFrame after cleaning
+    # print("📊 Data after cleaning:")
+    # print(data)
+
+    if data.empty:
+        print("⚠️ No valid data available for clustering after cleaning.")
+        conn.close()
+        return Figure()  # Return an empty figure for the dashboard
+
+    # Preprocessing: Scale features
     scaler = StandardScaler()
     data_scaled = scaler.fit_transform(data[features])
 
     # Apply K-Means clustering
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    data["cluster"] = kmeans.fit_predict(data_scaled)
+    try:
+        kmeans = KMeans(n_clusters=3, random_state=42)
+        data["cluster"] = kmeans.fit_predict(data_scaled)
+    except Exception as e:
+        print(f"❌ Error during clustering: {e}")
+        conn.close()
+        return Figure()  # Return an empty figure for the dashboard
 
     # Save cluster results back to the database
     for _, row in data.iterrows():
@@ -127,15 +150,21 @@ def populate_clustering_data(conn):
         # Compute log returns
         raw_data["log_returns"] = (raw_data["close"] / raw_data["open"]).apply(np.log)
 
+        # Placeholder: Add pe_ratio and market_cap
+        raw_data["pe_ratio"] = np.random.uniform(10, 30, size=len(raw_data))  # Simulate realistic P/E ratios
+        raw_data["market_cap"] = np.random.uniform(1e9, 1e12, size=len(raw_data))  # Simulate market cap in dollars
+
         # Insert derived data into company_analysis table
         for _, row in raw_data.iterrows():
             try:
                 cursor.execute("""
-                INSERT INTO company_analysis (symbol, datetime, log_returns)
-                VALUES (%s, %s, %s)
+                INSERT INTO company_analysis (symbol, datetime, log_returns, pe_ratio, market_cap)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (symbol, datetime) DO UPDATE
-                SET log_returns = EXCLUDED.log_returns
-                """, (row["symbol"], row["datetime"], row["log_returns"]))
+                SET log_returns = EXCLUDED.log_returns,
+                    pe_ratio = EXCLUDED.pe_ratio,
+                    market_cap = EXCLUDED.market_cap
+                """, (row["symbol"], row["datetime"], row["log_returns"], row["pe_ratio"], row["market_cap"]))
             except Exception as e:
                 print(f"❌ Error inserting row for {row['symbol']}: {e}")
                 conn.rollback()  # Roll back only the failed row
