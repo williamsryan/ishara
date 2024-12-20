@@ -1,11 +1,35 @@
+# Core Python Libraries
+pandas==2.0.3
+psycopg2-binary==2.9.7  # PostgreSQL database driver
+sqlalchemy==1.4.31  # SQL toolkit and Object-Relational Mapping (ORM) library
+
+# Yahoo Finance Fetcher
+yfinance==0.2.30
+
+# Google Trends Fetcher
+pytrends==4.9.2
+
+# Reddit Sentiment Fetcher
+requests==2.31.0
+vaderSentiment==3.3.2  # Sentiment analysis library
+
+# Real-time WebSocket Streaming
+websocket-client==1.7.0
+
+# Data Processing and Serialization
+numpy==1.26.0
+
+# Optional for JSON Parsing/Backtesting Extensions
+python-dateutil==2.8.2
+
+# Etc.
 alpaca-trade-api
 quiverquant
 dash
 pandas
-numpy
+fastapi
 matplotlib
 plotly
 backtrader
-websocket-client
-yfinance
-sqlalchemy
+praw
+dash-bootstrap-components

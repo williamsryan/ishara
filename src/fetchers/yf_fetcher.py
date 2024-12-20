@@ -1,40 +1,32 @@
 import yfinance as yf
-from src.utils.database import insert_alternative_data
+from datetime import datetime
+from src.utils.database import insert_yahoo_finance_data
 
-def fetch_yahoo_key_stats(symbols):
+def fetch_yahoo_finance_data(symbols):
     """
-    Fetch key statistics from Yahoo Finance.
-
-    Args:
-        symbols (list): List of stock symbols to fetch data for.
-
-    Returns:
-        list: List of tuples [(data_source, symbol, date, key_metric, value), ...].
+    Fetch historical data from Yahoo Finance and insert into the database.
     """
-    data = []
-    for symbol in symbols:
-        print(f"Fetching key statistics for {symbol}...")
-        ticker = yf.Ticker(symbol)
-        stats = ticker.info
+    data_to_insert = []
 
-        # Extract relevant metrics
-        metrics = {
-            "MarketCap": stats.get("marketCap"),
-            "PE_Ratio": stats.get("trailingPE"),
-            "DividendYield": stats.get("dividendYield"),
-            "52_Week_High": stats.get("fiftyTwoWeekHigh"),
-            "52_Week_Low": stats.get("fiftyTwoWeekLow")
-        }
+    try:
+        for symbol in symbols:
+            print(f"📊 Fetching Yahoo Finance data for {symbol}...")
+            stock = yf.Ticker(symbol)
+            history = stock.history(period="1y", interval="1h")
 
-        for key, value in metrics.items():
-            if value is not None:  # Avoid null entries
-                data.append(("YahooFinance", symbol, stats.get("regularMarketTime"), key, value))
+            # Prepare data for insertion
+            for date, row in history.iterrows():
+                data_to_insert.append((symbol, date, row['Open'], row['High'], row['Low'], row['Close'], row['Volume']))
 
-    return data
+        # Insert data into the database
+        if data_to_insert:
+            insert_yahoo_finance_data(data_to_insert)
+        else:
+            print("⚠️ No data fetched to insert.")
+
+    except Exception as e:
+        print(f"❌ Error fetching Yahoo Finance data: {e}")
 
 if __name__ == "__main__":
-    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]  # Example symbols
-    data = fetch_yahoo_key_stats(symbols)
-    insert_alternative_data(data)
-    print("Key statistics data inserted into alternative_data table.")
+    fetch_yahoo_finance_data(["AAPL", "MSFT", "GOOGL", "AMZN"])
     

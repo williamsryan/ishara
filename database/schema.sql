@@ -1,27 +1,36 @@
 -- Historical and real-time stock market data
-CREATE TABLE stock_data (
+CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
-    symbol TEXT NOT NULL,
-    datetime TIMESTAMP NOT NULL,
-    open DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close DOUBLE PRECISION,
+    symbol VARCHAR(10),
+    datetime TIMESTAMP,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
     volume BIGINT
 );
 
--- Alternative data (e.g., QuiverQuant's congressional trades)
-CREATE TABLE alternative_data (
+CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     id SERIAL PRIMARY KEY,
-    data_source TEXT NOT NULL,       -- Name of the source (e.g., "QuiverQuant")
-    symbol TEXT,                     -- Stock symbol
-    date TIMESTAMP,                  -- Date of the record
-    key_metric TEXT NOT NULL,        -- Metric name (e.g., "Sentiment Score")
-    value TEXT NOT NULL              -- Metric value (as string for flexibility)
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
+    volume BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS real_time_market_data (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10),
+    datetime TIMESTAMP,
+    price NUMERIC,
+    volume BIGINT
 );
 
 -- Trade execution logs for analysis and backtesting
-CREATE TABLE trade_logs (
+CREATE TABLE IF NOT EXISTS trade_logs (
     id SERIAL PRIMARY KEY,
     strategy_name TEXT NOT NULL,     -- Name of the trading strategy
     symbol TEXT NOT NULL,            -- Stock symbol
@@ -32,7 +41,7 @@ CREATE TABLE trade_logs (
     pnl DOUBLE PRECISION             -- Profit and loss (for tracking results)
 );
 
-CREATE TABLE backtest_results (
+CREATE TABLE IF NOT EXISTS backtest_results (
     id SERIAL PRIMARY KEY,
     strategy_name VARCHAR(255) NOT NULL,
     symbol VARCHAR(10) NOT NULL,
@@ -42,4 +51,14 @@ CREATE TABLE backtest_results (
     final_value NUMERIC NOT NULL,
     return_percentage NUMERIC NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS alternative_data (
+    id SERIAL PRIMARY KEY,
+    source VARCHAR(50),        -- Source of the data (e.g., 'yfinance', 'google_trends')
+    symbol VARCHAR(10),        -- Stock symbol (if applicable)
+    datetime TIMESTAMP,        -- Date and time of data
+    metric VARCHAR(50),        -- Metric name (e.g., 'search_volume', 'sentiment_score')
+    value NUMERIC,             -- Metric value
+    details TEXT               -- Optional extra information (e.g., JSON payload)
 );
