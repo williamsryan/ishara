@@ -74,15 +74,20 @@ CREATE TABLE IF NOT EXISTS company_analysis (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
     datetime TIMESTAMP NOT NULL,
-    log_returns DOUBLE PRECISION,
-    pe_ratio DOUBLE PRECISION,
-    market_cap BIGINT,
-    pnl DOUBLE PRECISION,
-    cluster_id INT DEFAULT NULL,
-    regime_label INT DEFAULT NULL,
-    delta NUMERIC,
-    gamma NUMERIC,
-    theta NUMERIC,
-    vega NUMERIC,
-    iv NUMERIC
+    log_returns NUMERIC,
+    pe_ratio NUMERIC,
+    market_cap NUMERIC,
+    cluster_id INT,
+    regime VARCHAR(50),
+    CONSTRAINT unique_symbol_datetime UNIQUE (symbol, datetime)
+);
+
+CREATE TABLE IF NOT EXISTS derived_metrics (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    metric_name VARCHAR(50) NOT NULL,
+    value NUMERIC,
+    details TEXT,
+    CONSTRAINT unique_metric_symbol_datetime UNIQUE (symbol, metric_name, datetime)
 );
