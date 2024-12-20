@@ -1,6 +1,6 @@
 import time
 from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
-from src.fetchers.google_trends_fetcher import fetch_google_trends_data
+from src.fetchers.google_trends_fetcher import fetch_google_trends
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 
 def stream_alternative_data(symbols, keywords, subreddit="stocks", interval=60):
@@ -12,7 +12,7 @@ def stream_alternative_data(symbols, keywords, subreddit="stocks", interval=60):
         fetch_yahoo_finance_data(symbols)
 
         print("🔍 Streaming Google Trends data...")
-        fetch_google_trends_data(keywords)
+        fetch_google_trends(keywords)
 
         print("📰 Streaming Reddit sentiment data...")
         for keyword in keywords:

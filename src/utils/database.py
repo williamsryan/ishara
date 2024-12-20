@@ -24,6 +24,35 @@ def connect_to_db():
 
 # -------------------- INSERT METHODS --------------------
 
+def insert_real_time_data(data):
+    """
+    Insert real-time market data into the database.
+
+    Args:
+        data (list): List of tuples with real-time market data.
+                    Each tuple should have:
+                    (symbol, datetime, open, high, low, close, volume).
+    """
+    query = """
+        INSERT INTO real_time_market_data (symbol, datetime, open, high, low, close, volume)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """
+    conn = connect_to_db()
+    if not conn:
+        print("❌ Failed to connect to the database.")
+        return
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.executemany(query, data)
+        conn.commit()
+        print(f"✅ Successfully inserted {len(data)} records into real_time_market_data.")
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Error inserting real-time data: {e}")
+    finally:
+        conn.close()
+
 def insert_historical_market_data(data):
     """
     Insert rows into the historical_market_data table.
@@ -67,7 +96,6 @@ def insert_alternative_data(data):
         return
 
     try:
-        # Validate and log incoming data
         clean_data = []
         for record in data:
             if len(record) != 6:
@@ -78,7 +106,6 @@ def insert_alternative_data(data):
                 continue
             clean_data.append(record)
 
-        # Insert validated data
         if clean_data:
             with conn.cursor() as cursor:
                 execute_batch(cursor, query, clean_data)

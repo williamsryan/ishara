@@ -1,41 +1,49 @@
-from hmmlearn.hmm import GaussianHMM
 import pandas as pd
+import numpy as np
+from plotly.graph_objs import Box, Figure
 from src.utils.database import connect_to_db
 
-def perform_regime_analysis():
-    conn = connect_to_db()
-    query = """
-    SELECT symbol, datetime, log_returns
-    FROM company_analysis
+def perform_regime_analysis(data, symbols=None):
     """
-    data = pd.read_sql_query(query, conn)
-    conn.close()
+    Identifies market regimes and returns a visualization.
+    """
+    if data.empty:
+        print("⚠️ No data available for regime analysis.")
+        return Figure()
 
-    # Fit HMM for each symbol
-    results = []
-    for symbol in data["symbol"].unique():
-        symbol_data = data[data["symbol"] == symbol].sort_values("datetime")
-        X = symbol_data["log_returns"].values.reshape(-1, 1)
+    # Define regimes based on log returns
+    data["Regime"] = pd.cut(
+        data["log_returns"],
+        bins=[-np.inf, -0.02, 0.02, np.inf],
+        labels=["Bearish", "Neutral", "Bullish"]
+    )
 
-        hmm = GaussianHMM(n_components=2, covariance_type="full", random_state=42)
-        hmm.fit(X)
-        states = hmm.predict(X)
-
-        symbol_data["regime"] = states
-        results.append(symbol_data)
-
-    # Concatenate results
-    all_results = pd.concat(results)
-
-    # Save regimes back to the database
+    # Save regime labels to the database
     conn = connect_to_db()
-    for _, row in all_results.iterrows():
+    for _, row in data.iterrows():
         conn.execute("""
         UPDATE company_analysis
-        SET regime = %s
-        WHERE symbol = %s AND datetime = %s
-        """, (row["regime"], row["symbol"], row["datetime"]))
+        SET regime_label = %s
+        WHERE symbol = %s
+        """, (row["Regime"], row["symbol"]))
     conn.commit()
     conn.close()
 
-    print("✅ Regime detection results stored in the database.")
+    print("✅ Regime analysis results stored in the database.")
+
+    # Generate visualization
+    figure = Figure()
+    for regime in data["Regime"].unique():
+        regime_data = data[data["Regime"] == regime]
+        figure.add_trace(Box(
+            y=regime_data["log_returns"],
+            name=f"{regime} Regime",
+            boxmean=True
+        ))
+
+    figure.update_layout(
+        title="Regime Analysis",
+        yaxis_title="Log Returns",
+        template="plotly_dark"
+    )
+    return figure

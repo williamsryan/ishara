@@ -3,10 +3,10 @@ CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10),
     datetime TIMESTAMP,
-    open NUMERIC,
-    high NUMERIC,
-    low NUMERIC,
-    close NUMERIC,
+    open DOUBLE PRECISION,
+    high DOUBLE PRECISION,
+    low DOUBLE PRECISION,
+    close DOUBLE PRECISION,
     volume BIGINT
 );
 
@@ -25,7 +25,10 @@ CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10),
     datetime TIMESTAMP,
-    price NUMERIC,
+    open DOUBLE PRECISION,
+    high DOUBLE PRECISION,
+    low DOUBLE PRECISION,
+    close DOUBLE PRECISION,
     volume BIGINT
 );
 
@@ -61,4 +64,15 @@ CREATE TABLE IF NOT EXISTS alternative_data (
     metric VARCHAR(50),        -- Metric name (e.g., 'search_volume', 'sentiment_score')
     value NUMERIC,             -- Metric value
     details TEXT               -- Optional extra information (e.g., JSON payload)
+);
+
+CREATE TABLE company_analysis (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    log_returns FLOAT,
+    pe_ratio FLOAT,
+    market_cap FLOAT,
+    cluster_id INT,             -- Clustering results
+    regime_label VARCHAR(20)    -- Regime analysis results (e.g., Bearish, Neutral, Bullish)
 );

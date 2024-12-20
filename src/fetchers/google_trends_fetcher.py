@@ -1,72 +1,58 @@
 from pytrends.request import TrendReq
-from datetime import datetime
-from time import sleep
-import random
 from src.utils.database import insert_alternative_data
 
-def fetch_google_trends_data(keywords):
+def fetch_google_trends(symbols):
     """
-    Fetch Google Trends data for a list of keywords and insert into the database.
+    Fetch Google Trends data for the given symbols and insert it into the database.
+
+    Args:
+        symbols (list): List of symbols to fetch trends data for.
     """
-    data_to_insert = []
+    pytrends = TrendReq(hl='en-US', tz=360)
+    all_data = []
 
-    # pytrends = TrendReq(
-    #     hl='en-US', tz=360, 
-    #     proxies=['https://34.203.233.13:80', 'https://51.79.50.22:8080'],
-    #     retries=3,
-    #     backoff_factor=0.3
-    # )
-
-    for keyword in keywords:
-        retries = 3  # Number of retries for each keyword
-        for attempt in range(retries):
-            try:
-                print(f"📊 Fetching Google Trends data for keyword: {keyword} (Attempt {attempt + 1})...")
-                pytrends = TrendReq(hl='en-US', tz=360)  # Reinitialize for each keyword
-                pytrends.build_payload([keyword], timeframe="today 1-m", geo='', gprop='')
-
-                # Fetch trends data
-                trends = pytrends.interest_over_time()
-
-                if trends.empty:
-                    print(f"⚠️ No trends data returned for keyword: {keyword}")
-                else:
-                    print(f"✅ Trends data fetched successfully for keyword: {keyword}")
-                    print(trends.tail())  # Debug output
-
-                    # Extract latest search volume
-                    search_volume = trends[keyword].iloc[-1]
-                    print(f"📈 Latest search volume for {keyword}: {search_volume}")
-
-                    # Prepare data for insertion
-                    data_to_insert.append((
-                        "google_trends",
-                        keyword,
-                        datetime.now(),
-                        "search_volume",
-                        search_volume,
-                        None
-                    ))
-                break  # Exit retry loop on success
-            except Exception as e:
-                print(f"❌ Error fetching Google Trends data for {keyword}: {e}")
-                sleep(10)  # Short delay before retry
-        else:
-            print(f"❌ Failed to fetch data for keyword: {keyword} after {retries} attempts.")
-
-        # Respect rate limits
-        delay = random.randint(15, 45)
-        print(f"⏳ Sleeping for {delay} seconds to respect rate limits...")
-        sleep(delay)
-
-    # Insert fetched data into the database
-    if data_to_insert:
+    for symbol in symbols:
         try:
-            print(f"🛠️ Inserting {len(data_to_insert)} records into the database...")
-            insert_alternative_data(data_to_insert)
-            print(f"✅ Successfully inserted {len(data_to_insert)} records.")
-        except Exception as db_error:
-            print(f"❌ Error inserting data into the database: {db_error}")
+            print(f"📊 Fetching Google Trends data for keyword: {symbol}...")
+            pytrends.build_payload(kw_list=[symbol], timeframe='today 5-y')
+            trends_data = pytrends.interest_over_time()
+
+            if trends_data.empty:
+                print(f"⚠️ No trends data available for symbol: {symbol}.")
+                continue
+
+            processed_data = process_google_trends_data(trends_data, symbol)
+            all_data.extend(processed_data)
+
+            print(f"✅ Successfully fetched trends data for keyword: {symbol}.")
+        except Exception as e:
+            print(f"❌ Error fetching Google Trends data for {symbol}: {e}")
+
+    if all_data:
+        print(f"🛠️ Inserting {len(all_data)} records into the database...")
+        insert_alternative_data(all_data)
     else:
-        print("⚠️ No valid data fetched to insert.")
-        
+        print("⚠️ No valid Google Trends data to insert.")
+
+def process_google_trends_data(data, symbol):
+    """
+    Processes Google Trends data for insertion into the database.
+
+    Args:
+        data (DataFrame): DataFrame containing Google Trends data.
+        symbol (str): Symbol for which data is fetched.
+
+    Returns:
+        list: Processed data ready for database insertion.
+    """
+    processed_data = []
+    for index, row in data.iterrows():
+        processed_data.append((
+            'google_trends',
+            symbol,
+            pd.Timestamp(index).to_pydatetime(),  # Convert to native datetime
+            'search_volume',
+            int(row[symbol]),                     # Cast numpy.int64 to int
+            f"Partial: {row['isPartial']}"        # Add partial details
+        ))
+    return processed_data
