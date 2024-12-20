@@ -2,7 +2,7 @@ import argparse
 from src.fetchers.alpaca_historical import insert_historical_data
 from src.fetchers.alpaca_realtime import start_stream as stream_alpaca_realtime
 from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
-from src.fetchers.google_trends_fetcher import fetch_google_trends_data
+from src.fetchers.google_trends_fetcher import fetch_google_trends
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.processors.alternative_data_streamer import stream_alternative_data
 from src.processors.clustering_analysis import perform_clustering_analysis
@@ -48,7 +48,7 @@ def fetch_alternative_data():
 
     # Fetch Google Trends
     print("📈 Fetching Google Trends data...")
-    fetch_google_trends_data(keywords)
+    fetch_google_trends(keywords)
 
     # Fetch Reddit sentiment
     print("📰 Fetching Reddit sentiment data...")
@@ -83,7 +83,7 @@ def perform_regime_analysis():
     Perform regime detection analysis on historical data.
     """
     print("🔍 Performing regime detection analysis...")
-    perform_regime_detection()
+    perform_regime_analysis()
     print("✅ Regime detection analysis complete.")
 
 def launch_dashboard():
