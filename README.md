@@ -22,16 +22,47 @@ Ishara (الإشارة) is a modular algorithmic trading platform designed for:
 ## **Project Structure**
 ```plaintext
 ishara/
-├── data/                     # Data storage
-│   ├── raw/                  # Raw data fetched from APIs
-│   ├── processed/            # Cleaned and normalized data
-├── database/                 # Database schema and SQL scripts
-├── notebooks/                # Jupyter notebooks for exploration
-├── src/                      # Core source code
-│   ├── fetchers/             # API fetchers
-│   ├── algorithms/           # Trading algorithms
-│   ├── backtesting/          # Backtesting utilities
-│   ├── dashboard/            # Visualization tools
-│   ├── utils/                # Utilities for config and database connections
-├── requirements.txt          # Python dependencies
-├── README.md                 # Project documentation
+├── data/                   # Organized storage for data
+│   ├── raw/                # Raw fetched data (e.g., API responses)
+│   ├── processed/          # Cleaned and normalized data
+│   ├── derived/            # Derived metrics (e.g., P/E ratio, momentum)
+├── database/               # Database schema, migrations, and setup scripts
+│   ├── schema.sql          # Unified database schema
+│   ├── migrations/         # Incremental migration scripts
+├── notebooks/              # Jupyter notebooks for research and prototyping
+├── src/                    # Source code
+│   ├── fetchers/           # API fetchers
+│   │   ├── alpaca_fetcher.py
+│   │   ├── yahoo_finance_fetcher.py
+│   │   ├── google_trends_fetcher.py
+│   │   ├── reddit_sentiment_fetcher.py
+│   │   ├── websocket_stream.py
+│   ├── processors/         # Analysis and computation scripts
+│   │   ├── clustering_analysis.py
+│   │   ├── regime_analysis.py
+│   │   ├── derived_metrics.py
+│   ├── backtesting/        # Backtesting engine
+│   │   ├── backtrader_engine.py
+│   │   ├── strategy_templates/
+│   │   │   ├── moving_average.py
+│   │   │   ├── momentum_strategy.py
+│   ├── dashboard/          # Visualization and dashboard components
+│   │   ├── app.py          # Main app file
+│   │   ├── components/     # Modular UI components
+│   │   │   ├── clustering_chart.py
+│   │   │   ├── regime_chart.py
+│   │   │   ├── performance_chart.py
+│   │   │   ├── data_table.py
+│   │   │   ├── tabs.py
+│   ├── utils/              # Shared utilities
+│   │   ├── database.py     # DB connection and query utilities
+│   │   ├── config.py       # Configuration variables
+│   │   ├── logger.py       # Logging utilities
+├── tests/                  # Unit and integration tests
+│   ├── test_fetchers.py
+│   ├── test_processors.py
+│   ├── test_dashboard.py
+├── requirements.txt        # Python dependencies
+├── README.md               # Documentation
+├── run.py                  # Entry point to launch the system
+```
