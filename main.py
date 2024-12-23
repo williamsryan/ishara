@@ -26,8 +26,8 @@ def fetch_historical_data():
     Fetch historical stock data from Alpaca and store it in the database.
     """
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
-    start_date = "2015-01-01"
-    end_date = "2024-12-17"
+    start_date = "2024-12-01"
+    end_date = "2024-12-20"
     print(f"📊 Fetching historical data for symbols: {symbols}")
     insert_historical_data(symbols, start_date, end_date)
     print("✅ Historical data fetch complete.")

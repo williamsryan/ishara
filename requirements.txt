@@ -36,3 +36,4 @@ praw
 dash-bootstrap-components
 scikit-learn
 hmmlearn
+networkx

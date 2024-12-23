@@ -1,3 +1,6 @@
+-- CREATE EXTENSION IF NOT EXISTS timescaledb;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- Historical and real-time stock market data
 CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
@@ -7,10 +10,9 @@ CREATE TABLE IF NOT EXISTS historical_market_data (
     high NUMERIC,
     low NUMERIC,
     close NUMERIC,
-    volume BIGINT,
-    pe_ratio NUMERIC,              -- Price-to-earnings ratio
-    market_cap BIGINT              -- Market capitalization
+    volume BIGINT
 );
+-- SELECT create_hypertable('historical_market_data', 'datetime');
 
 CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
@@ -21,9 +23,10 @@ CREATE TABLE IF NOT EXISTS real_time_market_data (
     low NUMERIC,
     close NUMERIC,
     volume BIGINT,
-    pe_ratio NUMERIC,              -- Price-to-earnings ratio
-    market_cap BIGINT              -- Market capitalization
+    pe_ratio NUMERIC,
+    market_cap BIGINT
 );
+-- SELECT create_hypertable('real_time_market_data', 'datetime');
 
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     id SERIAL PRIMARY KEY,
@@ -62,22 +65,22 @@ CREATE TABLE IF NOT EXISTS backtest_results (
 
 CREATE TABLE IF NOT EXISTS alternative_data (
     id SERIAL PRIMARY KEY,
-    source VARCHAR(50),        -- Source of the data (e.g., 'yfinance', 'google_trends')
-    symbol VARCHAR(10),        -- Stock symbol (if applicable)
-    datetime TIMESTAMP,        -- Date and time of data
-    metric VARCHAR(50),        -- Metric name (e.g., 'search_volume', 'sentiment_score')
-    value NUMERIC,             -- Metric value
-    details TEXT               -- Optional extra information (e.g., JSON payload)
+    source VARCHAR(50) NOT NULL,        -- Source of the data (e.g., 'yfinance', 'google_trends')
+    symbol VARCHAR(10) NOT NULL,        -- Stock symbol
+    datetime TIMESTAMP NOT NULL,        -- Date and time of data
+    metric VARCHAR(50),                 -- Metric name (e.g., 'search_volume', 'sentiment_score')
+    value NUMERIC,                      -- Metric value
+    details TEXT                        -- Optional extra information (e.g., JSON payload)
 );
 
 CREATE TABLE IF NOT EXISTS company_analysis (
     id SERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,
     datetime TIMESTAMP NOT NULL,
-    log_returns NUMERIC,
-    pe_ratio NUMERIC,
-    market_cap NUMERIC,
-    cluster_id INT,
+    log_returns DOUBLE PRECISION,
+    pe_ratio DOUBLE PRECISION,
+    market_cap DOUBLE PRECISION,
+    cluster_id INTEGER,
     regime VARCHAR(50),
     CONSTRAINT unique_symbol_datetime UNIQUE (symbol, datetime)
 );
