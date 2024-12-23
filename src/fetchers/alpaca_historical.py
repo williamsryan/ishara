@@ -5,7 +5,7 @@ from src.utils.config import ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL
 
 api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL)
 
-def insert_historical_data(symbols, start, end, timeframe="1Hour"):
+def insert_historical_data(symbols, start, end, timeframe="1Day"):
     """
     Fetch and store historical stock data for multiple symbols at the finest granularity.
 
