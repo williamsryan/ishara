@@ -1,4 +1,4 @@
--- CREATE EXTENSION IF NOT EXISTS timescaledb;
+CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Historical and real-time stock market data
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS historical_market_data (
     close NUMERIC,
     volume BIGINT
 );
--- SELECT create_hypertable('historical_market_data', 'datetime');
+SELECT create_hypertable('historical_market_data', 'datetime');
 
 CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS real_time_market_data (
     pe_ratio NUMERIC,
     market_cap BIGINT
 );
--- SELECT create_hypertable('real_time_market_data', 'datetime');
+SELECT create_hypertable('real_time_market_data', 'datetime');
 
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     id SERIAL PRIMARY KEY,
