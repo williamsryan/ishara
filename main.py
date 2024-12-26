@@ -9,18 +9,20 @@ from src.processors.regime_analysis import perform_regime_analysis
 from src.dashboard.app import run_dashboard
 import json
 
+DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTT", "QBTS", "QUBTS", "MSTR", "PLTR", "PL", "KURA"]
+
 def populate_database(target):
     """
     Populate the database with data from selected sources.
     """
     if target == "alpaca_historical":
-        insert_historical_data(["AAPL", "MSFT", "GOOGL", "AMZN"])
+        insert_historical_data(DEFAULT_TICKERS)
     elif target == "alpaca_realtime":
         fetch_real_time_data()
     elif target == "yahoo_finance":
-        fetch_yahoo_finance_data(["AAPL", "MSFT", "GOOGL", "AMZN"])
+        fetch_yahoo_finance_data(DEFAULT_TICKERS)
     elif target == "google_trends":
-        fetch_google_trends(["AAPL", "MSFT", "GOOGL", "AMZN"])
+        fetch_google_trends(DEFAULT_TICKERS)
     elif target == "reddit":
         fetch_reddit_sentiment("stocks", "AAPL")
     else:
