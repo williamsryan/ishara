@@ -1,58 +1,41 @@
 from pytrends.request import TrendReq
+from datetime import datetime
 from src.utils.database import insert_alternative_data
 
 def fetch_google_trends(symbols):
     """
-    Fetch Google Trends data for the given symbols and insert it into the database.
-
-    Args:
-        symbols (list): List of symbols to fetch trends data for.
+    Fetch Google Trends data for symbols and insert into the database.
     """
-    pytrends = TrendReq(hl='en-US', tz=360)
-    all_data = []
+    pytrends = TrendReq()
+    data_to_insert = []
 
     for symbol in symbols:
-        try:
-            print(f"📊 Fetching Google Trends data for keyword: {symbol}...")
-            pytrends.build_payload(kw_list=[symbol], timeframe='today 5-y')
-            trends_data = pytrends.interest_over_time()
+        print(f"🔍 Fetching Google Trends data for {symbol}...")
+        pytrends.build_payload([symbol], timeframe="now 7-d")
+        trends = pytrends.interest_over_time()
 
-            if trends_data.empty:
-                print(f"⚠️ No trends data available for symbol: {symbol}.")
+        if trends.empty:
+            print(f"⚠️ No trends data found for {symbol}.")
+            continue
+
+        for date, row in trends.iterrows():
+            if 'isPartial' in row and row['isPartial']:
                 continue
+            data_to_insert.append((
+                "google_trends",  # Source
+                symbol,
+                date,
+                "interest_over_time",
+                row[symbol],
+                None  # Details
+            ))
 
-            processed_data = process_google_trends_data(trends_data, symbol)
-            all_data.extend(processed_data)
-
-            print(f"✅ Successfully fetched trends data for keyword: {symbol}.")
-        except Exception as e:
-            print(f"❌ Error fetching Google Trends data for {symbol}: {e}")
-
-    if all_data:
-        print(f"🛠️ Inserting {len(all_data)} records into the database...")
-        insert_alternative_data(all_data)
+    # Insert data into the database
+    if data_to_insert:
+        insert_alternative_data(data_to_insert)
     else:
-        print("⚠️ No valid Google Trends data to insert.")
+        print("⚠️ No data fetched to insert.")
 
-def process_google_trends_data(data, symbol):
-    """
-    Processes Google Trends data for insertion into the database.
-
-    Args:
-        data (DataFrame): DataFrame containing Google Trends data.
-        symbol (str): Symbol for which data is fetched.
-
-    Returns:
-        list: Processed data ready for database insertion.
-    """
-    processed_data = []
-    for index, row in data.iterrows():
-        processed_data.append((
-            'google_trends',
-            symbol,
-            pd.Timestamp(index).to_pydatetime(),  # Convert to native datetime
-            'search_volume',
-            int(row[symbol]),                     # Cast numpy.int64 to int
-            f"Partial: {row['isPartial']}"        # Add partial details
-        ))
-    return processed_data
+if __name__ == "__main__":
+    fetch_google_trends(["AAPL", "MSFT", "GOOGL", "AMZN"])
+    

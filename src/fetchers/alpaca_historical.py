@@ -52,7 +52,7 @@ def fetch_historical_data(symbols, start_date, end_date, timeframe="1Day"):
     """
     all_data = []
     for symbol in symbols:
-        print(f"Fetching historical data for {symbol}...")
+        print(f"📊 Fetching historical data for {symbol}...")
         bars = api.get_bars(symbol, timeframe, start=start_date, end=end_date).df
         bars.index = bars.index.tz_convert(None)  # Remove timezone info
 

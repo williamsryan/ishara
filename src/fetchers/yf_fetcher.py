@@ -15,7 +15,17 @@ def fetch_yahoo_finance_data(symbols):
 
         # Prepare data for insertion
         for date, row in history.iterrows():
-            data_to_insert.append((symbol, date, row['Open'], row['High'], row['Low'], row['Close'], row['Volume']))
+            data_to_insert.append((
+                symbol,
+                date,
+                row['Open'],
+                row['High'],
+                row['Low'],
+                row['Close'],
+                row['Volume'],
+                None,  # Dividends
+                None   # Earnings
+            ))
 
     # Insert data into the database
     if data_to_insert:

@@ -1,96 +1,89 @@
-CREATE EXTENSION IF NOT EXISTS timescaledb;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- Connect to the default 'postgres' database first
+\c postgres;
 
--- Historical and real-time stock market data
+-- Terminate all active connections to the target database
+DO $$ BEGIN
+    PERFORM pg_terminate_backend(pg_stat_activity.pid)
+    FROM pg_stat_activity
+    WHERE pg_stat_activity.datname = 'ishara' AND pid <> pg_backend_pid();
+END $$;
+
+-- Drop the database if it exists
+DROP DATABASE IF EXISTS ishara;
+
+-- Create the database
+CREATE DATABASE ishara;
+
+-- Connect to the new database
+\c ishara;
+
+-- Table for historical market data (e.g., OHLC data)
 CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    datetime TIMESTAMP NOT NULL,
-    open NUMERIC,
-    high NUMERIC,
-    low NUMERIC,
-    close NUMERIC,
-    volume BIGINT
-);
-SELECT create_hypertable('historical_market_data', 'datetime');
-
-CREATE TABLE IF NOT EXISTS real_time_market_data (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    datetime TIMESTAMP NOT NULL,
+    symbol TEXT NOT NULL,
+    datetime TIMESTAMPTZ NOT NULL,
     open NUMERIC,
     high NUMERIC,
     low NUMERIC,
     close NUMERIC,
     volume BIGINT,
-    pe_ratio NUMERIC,
-    market_cap BIGINT
+    UNIQUE(symbol, datetime)
 );
-SELECT create_hypertable('real_time_market_data', 'datetime');
 
+-- Table for Yahoo Finance data
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    datetime TIMESTAMP NOT NULL,
+    symbol TEXT NOT NULL,
+    datetime TIMESTAMPTZ NOT NULL,
     open NUMERIC,
     high NUMERIC,
     low NUMERIC,
     close NUMERIC,
-    volume BIGINT
+    volume BIGINT,
+    dividends NUMERIC,
+    earnings NUMERIC
 );
 
--- Trade execution logs for analysis and backtesting
-CREATE TABLE IF NOT EXISTS trade_logs (
+-- Table for real-time market data
+CREATE TABLE IF NOT EXISTS real_time_market_data (
     id SERIAL PRIMARY KEY,
-    strategy_name TEXT NOT NULL,     -- Name of the trading strategy
-    symbol TEXT NOT NULL,            -- Stock symbol
-    action TEXT NOT NULL,            -- "BUY" or "SELL"
-    quantity INT NOT NULL,           -- Number of shares traded
-    price_per_share DOUBLE PRECISION NOT NULL, -- Price at execution
-    datetime TIMESTAMP NOT NULL,     -- Execution timestamp
-    pnl DOUBLE PRECISION             -- Profit and loss (for tracking results)
+    symbol TEXT NOT NULL,
+    datetime TIMESTAMPTZ NOT NULL,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
+    volume BIGINT,
+    price NUMERIC,
+    UNIQUE(symbol, datetime)
 );
 
-CREATE TABLE IF NOT EXISTS backtest_results (
-    id SERIAL PRIMARY KEY,
-    strategy_name VARCHAR(255) NOT NULL,
-    symbol VARCHAR(10) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    initial_value NUMERIC NOT NULL,
-    final_value NUMERIC NOT NULL,
-    return_percentage NUMERIC NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
+-- Table for alternative data (e.g., sentiment, trends)
 CREATE TABLE IF NOT EXISTS alternative_data (
     id SERIAL PRIMARY KEY,
-    source VARCHAR(50) NOT NULL,        -- Source of the data (e.g., 'yfinance', 'google_trends')
-    symbol VARCHAR(10) NOT NULL,        -- Stock symbol
-    datetime TIMESTAMP NOT NULL,        -- Date and time of data
-    metric VARCHAR(50),                 -- Metric name (e.g., 'search_volume', 'sentiment_score')
-    value NUMERIC,                      -- Metric value
-    details TEXT                        -- Optional extra information (e.g., JSON payload)
-);
-
-CREATE TABLE IF NOT EXISTS company_analysis (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    datetime TIMESTAMP NOT NULL,
-    log_returns DOUBLE PRECISION,
-    pe_ratio DOUBLE PRECISION,
-    market_cap DOUBLE PRECISION,
-    cluster_id INTEGER,
-    regime VARCHAR(50),
-    CONSTRAINT unique_symbol_datetime UNIQUE (symbol, datetime)
-);
-
-CREATE TABLE IF NOT EXISTS derived_metrics (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    datetime TIMESTAMP NOT NULL,
-    metric_name VARCHAR(50) NOT NULL,
+    source TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    datetime TIMESTAMPTZ NOT NULL,
+    metric TEXT NOT NULL,
     value NUMERIC,
     details TEXT,
-    CONSTRAINT unique_metric_symbol_datetime UNIQUE (symbol, metric_name, datetime)
+    UNIQUE(symbol, datetime, metric)
 );
+
+-- Table for derived metrics (e.g., technical indicators)
+CREATE TABLE IF NOT EXISTS derived_metrics (
+    id SERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    datetime TIMESTAMPTZ NOT NULL,
+    log_returns NUMERIC,
+    pe_ratio NUMERIC,
+    market_cap NUMERIC,
+    UNIQUE(symbol, datetime)
+);
+
+-- Indexes for fast querying
+CREATE INDEX IF NOT EXISTS idx_historical_market_data ON historical_market_data (symbol, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_yahoo_finance_data ON yahoo_finance_data (symbol, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_real_time_market_data ON real_time_market_data (symbol, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_alternative_data ON alternative_data (symbol, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_derived_metrics ON derived_metrics (symbol, datetime DESC);
