@@ -17,7 +17,6 @@ def setup_database():
     conn = connect_to_db()
     if conn:
         print("✅ Database connection successful.")
-        conn.close()
     else:
         print("❌ Database connection failed.")
 
@@ -37,7 +36,6 @@ def fetch_alternative_data():
     Fetch alternative data sources: Google Trends, Reddit sentiment, Yahoo Finance.
     """
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
-    keywords = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
     subreddits = ["stocks", "wallstreetbets"]
 
     print("🔍 Fetching alternative data...")
@@ -48,13 +46,13 @@ def fetch_alternative_data():
 
     # Fetch Google Trends
     print("📈 Fetching Google Trends data...")
-    fetch_google_trends(keywords)
+    fetch_google_trends(symbols)
 
     # Fetch Reddit sentiment
     print("📰 Fetching Reddit sentiment data...")
     for subreddit in subreddits:
-        for keyword in keywords:
-            fetch_reddit_sentiment(subreddit, keyword)
+        for symbol in symbols:
+            fetch_reddit_sentiment(subreddit, symbol)
 
     print("✅ Alternative data fetch complete.")
 

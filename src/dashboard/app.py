@@ -25,7 +25,8 @@ app.layout = dbc.Container(
     children=[
         dbc.Row(dbc.Col(render_header(), width=12)),
         dbc.Row(
-            [
+            className="g-0",  # Use Bootstrap class for no gutters
+            children=[
                 dbc.Col(render_sidebar(), width=3),
                 dbc.Col(
                     [
@@ -35,7 +36,6 @@ app.layout = dbc.Container(
                     width=9,
                 ),
             ],
-            no_gutters=True,
         ),
     ],
 )
