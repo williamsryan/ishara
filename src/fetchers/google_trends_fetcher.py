@@ -1,12 +1,16 @@
 from pytrends.request import TrendReq
 from datetime import datetime
 from src.utils.database import insert_alternative_data
+import pandas as pd
 
 def fetch_google_trends(symbols):
     """
-    Fetch Google Trends data for symbols and insert into the database.
+    Fetch Google Trends data for the given symbols and insert it into the database.
+
+    Args:
+        symbols (list): List of symbols to fetch trends data for.
     """
-    pytrends = TrendReq()
+    pytrends = TrendReq(hl='en-US', tz=360)
     data_to_insert = []
 
     for symbol in symbols:
@@ -24,9 +28,9 @@ def fetch_google_trends(symbols):
             data_to_insert.append((
                 "google_trends",  # Source
                 symbol,
-                date,
+                pd.Timestamp(date).to_pydatetime(),  # Convert to native datetime
                 "interest_over_time",
-                row[symbol],
+                int(row[symbol]),   # Cast numpy.int64 to int
                 None  # Details
             ))
 

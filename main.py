@@ -1,124 +1,81 @@
 import argparse
 from src.fetchers.alpaca_historical import insert_historical_data
-from src.fetchers.alpaca_realtime import start_stream as stream_alpaca_realtime
+from src.fetchers.alpaca_realtime import fetch_real_time_data
 from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
 from src.fetchers.google_trends_fetcher import fetch_google_trends
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
-from src.processors.alternative_data_streamer import stream_alternative_data
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
-from src.dashboard.app import run_dashboard_with_stream
-from src.utils.database import connect_to_db
+from src.dashboard.app import run_dashboard
+import json
 
-def setup_database():
+def populate_database(target):
     """
-    Test the database connection to ensure everything is working.
+    Populate the database with data from selected sources.
     """
-    conn = connect_to_db()
-    if conn:
-        print("✅ Database connection successful.")
+    if target == "alpaca_historical":
+        insert_historical_data(["AAPL", "MSFT", "GOOGL", "AMZN"])
+    elif target == "alpaca_realtime":
+        fetch_real_time_data()
+    elif target == "yahoo_finance":
+        fetch_yahoo_finance_data(["AAPL", "MSFT", "GOOGL", "AMZN"])
+    elif target == "google_trends":
+        fetch_google_trends(["AAPL", "MSFT", "GOOGL", "AMZN"])
+    elif target == "reddit":
+        fetch_reddit_sentiment("stocks", "AAPL")
     else:
-        print("❌ Database connection failed.")
+        print(f"⚠️ Unknown target '{target}' for database population.")
 
-def fetch_historical_data():
+def run_analysis(analysis_type):
     """
-    Fetch historical stock data from Alpaca and store it in the database.
+    Run a specified analysis and display results.
     """
-    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
-    start_date = "2024-12-01"
-    end_date = "2024-12-20"
-    print(f"📊 Fetching historical data for symbols: {symbols}")
-    insert_historical_data(symbols, start_date, end_date)
-    print("✅ Historical data fetch complete.")
-
-def fetch_alternative_data():
-    """
-    Fetch alternative data sources: Google Trends, Reddit sentiment, Yahoo Finance.
-    """
-    symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
-    subreddits = ["stocks", "wallstreetbets"]
-
-    print("🔍 Fetching alternative data...")
-
-    # Fetch Yahoo Finance
-    print("📊 Fetching Yahoo Finance data...")
-    fetch_yahoo_finance_data(symbols)
-
-    # Fetch Google Trends
-    print("📈 Fetching Google Trends data...")
-    fetch_google_trends(symbols)
-
-    # Fetch Reddit sentiment
-    print("📰 Fetching Reddit sentiment data...")
-    for subreddit in subreddits:
-        for symbol in symbols:
-            fetch_reddit_sentiment(subreddit, symbol)
-
-    print("✅ Alternative data fetch complete.")
-
-def stream_real_time_data():
-    """
-    Stream real-time Alpaca market data.
-    """
-    print("🚀 Starting Alpaca real-time data streaming...")
-    stream_alpaca_realtime()
-
-    # symbols = ["AAPL", "MSFT"]
-    # keywords = ["AAPL", "MSFT"]
-    # print("🚀 Starting real-time alternative data stream...")
-    # stream_alternative_data(symbols, keywords, subreddit="stocks", interval=300)
-
-def perform_clustering():
-    """
-    Perform clustering analysis on historical and alternative data.
-    """
-    print("🔍 Performing clustering analysis...")
-    perform_clustering_analysis(["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"])
-    print("✅ Clustering analysis complete.")
-
-def perform_regime_analysis():
-    """
-    Perform regime detection analysis on historical data.
-    """
-    print("🔍 Performing regime detection analysis...")
-    perform_regime_analysis()
-    print("✅ Regime detection analysis complete.")
-
-def launch_dashboard():
-    """
-    Launch the interactive UI dashboard for viewing data.
-    """
-    print("🚀 Launching the Ishara Trading Dashboard...")
-    run_dashboard_with_stream()
+    if analysis_type == "clustering":
+        perform_clustering_analysis()
+    elif analysis_type == "regime":
+        perform_regime_analysis()
+    else:
+        print(f"⚠️ Unknown analysis type '{analysis_type}'.")
 
 def main():
-    parser = argparse.ArgumentParser(description="Ishara Data Pipeline and Dashboard")
-    parser.add_argument("--setup-db", action="store_true", help="Test database connection.")
-    parser.add_argument("--fetch-historical", action="store_true", help="Fetch historical market data.")
-    parser.add_argument("--fetch-alternative", action="store_true", help="Fetch alternative data sources.")
-    parser.add_argument("--stream-data", action="store_true", help="Stream real-time market data.")
-    parser.add_argument("--perform-clustering", action="store_true", help="Perform clustering analysis.")
-    parser.add_argument("--perform-regime", action="store_true", help="Perform regime detection analysis.")
-    parser.add_argument("--launch-ui", action="store_true", help="Launch the interactive UI dashboard.")
+    parser = argparse.ArgumentParser(description="Ishara Platform Manager")
+    subparsers = parser.add_subparsers(dest="command")
+
+    # Subcommand: Populate Database
+    populate_parser = subparsers.add_parser("populate", help="Populate the database with data.")
+    populate_parser.add_argument("target", choices=["alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit"], help="Data source to populate.")
+
+    # Subcommand: Run Analyses
+    analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")
+    analysis_parser.add_argument("type", choices=["clustering", "regime"], help="Type of analysis to perform.")
+
+    # Subcommand: Launch UI
+    subparsers.add_parser("ui", help="Launch the Ishara dashboard UI.")
+
+    # Subcommand: Load Data
+    load_parser = subparsers.add_parser("load", help="Specify input file to load ticker data (JSON)")
+    load_parser.add_argument("file", type=str, help="Path to the input JSON file containing ticker data.")
 
     args = parser.parse_args()
 
-    if args.setup_db:
-        setup_database()
-    elif args.fetch_historical:
-        fetch_historical_data()
-    elif args.fetch_alternative:
-        fetch_alternative_data()
-    elif args.stream_data:
-        stream_real_time_data()
-    elif args.perform_clustering:
-        perform_clustering()
-    elif args.perform_regime:
-        perform_regime_analysis()
-    elif args.launch_ui:
-        launch_dashboard()
+    if args.command == "populate":
+        populate_database(args.target)
+    elif args.command == "analyze":
+        run_analysis(args.type)
+    elif args.command == "ui":
+        run_dashboard()
+    elif args.command == "load":
+        print(f"Loading data from input file: {args.file}")
+        def load_ticker_data(file_path):
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+            return data
+
+        ticker_data = load_ticker_data(args.file)
+        print(f"Loaded ticker data: {ticker_data}")
     else:
-        print("❓ No valid arguments provided. Use --help for options.")
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
+    

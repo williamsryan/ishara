@@ -18,11 +18,11 @@ def fetch_yahoo_finance_data(symbols):
             data_to_insert.append((
                 symbol,
                 date,
-                row['Open'],
-                row['High'],
-                row['Low'],
-                row['Close'],
-                row['Volume'],
+                int(row['Open']),
+                int(row['High']),
+                int(row['Low']),
+                int(row['Close']),
+                int(row['Volume']),
                 None,  # Dividends
                 None   # Earnings
             ))

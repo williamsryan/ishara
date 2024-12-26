@@ -8,7 +8,7 @@ from src.dashboard.widgets.symbol_watchlist import SymbolWatchlist
 from src.dashboard.widgets.data_table import DataTableWidget
 from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCharts
 from src.dashboard.widgets.analyses import AnalysisCharts
-from src.fetchers.alpaca_realtime import start_stream
+from src.fetchers.alpaca_realtime import fetch_real_time_data
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -58,12 +58,11 @@ def update_tab(tab_value):
         return html.Div("Invalid tab selected!")
 
 # Start Dashboard with Streaming
-def run_dashboard_with_stream():
-    stream_thread = Thread(target=start_stream)
+def run_dashboard():
+    stream_thread = Thread(target=fetch_real_time_data)
     stream_thread.daemon = True
     stream_thread.start()
     app.run_server(debug=True)
 
 if __name__ == "__main__":
-    run_dashboard_with_stream()
-    
+    run_dashboard()
