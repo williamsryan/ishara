@@ -9,7 +9,7 @@ from src.processors.regime_analysis import perform_regime_analysis
 from src.dashboard.app import run_dashboard
 import json
 
-DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTT", "QBTS", "QUBTS", "MSTR", "PLTR", "PL", "KURA"]
+DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA"]
 
 def populate_database(target):
     """
