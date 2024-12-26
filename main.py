@@ -24,7 +24,7 @@ def populate_database(target):
     elif target == "google_trends":
         fetch_google_trends(DEFAULT_TICKERS)
     elif target == "reddit":
-        fetch_reddit_sentiment("stocks", "AAPL")
+        fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
     else:
         print(f"⚠️ Unknown target '{target}' for database population.")
 
