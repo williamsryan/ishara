@@ -66,7 +66,7 @@ def on_message(ws, message):
         print(f"❌ Error processing message: {e}")
         print(f"Message causing error: {message}")
 
-def start_stream():
+def fetch_real_time_data():
     """
     Starts the Alpaca WebSocket stream with authentication and subscriptions.
     """
@@ -84,4 +84,4 @@ def start_stream():
     ws.run_forever()
 
 if __name__ == "__main__":
-    start_stream()
+    fetch_real_time_data()

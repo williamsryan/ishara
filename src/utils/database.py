@@ -134,7 +134,7 @@ def insert_yahoo_finance_data(data):
     Args:
         data (list): List of tuples [(symbol, datetime, open, high, low, close, volume), ...].
     """
-    return insert_data(TABLES["yahoo_finance"], data, ["symbol", "datetime", "open", "high", "low", "close", "volume"])
+    return insert_data(TABLES["yahoo_finance"], data, ["symbol", "datetime", "open", "high", "low", "close", "volume", "dividends", "earnings"])
 
 def insert_trade_logs(data):
     """
