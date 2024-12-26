@@ -5,6 +5,8 @@ from dateutil import parser
 from src.utils.database import insert_real_time_data
 from src.utils.config import ALPACA_API_KEY, ALPACA_SECRET_KEY
 
+DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA"]
+
 def on_open(ws):
     """
     Sends authentication payload on WebSocket connection open.
@@ -20,14 +22,13 @@ def on_open(ws):
 
     # Subscribe to market data
     print("📡 Subscribing to symbols...")
-    symbols = ["AAPL", "MSFT", "GOOGL"] 
     subscribe_payload = {
         "action": "subscribe",
-        "trades": symbols,  # Trade updates
-        "bars": symbols     # Minute bar updates
+        "trades": DEFAULT_TICKERS,  # Trade updates
+        "bars": DEFAULT_TICKERS     # Minute bar updates
     }
     ws.send(json.dumps(subscribe_payload))
-    print(f"✅ Subscribed to trades and bars for: {', '.join(symbols)}")
+    print(f"✅ Subscribed to trades and bars for: {', '.join(DEFAULT_TICKERS)}")
 
 def on_message(ws, message):
     """
