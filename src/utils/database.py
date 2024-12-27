@@ -22,6 +22,7 @@ TABLES = {
     "backtest_results": "backtest_results",
     "derived_metrics": "derived_metrics",
     "options": "options_data",
+    "analysis_results": "analysis_results",
 }
 
 # -------------------- CONTEXT MANAGER --------------------
@@ -228,6 +229,18 @@ def insert_derived_metrics(data):
     ]
 
     # Delegate to the generic insert_data function
+    return insert_data(table_name, data, columns)
+
+def insert_clustering_results(data):
+    """
+    Insert clustering results into the analysis_results table.
+
+    Args:
+        data (list of tuples): List of tuples (symbol, analysis_type, cluster_id, result).
+    """
+    table_name = TABLES["analysis_results"]
+    columns = ["symbol", "analysis_type", "cluster_id", "result"]
+
     return insert_data(table_name, data, columns)
 
 # -------------------- FETCH METHODS --------------------
