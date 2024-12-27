@@ -6,16 +6,16 @@ import re
 import json
 import datetime
 
-try:
-    from requests_html import HTMLSession
-except Exception:
-    print("""Warning - Certain functionality 
-             requires requests_html, which is not installed.
+# try:
+#     from requests_html import HTMLSession
+# except Exception:
+#     print("""Warning - Certain functionality 
+#              requires requests_html, which is not installed.
              
-             Install using: 
-             pip install requests_html
+#              Install using: 
+#              pip install requests_html
              
-             After installation, you may have to restart your Python session.""")
+#              After installation, you may have to restart your Python session.""")
 
     
 base_url = "https://query1.finance.yahoo.com/v8/finance/chart/"

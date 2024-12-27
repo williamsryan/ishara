@@ -131,27 +131,34 @@ def insert_alternative_data(data):
 
 def insert_yahoo_finance_data(data):
     """
-    Insert data into the yahoo_finance_data table.
+    Insert Yahoo Finance data into the database.
+
+    Args:
+        data (list): List of tuples [(symbol, date, open, high, low, close, volume,
+                                      dividends, target_est, beta, eps, earnings_date,
+                                      ex_dividend_date, forward_div_yield, pe_ratio, market_cap), ...].
     """
-    query = """
-        INSERT INTO yahoo_finance_data (
-            symbol, date, open, high, low, close, volume, dividends, 
-            target_est, beta, eps, earnings_date, ex_dividend_date, 
-            forward_div_yield, pe_ratio, market_cap
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, 
-            %s, %s, %s, %s, %s, %s, %s, %s
-        )
-    """
-    try:
-        conn = connect_to_db()
-        cur = conn.cursor()
-        cur.executemany(query, data)
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"❌ Error inserting data into yahoo_finance_data: {e}")
+    table_name = TABLES["yahoo_finance"]
+    columns = [
+        "symbol",
+        "datetime",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "dividends",
+        "target_est",
+        "beta",
+        "eps",
+        "earnings_date",
+        "ex_dividend_date",
+        "forward_div_yield",
+        "pe_ratio",
+        "market_cap",
+    ]
+
+    return insert_data(table_name, data, columns)
 
 def insert_trade_logs(data):
     """
