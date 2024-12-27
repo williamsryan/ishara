@@ -5,10 +5,13 @@ import pandas as pd
 
 class PriceChart:
     def layout(self, symbols):
-        conn = connect_to_db()
-        query = f"SELECT datetime, close FROM historical_market_data WHERE symbol IN ({','.join([f'\'{s}\'' for s in symbols])})"
-        data = pd.read_sql(query, conn)
-        conn.close()
+        try:
+            conn = connect_to_db()
+            query = f"SELECT datetime, close, symbol FROM historical_market_data WHERE symbol IN ({','.join([f'\'{s}\'' for s in symbols])})"
+            data = pd.read_sql(query, conn)
+            conn.close()
+        except Exception as e:
+            return html.Div(f"❌ Error fetching price data: {e}")
 
         if data.empty:
             return html.Div("⚠️ No price data available.")
@@ -24,35 +27,33 @@ class PriceChart:
 
 class AlternativeDataCharts:
     def layout(self, symbols):
-        conn = connect_to_db()
-        query = f"SELECT * FROM alternative_data WHERE symbol IN ({','.join([f'\'{s}\'' for s in symbols])})"
-        data = pd.read_sql(query, conn)
-        conn.close()
+        try:
+            conn = connect_to_db()
+            query = f"SELECT * FROM alternative_data WHERE symbol IN ({','.join([f'\'{s}\'' for s in symbols])})"
+            data = pd.read_sql(query, conn)
+            conn.close()
+        except Exception as e:
+            return html.Div(f"❌ Error fetching alternative data: {e}")
 
         if data.empty:
             return html.Div("⚠️ No alternative data available.")
 
-        sentiment_data = data[data["metric"] == "sentiment_score"]
-        mentions_data = data[data["metric"] == "mentions"]
+        figures = []
+        for metric in data["metric"].unique():
+            metric_data = data[data["metric"] == metric]
+            fig = go.Figure()
+            for symbol in symbols:
+                symbol_data = metric_data[metric_data["symbol"] == symbol]
+                if metric == "mentions":
+                    fig.add_trace(go.Bar(
+                        x=symbol_data["datetime"], y=symbol_data["value"], name=f"{symbol} Mentions"
+                    ))
+                else:
+                    fig.add_trace(go.Scatter(
+                        x=symbol_data["datetime"], y=symbol_data["value"], mode="lines", name=f"{symbol} {metric.capitalize()}"
+                    ))
+            fig.update_layout(title=f"{metric.capitalize()} Over Time", template="plotly_white")
+            figures.append(dcc.Graph(figure=fig))
 
-        sentiment_fig = go.Figure()
-        mentions_fig = go.Figure()
-
-        for symbol in symbols:
-            symbol_sentiment = sentiment_data[sentiment_data["symbol"] == symbol]
-            sentiment_fig.add_trace(go.Scatter(
-                x=symbol_sentiment["datetime"], y=symbol_sentiment["value"],
-                mode="lines", name=f"{symbol} Sentiment"
-            ))
-
-            symbol_mentions = mentions_data[mentions_data["symbol"] == symbol]
-            mentions_fig.add_trace(go.Bar(
-                x=symbol_mentions["datetime"], y=symbol_mentions["value"],
-                name=f"{symbol} Mentions"
-            ))
-
-        return html.Div([
-            dcc.Graph(figure=sentiment_fig),
-            dcc.Graph(figure=mentions_fig)
-        ])
+        return html.Div(figures)
     
