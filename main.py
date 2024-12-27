@@ -16,7 +16,14 @@ def populate_database(target):
     """
     Populate the database with data from selected sources.
     """
-    if target == "alpaca_historical":
+    if target == "all":
+        insert_historical_data(DEFAULT_TICKERS)
+        fetch_yahoo_finance_data(DEFAULT_TICKERS)
+        fetch_google_trends(DEFAULT_TICKERS)
+        fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
+        populate_derived_metrics()
+        # fetch_real_time_data()
+    elif target == "alpaca_historical":
         insert_historical_data(DEFAULT_TICKERS)
     elif target == "alpaca_realtime":
         fetch_real_time_data()
@@ -48,7 +55,7 @@ def main():
 
     # Subcommand: Populate Database
     populate_parser = subparsers.add_parser("populate", help="Populate the database with data.")
-    populate_parser.add_argument("target", choices=["alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit", "derived"], help="Data source to populate.")
+    populate_parser.add_argument("target", choices=["all", "alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit", "derived"], help="Data source to populate.")
 
     # Subcommand: Run Analyses
     analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")
