@@ -116,22 +116,12 @@ def fetch_yahoo_finance_data(symbols):
 
         # Insert data into the database
         if data_to_insert:
-            try:
-                print(f"🔍 Data to insert into yahoo_finance_data: {data_to_insert[:5]}")  # Print first 5 rows for debugging
-                insert_yahoo_finance_data(data_to_insert)
-                print(f"✅ Successfully inserted Yahoo Finance data for {len(symbols)} symbols.")
-            except Exception as e:
-                print(f"❌ Error inserting Yahoo Finance data: {e}")
+            insert_yahoo_finance_data(data_to_insert)
         else:
             print("⚠️ No data fetched to insert.")
 
         if options_data_to_insert:
-            try:
-                print(f"🔍 Options data to insert: {options_data_to_insert[:5]}")  # Print first 5 rows for debugging
-                insert_options_data(options_data_to_insert)
-                print(f"✅ Successfully inserted options data for {len(symbols)} symbols.")
-            except Exception as e:
-                print(f"❌ Error inserting options data: {e}")
+            insert_options_data(options_data_to_insert)
         else:
             print("⚠️ No options data fetched to insert.")
 
