@@ -4,18 +4,20 @@ from src.utils.database import connect_to_db
 import pandas as pd
 
 class PriceChart:
-    def layout(self, symbols):
-        try:
-            conn = connect_to_db()
-            query = f"SELECT datetime, close, symbol FROM historical_market_data WHERE symbol IN ({','.join([f'\'{s}\'' for s in symbols])})"
-            data = pd.read_sql(query, conn)
-            conn.close()
-        except Exception as e:
-            return html.Div(f"❌ Error fetching price data: {e}")
+    def layout(self, symbols, start_date, end_date):
+        conn = connect_to_db()
+        query = f"""
+            SELECT datetime, close, symbol
+            FROM historical_market_data
+            WHERE symbol IN ({','.join([f"'{s}'" for s in symbols])})
+              AND datetime BETWEEN '{start_date}' AND '{end_date}'
+            ORDER BY datetime ASC
+        """
+        data = pd.read_sql(query, conn)
 
         if data.empty:
-            return html.Div("⚠️ No price data available.")
-        
+            return html.Div("⚠️ No price data available for the selected criteria.")
+
         figure = go.Figure()
         for symbol in symbols:
             symbol_data = data[data["symbol"] == symbol]
@@ -26,14 +28,15 @@ class PriceChart:
         return dcc.Graph(figure=figure)
 
 class AlternativeDataCharts:
-    def layout(self, symbols):
-        try:
-            conn = connect_to_db()
-            query = f"SELECT * FROM alternative_data WHERE symbol IN ({','.join([f'\'{s}\'' for s in symbols])})"
-            data = pd.read_sql(query, conn)
-            conn.close()
-        except Exception as e:
-            return html.Div(f"❌ Error fetching alternative data: {e}")
+    def layout(self, symbols, start_date, end_date, overlay_toggle):
+        conn = connect_to_db()
+        query = f"""
+            SELECT datetime, value, metric, symbol
+            FROM alternative_data
+            WHERE symbol IN ({','.join([f"'{s}'" for s in symbols])})
+              AND datetime BETWEEN '{start_date}' AND '{end_date}'
+        """
+        data = pd.read_sql(query, conn)
 
         if data.empty:
             return html.Div("⚠️ No alternative data available.")
@@ -44,14 +47,9 @@ class AlternativeDataCharts:
             fig = go.Figure()
             for symbol in symbols:
                 symbol_data = metric_data[metric_data["symbol"] == symbol]
-                if metric == "mentions":
-                    fig.add_trace(go.Bar(
-                        x=symbol_data["datetime"], y=symbol_data["value"], name=f"{symbol} Mentions"
-                    ))
-                else:
-                    fig.add_trace(go.Scatter(
-                        x=symbol_data["datetime"], y=symbol_data["value"], mode="lines", name=f"{symbol} {metric.capitalize()}"
-                    ))
+                fig.add_trace(go.Scatter(x=symbol_data["datetime"], y=symbol_data["value"],
+                                         mode="lines", name=f"{symbol} {metric}"))
+
             fig.update_layout(title=f"{metric.capitalize()} Over Time", template="plotly_white")
             figures.append(dcc.Graph(figure=fig))
 
