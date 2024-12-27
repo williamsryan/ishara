@@ -277,8 +277,6 @@ def tickers_ftse250(include_company_data = False):
     return sorted(table.Ticker.tolist())
     
 
-
-
 def get_quote_table(ticker, dict_result=True, headers={'User-agent': 'Mozilla/5.0'}):
     """
     Fetches data elements found on Yahoo Finance's quote page of the input ticker.
@@ -291,32 +289,52 @@ def get_quote_table(ticker, dict_result=True, headers={'User-agent': 'Mozilla/5.
         dict or DataFrame: Stock quote data in the requested format.
     """
     site = f"https://finance.yahoo.com/quote/{ticker}?p={ticker}"
-    
+    print(f"🔍 Fetching data for ticker: {ticker}")
+    print(f"📡 URL: {site}")
+
     try:
+        # Perform the HTTP GET request
         response = requests.get(site, headers=headers)
-        response.raise_for_status()
-        
-        tables = pd.read_html(io.StringIO(response.text))
+        response.raise_for_status()  # Ensure the request was successful
+        print(f"✅ HTTP response status: {response.status_code}")
+
+        # Capture raw HTML for debugging
+        html_content = response.text
+        print(f"📄 Raw HTML content length: {len(html_content)}")
+
+        # Attempt to parse the tables from the HTML
+        tables = pd.read_html(io.StringIO(html_content))
+        print(f"🛠️ Parsed {len(tables)} tables from HTML.")
 
         if len(tables) >= 2:
+            # Combine the first two tables for complete data
             data = pd.concat([tables[0], tables[1]], ignore_index=True)
+            print(f"🗃️ Combined data from two tables.")
         else:
+            # If only one table exists, use it
             data = tables[0]
-        
+            print(f"🗃️ Using the single parsed table.")
+
+        # Assign column names and check data
         data.columns = ["attribute", "value"]
-        
+        print(f"📊 Data preview:\n{data.head()}")
+
+        # Fetch the live price separately and append it to the data
         live_price = get_live_price(ticker)
         live_price_row = pd.DataFrame([["Quote Price", live_price]], columns=data.columns)
         data = pd.concat([data, live_price_row], ignore_index=True)
-        
+        print(f"💲 Added live price: {live_price}")
+
         # Remove duplicates and reset index
         data = data.drop_duplicates(subset=["attribute"]).reset_index(drop=True)
-        
+        print(f"🔄 Final cleaned data:\n{data}")
+
         if dict_result:
             return data.set_index("attribute").to_dict()["value"]
         return data
+
     except Exception as e:
-        print(f"⚠️ Failed to fetch quote table for {ticker}: {e}")
+        print(f"⚠️ Error fetching or parsing quote table for {ticker}: {e}")
         return {} if dict_result else pd.DataFrame()
     
     
