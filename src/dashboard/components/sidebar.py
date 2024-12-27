@@ -1,41 +1,17 @@
-from dash import dcc, html
-import dash_bootstrap_components as dbc
+from dash import html
 
-def render_sidebar():
-    return html.Div(
-        style={
-            "backgroundColor": "#f8f9fa",
-            "padding": "15px",
-            "height": "100vh",
-            "borderRight": "1px solid #dcdcdc",
-        },
-        children=[
-            html.H4("Navigation", style={"marginBottom": "15px"}),
-            dbc.Nav(
-                [
-                    dbc.NavLink("Price Charts", href="/price-charts", active="exact"),
-                    dbc.NavLink("Alternative Data", href="/alternative-data", active="exact"),
-                    dbc.NavLink("Data Table", href="/data-table", active="exact"),
-                    dbc.NavLink("Analyses", href="/analyses", active="exact"),
-                ],
-                vertical=True,
-                pills=True,
-            ),
-            html.Hr(),
-            html.Div(
-                [
-                    html.H6("Preferences"),
-                    dcc.Checklist(
-                        options=[
-                            {"label": "Dark Mode", "value": "dark"},
-                            {"label": "Show Tooltips", "value": "tooltips"},
-                        ],
-                        value=[],
-                        id="preferences-checklist",
-                        inline=True,
-                    ),
-                ],
-                style={"marginTop": "15px"},
-            ),
-        ],
-    )
+class Sidebar:
+    def render(self):
+        return html.Div(
+            className="p-3 bg-light rounded shadow-sm",
+            children=[
+                html.H4("Navigation"),
+                html.Ul([
+                    html.Li(html.A("Price Chart", href="#price-chart")),
+                    html.Li(html.A("Alternative Data", href="#alternative-data")),
+                    html.Li(html.A("Data Table", href="#data-table")),
+                    html.Li(html.A("Analyses", href="#analyses")),
+                ])
+            ]
+        )
+    

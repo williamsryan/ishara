@@ -1,16 +1,11 @@
 from dash import html
 
-def render_header():
-    return html.Div(
-        style={"backgroundColor": "#2b3e50", "padding": "10px"},
-        children=[
-            html.H1(
-                "Ishara Trading Dashboard",
-                style={"color": "white", "textAlign": "center", "marginBottom": "0"}
-            ),
-            html.P(
-                "Real-time market analysis, alternative data insights, and predictive modeling",
-                style={"color": "lightgray", "textAlign": "center", "marginTop": "5px"}
-            ),
-        ]
-    )
+class Header:
+    def __init__(self):
+        self.title = "📊 Ishara Trading Platform"
+
+    def render(self):
+        return html.Div(
+            html.H2(self.title, className="text-center text-light bg-dark p-3")
+        )
+    
