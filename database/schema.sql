@@ -30,6 +30,15 @@ CREATE TABLE IF NOT EXISTS historical_market_data (
     UNIQUE(symbol, datetime)
 );
 
+CREATE TABLE IF NOT EXISTS analysis_results (
+    id SERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    analysis_type TEXT NOT NULL,  -- E.g., 'clustering', 'regime_detection'
+    cluster_id INTEGER,           -- Nullable for other analyses
+    result JSONB,                 -- To store additional analysis data in a flexible format
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Enhanced Table for Yahoo Finance data
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     id SERIAL PRIMARY KEY,
