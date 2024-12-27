@@ -6,6 +6,7 @@ from src.fetchers.google_trends_fetcher import fetch_google_trends
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
+from src.processors.derived_metrics import populate_derived_metrics
 from src.dashboard.app import run_dashboard
 import json
 
@@ -25,6 +26,8 @@ def populate_database(target):
         fetch_google_trends(DEFAULT_TICKERS)
     elif target == "reddit":
         fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
+    elif target == "derived":
+        populate_derived_metrics()
     else:
         print(f"⚠️ Unknown target '{target}' for database population.")
 
@@ -45,7 +48,7 @@ def main():
 
     # Subcommand: Populate Database
     populate_parser = subparsers.add_parser("populate", help="Populate the database with data.")
-    populate_parser.add_argument("target", choices=["alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit"], help="Data source to populate.")
+    populate_parser.add_argument("target", choices=["alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit", "derived"], help="Data source to populate.")
 
     # Subcommand: Run Analyses
     analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")

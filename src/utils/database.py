@@ -20,6 +20,8 @@ TABLES = {
     "yahoo_finance": "yahoo_finance_data",
     "trade_logs": "trade_logs",
     "backtest_results": "backtest_results",
+    "derived_metrics": "derived_metrics",
+    "options": "options_data",
 }
 
 # -------------------- CONTEXT MANAGER --------------------
@@ -129,12 +131,27 @@ def insert_alternative_data(data):
 
 def insert_yahoo_finance_data(data):
     """
-    Insert Yahoo Finance data into the database.
-
-    Args:
-        data (list): List of tuples [(symbol, datetime, open, high, low, close, volume), ...].
+    Insert data into the yahoo_finance_data table.
     """
-    return insert_data(TABLES["yahoo_finance"], data, ["symbol", "datetime", "open", "high", "low", "close", "volume", "dividends", "earnings"])
+    query = """
+        INSERT INTO yahoo_finance_data (
+            symbol, date, open, high, low, close, volume, dividends, 
+            target_est, beta, eps, earnings_date, ex_dividend_date, 
+            forward_div_yield, pe_ratio, market_cap
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s
+        )
+    """
+    try:
+        conn = connect_to_db()
+        cur = conn.cursor()
+        cur.executemany(query, data)
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"❌ Error inserting data into yahoo_finance_data: {e}")
 
 def insert_trade_logs(data):
     """
@@ -144,6 +161,67 @@ def insert_trade_logs(data):
         data (list): List of tuples [(strategy_name, symbol, action, quantity, price_per_share, datetime, pnl), ...].
     """
     return insert_data(TABLES["trade_logs"], data, ["strategy_name", "symbol", "action", "quantity", "price_per_share", "datetime", "pnl"])
+
+def insert_options_data(data):
+    """
+    Insert options data into the database.
+
+    Args:
+        data (list of tuples): Options data to insert. Each tuple should contain:
+            - symbol (str)
+            - expiration_date (date)
+            - option_type (str): 'call' or 'put'
+            - strike (float)
+            - last_price (float)
+            - bid (float)
+            - ask (float)
+            - change (float)
+            - percent_change (float)
+            - volume (int)
+            - open_interest (int)
+            - implied_volatility (float)
+    """
+    table_name = TABLES["options"]
+    columns = [
+        "symbol",
+        "expiration_date",
+        "option_type",
+        "strike",
+        "last_price",
+        "bid",
+        "ask",
+        "change",
+        "percent_change",
+        "volume",
+        "open_interest",
+        "implied_volatility"
+    ]
+
+    return insert_data(table_name, data, columns)
+
+def insert_derived_metrics(data):
+    """
+    Insert derived metrics into the database.
+
+    Args:
+        data (list): List of tuples [(symbol, datetime, log_returns, pe_ratio, market_cap,
+                                      moving_avg_50, moving_avg_200, rsi, macd), ...].
+    """
+    table_name = TABLES["derived_metrics"]
+    columns = [
+        "symbol",
+        "datetime",
+        "log_returns",
+        "pe_ratio",
+        "market_cap",
+        "moving_avg_50",
+        "moving_avg_200",
+        "rsi",
+        "macd"
+    ]
+
+    # Delegate to the generic insert_data function
+    return insert_data(table_name, data, columns)
 
 # -------------------- FETCH METHODS --------------------
 
@@ -160,7 +238,7 @@ def fetch_data(query, params=None):
     """
     with connect_to_db() as conn:
         try:
-            return pd.read_sql_query(query, conn, params=params)
+            return fetch_as_dataframe(query, params)
         except Exception as e:
             print(f"❌ Error fetching data: {e}")
             return pd.DataFrame()
