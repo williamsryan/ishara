@@ -5,6 +5,7 @@ sqlalchemy
 
 # Yahoo Finance Fetcher
 yfinance
+yahoo_fin
 
 # Google Trends Fetcher
 pytrends
@@ -38,3 +39,4 @@ dash-bootstrap-components
 scikit-learn
 hmmlearn
 networkx
+requests_html
