@@ -47,6 +47,7 @@ class Controls:
                     switch=True,
                     className="mt-3",
                 ),
+                dbc.Button("Run Analysis", id="run-analysis", color="primary", className="mt-3"),
             ], className="bg-light p-3 rounded shadow-sm")
         ], width=3)
     

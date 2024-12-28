@@ -1,40 +1,32 @@
 import pandas as pd
 from src.utils.database import connect_to_db
 
-def load_data_from_db(symbol, start_date=None, end_date=None):
+def fetch_feature_data():
     """
-    Load historical data for a given symbol from PostgreSQL using SQLAlchemy.
-
-    Args:
-        symbol (str): Stock ticker (e.g., "AAPL").
-        start_date (str): Optional start date (YYYY-MM-DD).
-        end_date (str): Optional end date (YYYY-MM-DD).
-
-    Returns:
-        pd.DataFrame: DataFrame of historical stock data.
+    Fetch feature data for K-NN clustering.
     """
-    engine = connect_to_db()
+    conn = connect_to_db()
     query = """
-    SELECT 
-        datetime, open, high, low, close, volume 
-    FROM stock_data 
-    WHERE symbol = %(symbol)s
+        SELECT symbol, feature1, feature2
+        FROM feature_table
     """
-    params = {"symbol": symbol}
+    data = pd.read_sql(query, conn)
 
-    if start_date:
-        query += " AND datetime >= %(start_date)s"
-        params["start_date"] = start_date
-    if end_date:
-        query += " AND datetime <= %(end_date)s"
-        params["end_date"] = end_date
+    if data.empty:
+        raise ValueError("No feature data available for clustering.")
+    return data
 
-    # Execute the query and return the DataFrame
-    df = pd.read_sql_query(query, engine, params=params)
+def fetch_graph_data():
+    """
+    Fetch graph data for graph-based clustering.
+    """
+    conn = connect_to_db()
+    query = """
+        SELECT source, target, weight
+        FROM graph_edges_table
+    """
+    data = pd.read_sql(query, conn)
 
-    # Ensure datetime column is in datetime64 format
-    df['datetime'] = pd.to_datetime(df['datetime'])
-
-    # Set index for Backtrader
-    df.set_index('datetime', inplace=True)
-    return df
+    if data.empty:
+        raise ValueError("No graph data available for clustering.")
+    return data.to_dict(orient="records")
