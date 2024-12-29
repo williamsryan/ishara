@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, State
+from dash import Dash, dcc, html, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
 from threading import Thread
 import pandas as pd
@@ -11,10 +11,12 @@ from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCh
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
+from src.utils.database import fetch_data
 
 # Initialize the app
-app = Dash(__name__, external_stylesheets=[dbc.themes.MINTY])
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 app.title = "📊 Ishara Trading Dashboard"
+app.config.suppress_callback_exceptions = True
 
 # Instantiate components and widgets
 header = Header()
@@ -28,14 +30,14 @@ analyses = Analyses()
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
     # Header
-    dbc.Row(dbc.Col(html.H2("📊 Ishara Trading Platform", className="text-center bg-dark text-light py-3"))),
+    dbc.Row(dbc.Col(header.render(), className="bg-dark text-light py-3")),
 
     # Sidebar and Tabs
     dbc.Row([
         dbc.Col(
-            controls.render(), 
-            width=3, 
-            className="bg-light p-3 border-end vh-100 sticky-top"
+            controls.render(),
+            width=3,
+            className="bg-light p-4 border-end vh-100 sticky-top overflow-auto"
         ),
         dbc.Col([
             dcc.Tabs(
@@ -49,10 +51,34 @@ app.layout = dbc.Container(fluid=True, children=[
                 ],
                 className="mb-3"
             ),
-            html.Div(id="tab-content", className="p-3"),
+            dcc.Loading(
+                id="tab-content-loading",
+                type="circle",
+                children=html.Div(id="tab-content", className="p-3")
+            ),
         ], width=9),
     ]),
 ])
+
+# Callback to update the symbol dropdown dynamically
+@app.callback(
+    [Output("symbol-selector", "options"), Output("symbol-selector", "value")],
+    Input("data-source", "value")
+)
+def update_symbol_selector(data_source):
+    try:
+        query = f"SELECT DISTINCT symbol FROM {data_source} ORDER BY symbol ASC LIMIT 1000"
+        results = fetch_data(query)
+
+        # Explicitly check if the DataFrame is empty
+        if results.empty:
+            return [], []
+
+        symbols = [{"label": row["symbol"], "value": row["symbol"]} for _, row in results.iterrows()]
+        return symbols, [symbols[0]["value"]] if symbols else []
+    except Exception as e:
+        print(f"Error updating symbol selector: {e}")
+        return [], []
 
 # Callback to dynamically update tab content
 @app.callback(
@@ -62,78 +88,49 @@ app.layout = dbc.Container(fluid=True, children=[
      Input("overlay-toggle", "value")]
 )
 def update_content(tab, symbols, start_date, end_date, overlay_toggle):
-    """
-    Update the tab content dynamically based on the selected tab and user inputs.
-    """
-    # Ensure symbols are selected
     if not symbols:
-        return dcc.Loading(
-            type="circle",
-            children=html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3"),
-        )
+        return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
-        # Render content for each tab
+        print(f"Tab selected: {tab}")
         if tab == "price-chart":
-            # Render the Price Chart
-            return dcc.Loading(
-                type="circle",
-                children=price_chart.layout(symbols, start_date, end_date)
-            )
+            return price_chart.layout(symbols, start_date, end_date)
         elif tab == "alternative-data":
-            # Render Alternative Data Charts
-            return dcc.Loading(
-                type="circle",
-                children=alternative_data.layout(symbols, start_date, end_date, overlay_toggle)
-            )
+            return alternative_data.layout(symbols, start_date, end_date, overlay_toggle)
         elif tab == "data-table":
-            # Render the Data Table
-            return dcc.Loading(
-                type="circle",
-                children=data_table.layout(symbols, start_date, end_date)
-            )
+            return data_table.layout(symbols, start_date, end_date)
         elif tab == "analyses":
-            # Render Analyses Tab
-            return dcc.Loading(
-                type="circle",
-                children=analyses.layout()
-            )
+            return analyses.layout()
         else:
-            # Handle invalid tab selections
-            return dcc.Loading(
-                type="circle",
-                children=html.Div("⚠️ Invalid tab selected.", className="text-danger p-3"),
-            )
+            return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
     except Exception as e:
-        # Handle errors and display a user-friendly message
-        return dcc.Loading(
-            type="circle",
-            children=html.Div(
-                f"❌ An error occurred while loading the content: {str(e)}",
-                className="text-danger p-3"
-            ),
-        )
+        print(f"Error loading tab content: {e}")
+        return html.Div(f"❌ Error loading content: {str(e)}", className="text-danger p-3")
 
+# Callback for triggering analyses
 @app.callback(
-    [Output("analysis-status", "children"), Output("tab-content", "children")],
+    Output("analysis-status", "children"),
     [Input("run-analysis", "n_clicks")],
     [State("symbol-selector", "value"), State("date-picker", "start_date"), State("date-picker", "end_date")]
 )
 def run_analysis(n_clicks, symbols, start_date, end_date):
     if not n_clicks:
-        return "", html.Div("⚠️ Please select symbols and run an analysis.")
+        return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3"), ""
 
     # Display running status
     status_message = "⏳ Running analyses... This may take a few moments."
 
-    # Call the analysis function
-    perform_clustering_analysis(symbols)
+    try:
+        print(f"Running analysis for symbols: {symbols}")
+        perform_clustering_analysis(symbols)
 
-    # Update results in the tab
-    analyses_tab = Analyses().layout()
-    status_message = "✅ Analysis complete! Results are updated."
-
-    return status_message, analyses_tab
+        # Update results in the tab
+        analyses_tab = analyses.layout()
+        status_message = "✅ Analysis complete! Results are updated."
+        return analyses_tab, status_message
+    except Exception as e:
+        print(f"Error during analysis: {e}")
+        return html.Div(f"❌ Error during analysis: {str(e)}", className="text-danger p-3"), ""
 
 # Run the dashboard and real-time data streamer
 def run_dashboard():
