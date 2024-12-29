@@ -39,26 +39,27 @@ CREATE TABLE IF NOT EXISTS analysis_results (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Enhanced Table for Yahoo Finance data
+-- Table for Yahoo Finance data (historical and metrics)
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
-    id SERIAL PRIMARY KEY,
-    symbol TEXT NOT NULL,
-    datetime TIMESTAMPTZ NOT NULL,
-    open NUMERIC,
-    high NUMERIC,
-    low NUMERIC,
-    close NUMERIC,
-    volume BIGINT,
-    dividends NUMERIC,
-    target_est NUMERIC,               -- 1y Target Estimate
-    beta NUMERIC,                     -- Beta (5Y Monthly)
-    eps NUMERIC,                      -- Earnings per share (TTM)
-    earnings_date TEXT,               -- Earnings Date (parsed as a range string)
-    ex_dividend_date TEXT,            -- Ex-Dividend Date
-    forward_div_yield TEXT,           -- Forward Dividend & Yield (parsed as string)
-    pe_ratio NUMERIC,                 -- Price-to-Earnings Ratio (TTM)
-    market_cap NUMERIC,               -- Market Cap (converted to numeric)
-    UNIQUE(symbol, datetime)
+    id SERIAL PRIMARY KEY,                  -- Unique identifier for each record
+    symbol TEXT NOT NULL,                   -- Stock ticker symbol (e.g., AAPL, MSFT)
+    datetime TIMESTAMPTZ NOT NULL,          -- Datetime of the record
+    open NUMERIC,                           -- Opening price
+    high NUMERIC,                           -- Highest price
+    low NUMERIC,                            -- Lowest price
+    close NUMERIC,                          -- Closing price
+    volume BIGINT,                          -- Volume of shares traded
+    dividends NUMERIC,                      -- Dividends paid on this date (if available)
+    splits NUMERIC,                         -- Stock splits (e.g., 2.0 for a 2-for-1 split)
+    target_est NUMERIC,                     -- 1-year target estimate
+    beta NUMERIC,                           -- Beta (5Y monthly)
+    eps NUMERIC,                            -- Earnings per share (TTM)
+    earnings_date TIMESTAMPTZ,              -- Earnings date (parsed to a single timestamp)
+    ex_dividend_date TIMESTAMPTZ,           -- Ex-dividend date (parsed to a single timestamp)
+    forward_div_yield NUMERIC,              -- Forward dividend yield (as a percentage)
+    pe_ratio NUMERIC,                       -- Price-to-earnings ratio (TTM)
+    market_cap NUMERIC,                     -- Market capitalization (in dollars)
+    UNIQUE(symbol, datetime)                -- Ensure no duplicate records for the same symbol and datetime
 );
 
 CREATE TABLE IF NOT EXISTS options_data (
