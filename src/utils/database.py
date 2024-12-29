@@ -149,6 +149,7 @@ def insert_yahoo_finance_data(data):
         "close",
         "volume",
         "dividends",
+        "splits",
         "target_est",
         "beta",
         "eps",
