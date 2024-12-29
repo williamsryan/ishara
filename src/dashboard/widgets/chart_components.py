@@ -1,78 +1,76 @@
 from dash import dcc, html
 import plotly.graph_objs as go
 import networkx as nx
-from src.utils.database import connect_to_db
+from src.utils.database import fetch_data
 import pandas as pd
 
 class PriceChart:
     def layout(self, symbols, start_date, end_date):
-        conn = connect_to_db()
         query = f"""
-            SELECT datetime, close, symbol
-            FROM historical_market_data
-            WHERE symbol IN ({','.join([f"'{s}'" for s in symbols])})
-              AND datetime BETWEEN '{start_date}' AND '{end_date}'
+            SELECT datetime, close
+            FROM real_time_market_data
+            WHERE symbol IN ({','.join(['%s'] * len(symbols))})
+            AND datetime BETWEEN %s AND %s
             ORDER BY datetime ASC
         """
-        data = pd.read_sql(query, conn)
+        params = tuple(symbols) + (start_date, end_date)
+        results = fetch_data(query, params=params)
 
-        if data.empty:
-            return html.Div("⚠️ No price data available for the selected criteria.")
+        if not results:
+            return html.Div("⚠️ No price data available.", className="text-warning p-3")
 
         figure = go.Figure()
-        for symbol in symbols:
-            symbol_data = data[data["symbol"] == symbol]
-            figure.add_trace(go.Scatter(x=symbol_data["datetime"], y=symbol_data["close"],
-                                        mode="lines", name=f"{symbol} Price"))
+        for row in results:
+            figure.add_trace(go.Scatter(x=row["datetime"], y=row["close"], mode="lines", name=row["symbol"]))
 
-        figure.update_layout(title="Price Chart", template="plotly_white")
+        figure.update_layout(title="Price Chart", xaxis_title="Datetime", yaxis_title="Close Price")
         return dcc.Graph(figure=figure)
 
 class AlternativeDataCharts:
     def layout(self, symbols, start_date, end_date, overlay_toggle):
-        conn = connect_to_db()
         query = f"""
-            SELECT datetime, value, metric, symbol
+            SELECT datetime, metric, value
             FROM alternative_data
-            WHERE symbol IN ({','.join([f"'{s}'" for s in symbols])})
-              AND datetime BETWEEN '{start_date}' AND '{end_date}'
+            WHERE symbol IN ({','.join(['%s'] * len(symbols))})
+            AND datetime BETWEEN %s AND %s
         """
-        data = pd.read_sql(query, conn)
+        params = tuple(symbols) + (start_date, end_date)
+        results = fetch_data(query, params=params)
 
-        if data.empty:
-            return html.Div("⚠️ No alternative data available.")
+        if not results:
+            return html.Div("⚠️ No alternative data available.", className="text-warning p-3")
 
-        figures = []
-        for metric in data["metric"].unique():
-            metric_data = data[data["metric"] == metric]
-            fig = go.Figure()
-            for symbol in symbols:
-                symbol_data = metric_data[metric_data["symbol"] == symbol]
-                fig.add_trace(go.Scatter(x=symbol_data["datetime"], y=symbol_data["value"],
-                                         mode="lines", name=f"{symbol} {metric}"))
+        sentiment_figure = go.Figure()
+        mentions_figure = go.Figure()
 
-            fig.update_layout(title=f"{metric.capitalize()} Over Time", template="plotly_white")
-            figures.append(dcc.Graph(figure=fig))
+        for row in results:
+            if row["metric"] == "sentiment":
+                sentiment_figure.add_trace(go.Scatter(x=row["datetime"], y=row["value"], mode="lines"))
+            elif row["metric"] == "mentions":
+                mentions_figure.add_trace(go.Bar(x=row["datetime"], y=row["value"]))
 
-        return html.Div(figures)
+        return html.Div([
+            dcc.Graph(figure=sentiment_figure),
+            dcc.Graph(figure=mentions_figure),
+        ])
 
 class KnnClusteringChart:
     def layout(self):
-        conn = connect_to_db()
         query = """
             SELECT result
             FROM analysis_results
             WHERE analysis_type = 'clustering_knn'
         """
-        data = pd.read_sql(query, conn)
+        results = fetch_data(query)
 
-        if data.empty:
-            return html.Div("⚠️ No K-NN clustering results available.")
+        if not results:
+            return html.Div("⚠️ No K-NN clustering results available.", className="text-warning p-3")
 
-        results = pd.json_normalize([pd.read_json(row["result"]) for _, row in data.iterrows()])
+        # Parse and normalize JSON data
+        parsed_results = pd.json_normalize([row["result"] for row in results])
         fig = go.Figure()
-        for cluster_id in results['cluster'].unique():
-            cluster_data = results[results['cluster'] == cluster_id]
+        for cluster_id in parsed_results['cluster'].unique():
+            cluster_data = parsed_results[parsed_results['cluster'] == cluster_id]
             fig.add_trace(go.Scatter(
                 x=cluster_data['feature1'], y=cluster_data['feature2'],
                 mode='markers', name=f"Cluster {cluster_id}",
@@ -89,21 +87,21 @@ class KnnClusteringChart:
 
 class GraphClusteringChart:
     def layout(self):
-        conn = connect_to_db()
         query = """
             SELECT result
             FROM analysis_results
             WHERE analysis_type = 'clustering_graph'
         """
-        data = pd.read_sql(query, conn)
+        results = fetch_data(query)
 
-        if data.empty:
-            return html.Div("⚠️ No graph-based clustering results available.")
+        if not results:
+            return html.Div("⚠️ No graph-based clustering results available.", className="text-warning p-3")
 
-        results = pd.json_normalize([pd.read_json(row["result"]) for _, row in data.iterrows()])
+        # Parse and normalize JSON data
+        parsed_results = pd.json_normalize([row["result"] for row in results])
 
         G = nx.Graph()
-        for _, row in results.iterrows():
+        for _, row in parsed_results.iterrows():
             G.add_node(row['symbol'], centrality=row['node_centrality'])
 
         pos = nx.spring_layout(G)
