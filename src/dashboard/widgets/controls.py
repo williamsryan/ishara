@@ -1,8 +1,23 @@
 from dash import dcc, html
 import dash_bootstrap_components as dbc
+from src.utils.database import fetch_data
 
 class Controls:
     def render(self):
+        # Fetch the default date range from the database
+        query = """
+            SELECT MIN(datetime) AS start_date, MAX(datetime) AS end_date
+            FROM real_time_market_data
+        """
+        results = fetch_data(query)
+
+        if results.empty:
+            start_date = None
+            end_date = None
+        else:
+            start_date = results.iloc[0]["start_date"]
+            end_date = results.iloc[0]["end_date"]
+
         return html.Div([
             html.H4("Controls", className="mb-3"),
             html.Label("Select Data Source"),
@@ -27,8 +42,10 @@ class Controls:
             html.Label("Select Time Range"),
             dcc.DatePickerRange(
                 id="date-picker",
-                start_date_placeholder_text="Start Date",
-                end_date_placeholder_text="End Date",
+                # start_date_placeholder_text="Start Date",
+                # end_date_placeholder_text="End Date",
+                start_date=start_date,
+                end_date=end_date,
                 display_format="YYYY-MM-DD",
                 className="mb-3"
             ),

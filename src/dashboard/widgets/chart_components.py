@@ -41,13 +41,14 @@ class AlternativeDataCharts:
         params = tuple(symbols) + (start_date, end_date)
         results = fetch_data(query, params=params)
 
-        if not results:
+        # Check if results are empty
+        if results.empty:
             return html.Div("⚠️ No alternative data available.", className="text-warning p-3")
 
         sentiment_figure = go.Figure()
         mentions_figure = go.Figure()
 
-        for row in results:
+        for row in results.to_dict(orient="records"):
             if row["metric"] == "sentiment":
                 sentiment_figure.add_trace(go.Scatter(x=row["datetime"], y=row["value"], mode="lines"))
             elif row["metric"] == "mentions":

@@ -2,6 +2,7 @@ import psycopg2
 from psycopg2.extras import execute_batch, RealDictCursor
 from contextlib import contextmanager
 import pandas as pd
+from sqlalchemy import create_engine
 from src.utils.config import DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
 
 # Database Configuration
@@ -11,6 +12,9 @@ DB_CONFIG = {
     "user": DATABASE_USER,
     "password": DATABASE_PASSWORD
 }
+
+# SQLAlchemy Connection String
+SQLALCHEMY_DB_URI = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
 
 # Table Names
 TABLES = {
@@ -41,6 +45,17 @@ def connect_to_db():
     finally:
         if conn:
             conn.close()
+
+def get_sqlalchemy_engine():
+    """
+    Returns a SQLAlchemy engine for compatibility with Pandas.
+    """
+    try:
+        engine = create_engine(SQLALCHEMY_DB_URI)
+        return engine
+    except Exception as e:
+        print(f"❌ Error creating SQLAlchemy engine: {e}")
+        raise
 
 # -------------------- GENERIC INSERT METHODS --------------------
 
@@ -248,21 +263,23 @@ def insert_clustering_results(data):
 
 def fetch_data(query, params=None):
     """
-    Fetch data from the database using a raw SQL query.
+    Execute a query and fetch results as a Pandas DataFrame.
 
     Args:
-        query (str): The SQL query to execute.
-        params (tuple): Parameters to substitute in the query.
+        query (str): SQL query to execute.
+        params (tuple, optional): Query parameters.
 
     Returns:
         pd.DataFrame: Query results as a Pandas DataFrame.
     """
-    with connect_to_db() as conn:
-        try:
-            return fetch_as_dataframe(query, params)
-        except Exception as e:
-            print(f"❌ Error fetching data: {e}")
-            return pd.DataFrame()
+    engine = get_sqlalchemy_engine()
+    try:
+        results = pd.read_sql_query(query, con=engine, params=params)
+        print(f"DEBUG: Query results:\n{results.head()}")
+        return results
+    except Exception as e:
+        print(f"❌ Error fetching data: {e}")
+        return pd.DataFrame()
 
 # -------------------- UTILITIES --------------------
 
