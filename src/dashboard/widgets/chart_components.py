@@ -5,10 +5,11 @@ from src.utils.database import fetch_data
 import pandas as pd
 
 class PriceChart:
-    def layout(self, symbols, start_date, end_date):
+    def layout(self, symbols, start_date, end_date, data_source):
+        # Build the query dynamically based on the selected data source
         query = f"""
-            SELECT datetime, close
-            FROM real_time_market_data
+            SELECT datetime, close, symbol
+            FROM {data_source}  -- Use the dynamic data source
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
             AND datetime BETWEEN %s AND %s
             ORDER BY datetime ASC
@@ -31,17 +32,16 @@ class PriceChart:
         return dcc.Graph(figure=figure)
 
 class AlternativeDataCharts:
-    def layout(self, symbols, start_date, end_date, overlay_toggle):
+    def layout(self, symbols, start_date, end_date, overlay_toggle, data_source):
         query = f"""
             SELECT datetime, metric, value
-            FROM alternative_data
+            FROM {data_source}
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
             AND datetime BETWEEN %s AND %s
         """
         params = tuple(symbols) + (start_date, end_date)
         results = fetch_data(query, params=params)
 
-        # Check if results are empty
         if results.empty:
             return html.Div("⚠️ No alternative data available.", className="text-warning p-3")
 
