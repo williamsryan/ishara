@@ -85,37 +85,31 @@ def update_symbol_selector(data_source):
     Output("tab-content", "children"),
     [Input("tabs", "value"), Input("symbol-selector", "value"),
      Input("date-picker", "start_date"), Input("date-picker", "end_date"),
-     Input("overlay-toggle", "value")]
+     Input("overlay-toggle", "value"), Input("data-source", "value")]
 )
-def update_content(tab, symbols, start_date, end_date, overlay_toggle):
-    # Handle missing symbols
+def update_content(tab, symbols, start_date, end_date, overlay_toggle, data_source):
     if not symbols:
         return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
         if tab == "price-chart":
-            # Pass symbols and date range to the PriceChart layout
             price_chart = PriceChart()
-            return price_chart.layout(symbols, start_date, end_date)
+            return price_chart.layout(symbols, start_date, end_date, data_source)
 
         elif tab == "alternative-data":
-            # Pass symbols, date range, and overlay toggle to AlternativeDataCharts
             alternative_data_charts = AlternativeDataCharts()
             return alternative_data_charts.layout(symbols, start_date, end_date, overlay_toggle)
 
         elif tab == "data-table":
-            # Pass symbols and date range to the DataTable layout
             data_table = DataTable()
             return data_table.layout(symbols, start_date, end_date)
 
         elif tab == "analyses":
-            # Return the analyses layout
             analyses = Analyses()
             return analyses.layout()
 
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
-
     except Exception as e:
         print(f"Error loading tab content: {e}")
         return html.Div(f"❌ Error loading content: {str(e)}", className="text-danger p-3")
