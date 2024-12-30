@@ -5,7 +5,7 @@ from src.utils.config import ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL
 
 api = tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL)
 
-def insert_historical_data(symbols, start_date="2024-12-01", end_date="2024-12-20", timeframe="1Min"):
+def insert_historical_data(symbols, start_date="2024-12-01", end_date="2024-12-29", timeframe="1Min"):
     """
     Fetch and store historical stock data for multiple symbols at the finest granularity.
 
@@ -37,7 +37,7 @@ def insert_historical_data(symbols, start_date="2024-12-01", end_date="2024-12-2
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
 
-def fetch_historical_data(symbols, start_date="2024-12-01", end_date="2024-12-20", timeframe="1Day"):
+def fetch_historical_data(symbols, start_date="2024-12-01", end_date="2024-12-29", timeframe="1Day"):
     """
     Fetch historical stock data from Alpaca and return it as a DataFrame.
 

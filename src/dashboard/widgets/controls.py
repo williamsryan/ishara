@@ -7,7 +7,7 @@ class Controls:
         # Fetch the default date range from the database
         query = """
             SELECT MIN(datetime) AS start_date, MAX(datetime) AS end_date
-            FROM real_time_market_data
+            FROM historical_market_data
         """
         results = fetch_data(query)
 

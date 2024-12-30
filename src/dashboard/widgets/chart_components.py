@@ -11,11 +11,10 @@ class PriceChart:
             SELECT datetime, close, symbol
             FROM {data_source} 
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
-            AND datetime BETWEEN %s AND %s
             ORDER BY datetime ASC
         """
-        params = tuple(symbols) + (start_date, end_date)
-        results = fetch_data(query, params=params)
+        # params = tuple(symbols) + (start_date, end_date)
+        results = fetch_data(query, params=tuple(symbols,))
 
         # Check if the DataFrame is empty
         if results.empty:
@@ -32,31 +31,29 @@ class PriceChart:
         return dcc.Graph(figure=figure)
 
 class AlternativeDataCharts:
-    def layout(self, symbols, start_date=None, end_date=None):
+    def layout(self, symbols):
         # Fetch data
         query = f"""
-            SELECT *
+            SELECT datetime, metric, value, symbol
             FROM alternative_data
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
-            AND datetime BETWEEN %s AND %s
         """
-        params = tuple(symbols) + (start_date, end_date)
-        results = fetch_data(query, params=params)
+        results = fetch_data(query, params=tuple(symbols))
 
         if results.empty:
-            return html.Div("⚠️ No alternative data available.", className="text-warning p-3")
+            return html.Div("⚠️ No alternative data available for the selected symbols.", className="text-warning p-3")
 
-        # Generate metric options
+        # Generate metric options dynamically
         metrics = results["metric"].unique()
         metric_options = [{"label": metric.capitalize(), "value": metric} for metric in metrics]
 
-        # Filter controls
+        # Controls for metric selection
         controls = html.Div([
             html.Label("Select Metrics to Display"),
             dcc.Checklist(
                 id="metric-filter",
                 options=metric_options,
-                value=metrics.tolist(),
+                value=metrics.tolist(),  # Default to all metrics
                 inline=True
             )
         ], className="mb-4")
@@ -65,6 +62,39 @@ class AlternativeDataCharts:
         graphs_container = html.Div(id="alternative-data-graphs")
 
         return html.Div([controls, graphs_container], className="container")
+    
+    def render_graphs(self, symbols, selected_metrics):
+        # Fetch data for the selected symbols and metrics
+        query = f"""
+            SELECT datetime, metric, value, symbol
+            FROM alternative_data
+            WHERE symbol IN ({','.join(['%s'] * len(symbols))}) AND metric = ANY(%s)
+        """
+        params = tuple(symbols) + (selected_metrics,)
+        results = fetch_data(query, params=params)
+
+        if results.empty:
+            return html.Div("⚠️ No data available for the selected metrics.", className="text-warning p-3")
+
+        # Generate a graph for each selected metric
+        graphs = []
+        for metric in selected_metrics:
+            metric_data = results[results["metric"] == metric]
+            fig = go.Figure()
+            for symbol in symbols:
+                symbol_data = metric_data[metric_data["symbol"] == symbol]
+                fig.add_trace(go.Scatter(
+                    x=symbol_data["datetime"], y=symbol_data["value"],
+                    mode="lines", name=f"{symbol} {metric}"
+                ))
+            fig.update_layout(
+                title=f"{metric.capitalize()} Over Time",
+                xaxis_title="Datetime",
+                yaxis_title="Value"
+            )
+            graphs.append(dcc.Graph(figure=fig))
+
+        return html.Div(graphs)
 
 class KnnClusteringChart:
     def layout(self):
