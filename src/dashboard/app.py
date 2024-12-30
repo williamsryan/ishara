@@ -80,44 +80,87 @@ def update_symbols(tab):
 
     # Handle empty results
     if symbols_data.empty:
-        return [], []
+        return [], None
 
     # Generate dropdown options
     options = [{"label": symbol, "value": symbol} for symbol in symbols_data["symbol"].unique()]
+    # Preserve the current selection if still valid
+    if tab in [opt["value"] for opt in options]:
+        return options, tab
     default_value = options[0]["value"] if options else None
     return options, default_value
+
+@app.callback(
+    Output("alternative-data-graphs", "children"),
+    [Input("metric-filter", "value")],
+    [State("symbol-store", "data"), State("date-picker", "start_date"), State("date-picker", "end_date")]
+)
+def update_alternative_data_graphs(selected_metrics, symbols, start_date, end_date):
+    if not symbols:
+        return html.Div("⚠️ No symbols selected.", className="text-warning p-3")
+
+    # Fetch and filter data
+    query = f"""
+        SELECT *
+        FROM alternative_data
+        WHERE symbol IN ({','.join(['%s'] * len(symbols))})
+        AND datetime BETWEEN %s AND %s
+        AND metric IN ({','.join(['%s'] * len(selected_metrics))})
+    """
+    params = tuple(symbols) + (start_date, end_date) + tuple(selected_metrics)
+    results = fetch_data(query, params=params)
+
+    if results.empty:
+        return html.Div("⚠️ No data available for selected metrics.", className="text-warning p-3")
+
+    # Generate graphs
+    grouped_data = results.groupby("metric")
+    graphs = []
+    for metric, data in grouped_data:
+        fig = go.Figure()
+        for symbol in symbols:
+            symbol_data = data[data["symbol"] == symbol]
+            fig.add_trace(go.Scatter(
+                x=symbol_data["datetime"],
+                y=symbol_data["value"],
+                mode="lines",
+                name=f"{symbol} ({metric})"
+            ))
+        fig.update_layout(
+            title=f"{metric.capitalize()} Over Time",
+            xaxis_title="Datetime",
+            yaxis_title="Value",
+            template="plotly_white"
+        )
+        graphs.append(dcc.Graph(figure=fig))
+
+    return graphs
 
 # Callback to dynamically update tab content
 @app.callback(
     Output("tab-content", "children"),
     [Input("tabs", "value"), Input("symbol-selector", "value"),
-     Input("date-picker", "start_date"), Input("date-picker", "end_date"),
-     Input("overlay-toggle", "value")]
+     Input("date-picker", "start_date"), Input("date-picker", "end_date")]
 )
-def update_content(tab, symbols, start_date, end_date, overlay_toggle):
-    if not symbols:
+def update_content(tab, stored_symbols, start_date, end_date):
+    if not stored_symbols:
         return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
-        if tab == "price-chart":
-            price_chart = PriceChart()
-            return price_chart.layout(symbols, start_date, end_date, data_source="real_time_market_data")
+        if tab == "data-table":
+            return data_table.layout(stored_symbols, start_date, end_date)
+
+        elif tab == "price-chart":
+            return price_chart.layout(stored_symbols, start_date, end_date, "real_time_market_data")
 
         elif tab == "alternative-data":
-            alternative_data_charts = AlternativeDataCharts()
-            return alternative_data_charts.layout(symbols, start_date, end_date, overlay_toggle, data_source="alternative_data")
-
-        elif tab == "data-table":
-            data_table = DataTable()
-            return data_table.layout(symbols, start_date, end_date)
+            return alternative_data.layout(stored_symbols, start_date, end_date)
 
         elif tab == "analyses":
-            analyses = Analyses()
             return analyses.layout()
 
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
-
     except Exception as e:
         print(f"Error loading tab content: {e}")
         return html.Div(f"❌ Error loading content: {str(e)}", className="text-danger p-3")

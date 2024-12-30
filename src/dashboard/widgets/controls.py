@@ -42,8 +42,8 @@ class Controls:
             html.Label("Select Time Range"),
             dcc.DatePickerRange(
                 id="date-picker",
-                # start_date_placeholder_text="Start Date",
-                # end_date_placeholder_text="End Date",
+                start_date_placeholder_text="Start Date (optional)",
+                end_date_placeholder_text="End Date (optional)",
                 start_date=start_date,
                 end_date=end_date,
                 display_format="YYYY-MM-DD",

@@ -32,10 +32,11 @@ class PriceChart:
         return dcc.Graph(figure=figure)
 
 class AlternativeDataCharts:
-    def layout(self, symbols, start_date, end_date, overlay_toggle, data_source):
+    def layout(self, symbols, start_date=None, end_date=None):
+        # Fetch data
         query = f"""
-            SELECT datetime, metric, value
-            FROM {data_source}
+            SELECT *
+            FROM alternative_data
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
             AND datetime BETWEEN %s AND %s
         """
@@ -45,19 +46,25 @@ class AlternativeDataCharts:
         if results.empty:
             return html.Div("⚠️ No alternative data available.", className="text-warning p-3")
 
-        sentiment_figure = go.Figure()
-        mentions_figure = go.Figure()
+        # Generate metric options
+        metrics = results["metric"].unique()
+        metric_options = [{"label": metric.capitalize(), "value": metric} for metric in metrics]
 
-        for row in results.to_dict(orient="records"):
-            if row["metric"] == "sentiment":
-                sentiment_figure.add_trace(go.Scatter(x=row["datetime"], y=row["value"], mode="lines"))
-            elif row["metric"] == "mentions":
-                mentions_figure.add_trace(go.Bar(x=row["datetime"], y=row["value"]))
+        # Filter controls
+        controls = html.Div([
+            html.Label("Select Metrics to Display"),
+            dcc.Checklist(
+                id="metric-filter",
+                options=metric_options,
+                value=metrics.tolist(),
+                inline=True
+            )
+        ], className="mb-4")
 
-        return html.Div([
-            dcc.Graph(figure=sentiment_figure),
-            dcc.Graph(figure=mentions_figure),
-        ])
+        # Placeholder for graphs
+        graphs_container = html.Div(id="alternative-data-graphs")
+
+        return html.Div([controls, graphs_container], className="container")
 
 class KnnClusteringChart:
     def layout(self):
