@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, State, callback_context
+from dash import Dash, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 from threading import Thread
 import pandas as pd
@@ -20,12 +20,27 @@ app.config.suppress_callback_exceptions = True
 
 # Instantiate components and widgets
 header = Header()
-sidebar = Sidebar()
+# sidebar = Sidebar()
 controls = Controls()
 price_chart = PriceChart()
 alternative_data = AlternativeDataCharts()
 data_table = DataTable()
 analyses = Analyses()
+
+# Fetch distinct symbols once
+def get_symbols():
+    data_source = "real_time_market_data"  # Default data source
+    query = f"SELECT DISTINCT symbol FROM {data_source}"
+    data = fetch_data(query)
+
+    if data.empty:
+        print("⚠️ No symbols found in the database.")
+        return []
+
+    return [{"label": symbol, "value": symbol} for symbol in data["symbol"].unique()]
+
+# Load symbols globally
+SYMBOL_OPTIONS = get_symbols()
 
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
@@ -35,7 +50,7 @@ app.layout = dbc.Container(fluid=True, children=[
     # Sidebar and Tabs
     dbc.Row([
         dbc.Col(
-            controls.render(),
+            controls.render(symbol_options=SYMBOL_OPTIONS),
             width=3,
             className="bg-light p-4 border-end vh-100 sticky-top overflow-auto"
         ),
@@ -49,7 +64,7 @@ app.layout = dbc.Container(fluid=True, children=[
                     dcc.Tab(label="🗃 Data Table", value="data-table"),
                     dcc.Tab(label="📐 Analyses", value="analyses"),
                 ],
-                className="mb-3"
+                className="mb-3",
             ),
             dcc.Loading(
                 id="tab-content-loading",
@@ -61,34 +76,30 @@ app.layout = dbc.Container(fluid=True, children=[
 ])
 
 # Callback to update the symbol dropdown dynamically
-@app.callback(
-    [Output("symbol-selector", "options"), Output("symbol-selector", "value")],
-    Input("tabs", "value")
-)
-def update_symbols(tab):
-    # Determine the data source based on the selected tab
-    data_source = {
-        "price-chart": "real_time_market_data",
-        "alternative-data": "alternative_data",
-        "data-table": "yahoo_finance_data",
-        "analyses": "analysis_results",
-    }.get(tab, "real_time_market_data")
+# @app.callback(
+#     [Output("symbol-selector", "options"), Output("symbol-selector", "value")],
+#     [Input("symbol-selector", "value")]
+# )
+# def update_symbols(current_value):
+#     # Determine the data source based on logic (or keep default)
+#     data_source = "real_time_market_data"  # Or default to a primary data source
 
-    # Fetch symbols from the appropriate data source
-    query = f"SELECT DISTINCT symbol FROM {data_source}"
-    symbols_data = fetch_data(query)
+#     # Fetch distinct symbols from the data source
+#     query = f"SELECT DISTINCT symbol FROM {data_source}"
+#     data = fetch_data(query)
 
-    # Handle empty results
-    if symbols_data.empty:
-        return [], None
+#     if data.empty:
+#         print(f"No symbols found for data source: {data_source}")
+#         return [], None
 
-    # Generate dropdown options
-    options = [{"label": symbol, "value": symbol} for symbol in symbols_data["symbol"].unique()]
-    # Preserve the current selection if still valid
-    if tab in [opt["value"] for opt in options]:
-        return options, tab
-    default_value = options[0]["value"] if options else None
-    return options, default_value
+#     options = [{"label": symbol, "value": symbol} for symbol in data["symbol"].unique()]
+
+#     # Preserve the current selection if it is valid
+#     if current_value and current_value in [opt["value"] for opt in options]:
+#         return options, current_value
+
+#     # Reset to None if the current value is invalid
+#     return options, None
 
 @app.callback(
     Output("alternative-data-graphs", "children"),
@@ -99,8 +110,7 @@ def update_alternative_data_graphs(selected_symbols, selected_metrics):
         return html.Div("⚠️ Please select symbols and metrics to display data.", className="text-warning p-3")
 
     # Render graphs dynamically based on selected metrics
-    alt_data_charts = AlternativeDataCharts()
-    return alt_data_charts.render_graphs(selected_symbols, selected_metrics)
+    return alternative_data.render_graphs(selected_symbols, selected_metrics)
 
 @app.callback(
     Output("tab-content", "children"),
