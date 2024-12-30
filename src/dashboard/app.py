@@ -90,25 +90,29 @@ def update_symbols(tab):
     default_value = options[0]["value"] if options else None
     return options, default_value
 
-# Callback to dynamically update tab content
 @app.callback(
     Output("tab-content", "children"),
     [Input("tabs", "value"), Input("symbol-selector", "value"),
-     Input("date-picker", "start_date"), Input("date-picker", "end_date")]
+     Input("date-picker", "start_date"), Input("date-picker", "end_date"),
+     Input("overlay-toggle", "value")]
 )
-def update_content(tab, stored_symbols, start_date, end_date):
-    if not stored_symbols:
-        return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
+def update_content(tab, symbols, start_date, end_date, overlay_toggle):
+    if not symbols:
+        return html.Div("⚠️ Please select symbols to display data.")
+    
+    # start_date = start_date or data["datetime"].min() if not data.empty else None
+    # end_date = end_date or data["datetime"].max() if not data.empty else None
+    # start_date, end_date = pd.to_datetime(start_date), pd.to_datetime(end_date)
 
     try:
         if tab == "data-table":
-            return data_table.layout(stored_symbols, start_date, end_date)
+            return data_table.layout(symbols, start_date, end_date)
 
         elif tab == "price-chart":
-            return price_chart.layout(stored_symbols, start_date, end_date, "real_time_market_data")
+            return price_chart.layout(symbols, start_date, end_date, "real_time_market_data")
 
         elif tab == "alternative-data":
-            return alternative_data.layout(stored_symbols, start_date, end_date)
+            return alternative_data.layout(symbols, start_date, end_date)
 
         elif tab == "analyses":
             return analyses.layout()

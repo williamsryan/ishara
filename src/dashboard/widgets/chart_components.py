@@ -9,7 +9,7 @@ class PriceChart:
         # Build the query dynamically based on the selected data source
         query = f"""
             SELECT datetime, close, symbol
-            FROM {data_source}  -- Use the dynamic data source
+            FROM {data_source} 
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
             AND datetime BETWEEN %s AND %s
             ORDER BY datetime ASC
