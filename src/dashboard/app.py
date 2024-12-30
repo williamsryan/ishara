@@ -90,52 +90,6 @@ def update_symbols(tab):
     default_value = options[0]["value"] if options else None
     return options, default_value
 
-@app.callback(
-    Output("alternative-data-graphs", "children"),
-    [Input("metric-filter", "value")],
-    [State("symbol-store", "data"), State("date-picker", "start_date"), State("date-picker", "end_date")]
-)
-def update_alternative_data_graphs(selected_metrics, symbols, start_date, end_date):
-    if not symbols:
-        return html.Div("⚠️ No symbols selected.", className="text-warning p-3")
-
-    # Fetch and filter data
-    query = f"""
-        SELECT *
-        FROM alternative_data
-        WHERE symbol IN ({','.join(['%s'] * len(symbols))})
-        AND datetime BETWEEN %s AND %s
-        AND metric IN ({','.join(['%s'] * len(selected_metrics))})
-    """
-    params = tuple(symbols) + (start_date, end_date) + tuple(selected_metrics)
-    results = fetch_data(query, params=params)
-
-    if results.empty:
-        return html.Div("⚠️ No data available for selected metrics.", className="text-warning p-3")
-
-    # Generate graphs
-    grouped_data = results.groupby("metric")
-    graphs = []
-    for metric, data in grouped_data:
-        fig = go.Figure()
-        for symbol in symbols:
-            symbol_data = data[data["symbol"] == symbol]
-            fig.add_trace(go.Scatter(
-                x=symbol_data["datetime"],
-                y=symbol_data["value"],
-                mode="lines",
-                name=f"{symbol} ({metric})"
-            ))
-        fig.update_layout(
-            title=f"{metric.capitalize()} Over Time",
-            xaxis_title="Datetime",
-            yaxis_title="Value",
-            template="plotly_white"
-        )
-        graphs.append(dcc.Graph(figure=fig))
-
-    return graphs
-
 # Callback to dynamically update tab content
 @app.callback(
     Output("tab-content", "children"),
