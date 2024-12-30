@@ -275,7 +275,7 @@ def fetch_data(query, params=None):
     engine = get_sqlalchemy_engine()
     try:
         results = pd.read_sql_query(query, con=engine, params=params)
-        print(f"DEBUG: Query results:\n{results.head()}")
+        # print(f"DEBUG: Query results:\n{results.head()}")
         return results
     except Exception as e:
         print(f"❌ Error fetching data: {e}")
