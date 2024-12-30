@@ -91,6 +91,18 @@ def update_symbols(tab):
     return options, default_value
 
 @app.callback(
+    Output("alternative-data-graphs", "children"),
+    [Input("symbol-selector", "value"), Input("metric-filter", "value")]
+)
+def update_alternative_data_graphs(selected_symbols, selected_metrics):
+    if not selected_symbols or not selected_metrics:
+        return html.Div("⚠️ Please select symbols and metrics to display data.", className="text-warning p-3")
+
+    # Render graphs dynamically based on selected metrics
+    alt_data_charts = AlternativeDataCharts()
+    return alt_data_charts.render_graphs(selected_symbols, selected_metrics)
+
+@app.callback(
     Output("tab-content", "children"),
     [Input("tabs", "value"), Input("symbol-selector", "value"),
      Input("date-picker", "start_date"), Input("date-picker", "end_date"),
@@ -109,10 +121,10 @@ def update_content(tab, symbols, start_date, end_date, overlay_toggle):
             return data_table.layout(symbols, start_date, end_date)
 
         elif tab == "price-chart":
-            return price_chart.layout(symbols, start_date, end_date, "real_time_market_data")
+            return price_chart.layout(symbols, start_date, end_date, "historical_market_data")
 
         elif tab == "alternative-data":
-            return alternative_data.layout(symbols, start_date, end_date)
+            return alternative_data.layout(symbols)
 
         elif tab == "analyses":
             return analyses.layout()
