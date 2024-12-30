@@ -3,7 +3,7 @@ import dash_bootstrap_components as dbc
 from src.utils.database import fetch_data
 
 class Controls:
-    def render(self):
+    def render(self, symbol_options):
         # Fetch the default date range from the database
         query = """
             SELECT MIN(datetime) AS start_date, MAX(datetime) AS end_date
@@ -36,8 +36,9 @@ class Controls:
             dcc.Dropdown(
                 id="symbol-selector",
                 multi=True,
+                options=symbol_options,
                 placeholder="Loading symbols...",
-                className="mb-3"
+                className="mb-3",
             ),
             html.Label("Select Time Range"),
             dcc.DatePickerRange(
