@@ -63,42 +63,49 @@ app.layout = dbc.Container(fluid=True, children=[
 # Callback to update the symbol dropdown dynamically
 @app.callback(
     [Output("symbol-selector", "options"), Output("symbol-selector", "value")],
-    Input("data-source", "value")
+    Input("tabs", "value")
 )
-def update_symbol_selector(data_source):
-    try:
-        query = f"SELECT DISTINCT symbol FROM {data_source} ORDER BY symbol ASC LIMIT 1000"
-        results = fetch_data(query)
+def update_symbols(tab):
+    # Determine the data source based on the selected tab
+    data_source = {
+        "price-chart": "real_time_market_data",
+        "alternative-data": "alternative_data",
+        "data-table": "yahoo_finance_data",
+        "analyses": "analysis_results",
+    }.get(tab, "real_time_market_data")
 
-        # Explicitly check if the DataFrame is empty
-        if results.empty:
-            return [], []
+    # Fetch symbols from the appropriate data source
+    query = f"SELECT DISTINCT symbol FROM {data_source}"
+    symbols_data = fetch_data(query)
 
-        symbols = [{"label": row["symbol"], "value": row["symbol"]} for _, row in results.iterrows()]
-        return symbols, [symbols[0]["value"]] if symbols else []
-    except Exception as e:
-        print(f"Error updating symbol selector: {e}")
+    # Handle empty results
+    if symbols_data.empty:
         return [], []
+
+    # Generate dropdown options
+    options = [{"label": symbol, "value": symbol} for symbol in symbols_data["symbol"].unique()]
+    default_value = options[0]["value"] if options else None
+    return options, default_value
 
 # Callback to dynamically update tab content
 @app.callback(
     Output("tab-content", "children"),
     [Input("tabs", "value"), Input("symbol-selector", "value"),
      Input("date-picker", "start_date"), Input("date-picker", "end_date"),
-     Input("overlay-toggle", "value"), Input("data-source", "value")]
+     Input("overlay-toggle", "value")]
 )
-def update_content(tab, symbols, start_date, end_date, overlay_toggle, data_source):
+def update_content(tab, symbols, start_date, end_date, overlay_toggle):
     if not symbols:
         return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
         if tab == "price-chart":
             price_chart = PriceChart()
-            return price_chart.layout(symbols, start_date, end_date, data_source)
+            return price_chart.layout(symbols, start_date, end_date, data_source="real_time_market_data")
 
         elif tab == "alternative-data":
             alternative_data_charts = AlternativeDataCharts()
-            return alternative_data_charts.layout(symbols, start_date, end_date, overlay_toggle)
+            return alternative_data_charts.layout(symbols, start_date, end_date, overlay_toggle, data_source="alternative_data")
 
         elif tab == "data-table":
             data_table = DataTable()
@@ -110,6 +117,7 @@ def update_content(tab, symbols, start_date, end_date, overlay_toggle, data_sour
 
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
+
     except Exception as e:
         print(f"Error loading tab content: {e}")
         return html.Div(f"❌ Error loading content: {str(e)}", className="text-danger p-3")

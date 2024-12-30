@@ -20,18 +20,18 @@ class Controls:
 
         return html.Div([
             html.H4("Controls", className="mb-3"),
-            html.Label("Select Data Source"),
-            dcc.Dropdown(
-                id="data-source",
-                options=[
-                    {"label": "Real-Time Data", "value": "real_time_market_data"},
-                    {"label": "Yahoo Finance", "value": "yahoo_finance_data"},
-                    {"label": "Alternative Data", "value": "alternative_data"}
-                ],
-                value="real_time_market_data",
-                clearable=True,
-                className="mb-3"
-            ),
+            # html.Label("Select Data Source"),
+            # dcc.Dropdown(
+            #     id="data-source",
+            #     options=[
+            #         {"label": "Real-Time Data", "value": "real_time_market_data"},
+            #         {"label": "Yahoo Finance", "value": "yahoo_finance_data"},
+            #         {"label": "Alternative Data", "value": "alternative_data"}
+            #     ],
+            #     value="real_time_market_data",
+            #     clearable=True,
+            #     className="mb-3"
+            # ),
             html.Label("Select Symbols"),
             dcc.Dropdown(
                 id="symbol-selector",
