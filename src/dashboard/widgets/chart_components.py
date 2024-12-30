@@ -16,12 +16,16 @@ class PriceChart:
         params = tuple(symbols) + (start_date, end_date)
         results = fetch_data(query, params=params)
 
-        if not results:
-            return html.Div("⚠️ No price data available.", className="text-warning p-3")
+        # Check if the DataFrame is empty
+        if results.empty:
+            return html.Div("⚠️ No price data available for the selected criteria.", className="text-warning p-3")
 
         figure = go.Figure()
-        for row in results:
-            figure.add_trace(go.Scatter(x=row["datetime"], y=row["close"], mode="lines", name=row["symbol"]))
+        for symbol in symbols:
+            symbol_data = results[results["symbol"] == symbol]
+            figure.add_trace(go.Scatter(
+                x=symbol_data["datetime"], y=symbol_data["close"], mode="lines", name=f"{symbol} Price"
+            ))
 
         figure.update_layout(title="Price Chart", xaxis_title="Datetime", yaxis_title="Close Price")
         return dcc.Graph(figure=figure)
