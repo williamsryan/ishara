@@ -29,34 +29,29 @@ class Analysis:
             print(f"⚠️ No {cluster_type} clustering results found.")
             return pd.DataFrame()
 
-        # Filter out rows with None or NULL in the result column
         data = data[data["result"].notnull()]
 
-        if data.empty:
-            print(f"⚠️ No valid {cluster_type} clustering results found.")
-            return pd.DataFrame()
-        
-        print(f"TEST: {type(data['result'])}")
-        
-        # Parse JSON result column
-        data["parsed_result"] = data["result"].apply(json.loads)
+        # Deserialize JSON in the result column
+        data["parsed_result"] = data["result"].apply(
+            lambda x: json.loads(x) if isinstance(x, str) else x
+        )
+
         return data
 
     @staticmethod
-    def perform_knn_clustering(symbols, start_date, end_date):
+    def perform_knn_clustering(start_date, end_date):
         """
-        Perform K-NN clustering for the given symbols.
+        Perform K-NN clustering for all available symbols.
         """
         query = f"""
         SELECT *
         FROM historical_market_data
-        WHERE symbol IN ({','.join(f"'{s}'" for s in symbols)})
-        AND datetime BETWEEN '{start_date}' AND '{end_date}'
+        WHERE datetime BETWEEN '{start_date}' AND '{end_date}'
         """
         data = fetch_data(query)
 
         if data.empty:
-            raise ValueError("No data available for the given symbols and date range.")
+            raise ValueError("No data available for the given date range.")
 
         features = data.drop(columns=["datetime", "symbol"])
         scaler = StandardScaler()
@@ -80,6 +75,7 @@ class Analysis:
             ))
 
         insert_clustering_results(clustering_results)
+        print(f"✅ Stored K-NN clustering results for {len(data)} rows.")
         return data
 
     @staticmethod
@@ -91,9 +87,7 @@ class Analysis:
         historical_query = f"""
         SELECT symbol, datetime, close, open
         FROM historical_market_data
-        WHERE symbol IN ({','.join(f"'{s}'" for s in symbols)})
-        AND datetime BETWEEN '{start_date}' AND '{end_date}'
-        AND close IS NOT NULL AND open IS NOT NULL
+        WHERE close IS NOT NULL AND open IS NOT NULL
         """
         historical_data = fetch_data(historical_query)
 
@@ -104,8 +98,7 @@ class Analysis:
         options_query = f"""
         SELECT symbol, implied_volatility, open_interest, strike
         FROM options_data
-        WHERE symbol IN ({','.join(f"'{s}'" for s in symbols)})
-        AND implied_volatility IS NOT NULL AND open_interest IS NOT NULL
+        WHERE implied_volatility IS NOT NULL AND open_interest IS NOT NULL
         """
         options_data = fetch_data(options_query)
 
@@ -159,7 +152,11 @@ class Analysis:
                     json.dumps(result_data)  # Serialize the dict to JSON
                 ))
 
-        insert_clustering_results(graph_clustering_results)
+        if graph_clustering_results:
+            insert_clustering_results(graph_clustering_results)
+            print(f"✅ Stored graph clustering results for {len(clusters)} clusters.")
+        else:
+            print("⚠️ No graph clustering results to store.")
 
         return graph, clusters
 
