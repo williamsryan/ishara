@@ -163,9 +163,10 @@ def update_tab_content(tab, symbols, start_date, end_date):
         State("symbol-selector", "value"),
         State("date-picker", "start_date"),
         State("date-picker", "end_date"),
+        State("feature-selector", "value"),  # Dropdown for features
     ],
 )
-def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_date):
+def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_date, selected_features):
     """
     Run the selected analysis and update the analyses tab content.
     """
@@ -181,54 +182,75 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
             html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
         )
 
+    if not selected_features or len(selected_features) < 2:
+        return (
+            html.Div("⚠️ Please select at least two features for analysis.", className="text-warning p-3"),
+            html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
+        )
+
     try:
-        # Step 1: Run the selected analysis
+        # Run the selected analysis
         if analysis_type == "knn_clustering":
-            data = Analysis.perform_knn_clustering(symbols, start_date, end_date)
+            Analysis.perform_knn_clustering(
+                selected_symbols=symbols,
+                start_date=start_date,
+                end_date=end_date,
+                selected_features=selected_features
+            )
+            results = Analysis.fetch_clustering_results("knn_clustering")
+            visualization = Analysis.plot_cluster_scatter(results, selected_features)
+
         elif analysis_type == "graph_clustering":
-            graph, communities = Analysis.perform_graph_clustering(symbols, start_date, end_date)
+            Analysis.perform_graph_clustering(
+                selected_symbols=symbols,
+                start_date=start_date,
+                end_date=end_date
+            )
+            results = Analysis.fetch_clustering_results("graph_clustering")
+            visualization = Analysis.plot_graph_clusters(results)
+
         else:
             return (
                 html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3"),
                 html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
             )
 
-        # Step 2: Fetch the results for visualization
-        if analysis_type == "knn_clustering":
-            results = Analysis.fetch_clustering_results("knn_clustering")
-            # print(f"DEBUG: Fetched KNN clustering results: {results.head()}")
-            if results.empty:
-                return (
-                    html.Div("⚠️ No clustering results found.", className="text-warning p-3"),
-                    html.Div("⚠️ No visualization data available.", className="text-warning p-3"),
-                )
-            visualization = Analysis.plot_cluster_scatter(results, features=["low", "high"])
-        elif analysis_type == "graph_clustering":
-            results = Analysis.fetch_clustering_results("graph_clustering")
-            print(f"DEBUG: Fetched graph clustering results: {results.head()}")
-            if results.empty:
-                return (
-                    html.Div("⚠️ No graph clustering results found.", className="text-warning p-3"),
-                    html.Div("⚠️ No visualization data available.", className="text-warning p-3"),
-                )
-            visualization = Analysis.plot_graph_clusters(results)
-        else:
-            visualization = html.Div("⚠️ Visualization not supported for this analysis type.", className="text-warning p-3")
-
-        # Step 3: Return success message and visualization
+        # Return success message and visualization
         return (
             html.Div("✅ Analysis complete! Results are updated.", className="text-success p-3"),
             dcc.Graph(figure=visualization),
         )
 
     except Exception as e:
-        # Handle any errors during analysis or visualization
+        # Handle errors during analysis or visualization
         print(f"❌ Error during analysis: {e}")
         return (
             html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger p-3"),
             html.Div(f"❌ Error displaying results: {str(e)}", className="text-danger p-3"),
         )
 
+@app.callback(
+    Output("knn-chart", "figure"),
+    [Input("x-feature", "value"), Input("y-feature", "value")],
+    [State("symbol-selector", "value"), State("date-picker", "start_date"), State("date-picker", "end_date")]
+)
+def update_knn_chart(x_feature, y_feature, selected_symbols, start_date, end_date):
+    if not selected_symbols:
+        return go.Figure(layout={"title": "Please select symbols."})
+
+    try:
+        # Fetch or run the KNN clustering analysis
+        results = Analysis.fetch_clustering_results("knn_clustering", selected_symbols)
+        if results.empty:
+            results = Analysis.perform_knn_clustering(selected_symbols, start_date, end_date)
+
+        # Generate the clustering scatter plot
+        return Analysis.plot_cluster_scatter(results, [x_feature, y_feature])
+
+    except Exception as e:
+        print(f"❌ Error updating KNN chart: {e}")
+        return go.Figure(layout={"title": "Error generating chart."})
+    
 # Run the dashboard and real-time data streamer
 def run_dashboard():
     stream_thread = Thread(target=fetch_real_time_data)
