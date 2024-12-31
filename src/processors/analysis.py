@@ -32,14 +32,18 @@ class Analysis:
         data = data[data["result"].notnull()]
 
         # Deserialize JSON in the result column
-        data["parsed_result"] = data["result"].apply(
-            lambda x: json.loads(x) if isinstance(x, str) else x
-        )
+        # data["parsed_result"] = data["result"].apply(
+        #     lambda x: json.loads(x) if isinstance(x, str) else x
+        # )
+
+        # Testing for now.
+        data["parsed_result"] = data["result"]
+        print(f"Fetched {len(data)} {cluster_type} clustering results.")
 
         return data
 
     @staticmethod
-    def perform_knn_clustering(start_date, end_date):
+    def perform_knn_clustering(symbols, start_date, end_date):
         """
         Perform K-NN clustering for all available symbols.
         """
@@ -166,38 +170,54 @@ class Analysis:
         Visualize graph-based clusters using NetworkX and Plotly.
         """
         graph = nx.Graph()
-        
-        # Parse the JSON data in the result column to build the graph
+
+        # Build the graph using data from the 'result' column
         for _, row in results.iterrows():
-            result_data = json.loads(row["result"])
+            result_data = row["result"]  # Assume this is already a dictionary
             connected_symbols = result_data.get("connected_symbols", [])
             for symbol in connected_symbols:
                 graph.add_edge(row["symbol"], symbol)
 
         # Assign cluster colors based on cluster_id
         cluster_ids = {row["symbol"]: row["cluster_id"] for _, row in results.iterrows()}
-        color_map = [cluster_ids[node] for node in graph]
+        color_map = [cluster_ids.get(node, 0) for node in graph.nodes()]
 
-        # Plot the graph
-        pos = nx.spring_layout(graph)  # Generate layout
+        # Generate graph layout
+        pos = nx.spring_layout(graph)
+
+        # Initialize edge trace
+        edge_x = []
+        edge_y = []
+
+        for edge in graph.edges():
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+
         edge_trace = go.Scatter(
-            x=[],
-            y=[],
+            x=edge_x,
+            y=edge_y,
             line=dict(width=0.5, color="#888"),
             hoverinfo="none",
             mode="lines",
         )
 
-        for edge in graph.edges():
-            x0, y0 = pos[edge[0]]
-            x1, y1 = pos[edge[1]]
-            edge_trace["x"] += [x0, x1, None]
-            edge_trace["y"] += [y0, y1, None]
+        # Initialize node trace
+        node_x = []
+        node_y = []
+        node_text = []
+
+        for node in graph.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+            node_text.append(node)
 
         node_trace = go.Scatter(
-            x=[],
-            y=[],
-            text=[],
+            x=node_x,
+            y=node_y,
+            text=node_text,
             mode="markers",
             hoverinfo="text",
             marker=dict(
@@ -208,12 +228,6 @@ class Analysis:
                 line_width=2,
             ),
         )
-
-        for node in graph:
-            x, y = pos[node]
-            node_trace["x"] += [x]
-            node_trace["y"] += [y]
-            node_trace["text"] += [node]
 
         fig = go.Figure(
             data=[edge_trace, node_trace],
@@ -233,9 +247,9 @@ class Analysis:
         """
         Plot 2D scatter plot of clustered data using normalized features.
         """
-        results["parsed_result"] = results["result"].apply(json.loads)
-        results["x"] = results["parsed_result"].apply(lambda d: d["features"].get(features[0]))
-        results["y"] = results["parsed_result"].apply(lambda d: d["features"].get(features[1]))
+        # Extract x and y features from the JSON data
+        results["x"] = results["result"].apply(lambda d: d["features"].get(features[0]))
+        results["y"] = results["result"].apply(lambda d: d["features"].get(features[1]))
 
         # Create a scatter plot with clusters
         fig = go.Figure()
@@ -263,13 +277,25 @@ class Analysis:
         """
         Plot community sizes as a bar chart.
         """
+        # Count the number of symbols in each cluster
         communities = results.groupby("cluster_id").size().reset_index(name="count")
-        fig = go.bar(
-            communities,
-            x="cluster_id",
-            y="count",
+
+        fig = go.Figure(
+            data=[
+                go.Bar(
+                    x=communities["cluster_id"],
+                    y=communities["count"],
+                    text=communities["count"],
+                    textposition="auto",
+                )
+            ]
+        )
+
+        fig.update_layout(
             title="Community Size Summary",
-            labels={"cluster_id": "Community ID", "count": "Number of Symbols"},
+            xaxis_title="Community ID",
+            yaxis_title="Number of Symbols",
+            template="plotly_white",
         )
         return fig
     
