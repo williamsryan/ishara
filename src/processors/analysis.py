@@ -263,6 +263,7 @@ class Analysis:
         # Extract x and y features from the JSON data
         results["x"] = results["result"].apply(lambda d: d.get("features", {}).get(features[0]))
         results["y"] = results["result"].apply(lambda d: d.get("features", {}).get(features[1]))
+        results["volume"] = results["result"].apply(lambda d: d.get("features", {}).get("volume"))
 
         # Filter out rows with None values in x or y
         filtered_results = results.dropna(subset=["x", "y"])
@@ -290,25 +291,42 @@ class Analysis:
         fig = go.Figure()
         for cluster_id, cluster_data in filtered_results.groupby("cluster_id"):
             fig.add_trace(
-                go.Scattergl(  # Use Scattergl for fast rendering
+                go.Scattergl(
                     x=cluster_data["x"],
                     y=cluster_data["y"],
                     mode="markers",
                     name=f"Cluster {cluster_id}",
-                    marker=dict(size=8, opacity=0.7, line=dict(width=0.5, color="black")),
+                    marker=dict(
+                        size=cluster_data["volume"] / cluster_data["volume"].max() * 20,  # Scale by volume
+                        opacity=0.7,
+                        line=dict(width=0.5, color="black"),
+                    ),
                     text=[
-                        f"Feature 1: {x}<br>Feature 2: {y}"
-                        for x, y in zip(cluster_data["x"], cluster_data["y"])
+                        f"Symbol: {symbol}<br>Low: {x}<br>High: {y}<br>Volume: {volume}"
+                        for symbol, x, y, volume in zip(
+                            cluster_data["symbol"], cluster_data["x"], cluster_data["y"], cluster_data["volume"]
+                        )
                     ],
                     hoverinfo="text",
                 )
             )
 
+        # Add cluster center annotations
+        for cluster_id, center in enumerate(filtered_results.groupby("cluster_id").mean()[["x", "y"]].values):
+            fig.add_trace(go.Scatter(
+                x=[center[0]], y=[center[1]],
+                mode="markers+text",
+                text=[f"Cluster {cluster_id}"],
+                textposition="top center",
+                marker=dict(size=15, color="black", symbol="x"),
+                name=f"Cluster {cluster_id} Center"
+            ))
+
         fig.update_layout(
             title="KNN Cluster Scatter Plot",
             title_x=0.5,
-            xaxis_title=features[0],
-            yaxis_title=features[1],
+            xaxis_title="Low Price (USD)",
+            yaxis_title="High Price (USD)",
             template="plotly_white",
             dragmode="pan",  # Enable panning
             margin=dict(l=40, r=40, b=40, t=40),
@@ -320,9 +338,6 @@ class Analysis:
                 x=1,
             ),
         )
-
-        # Enable zooming and panning
-        fig.update_layout(dragmode="pan")
         return fig
 
     @staticmethod
