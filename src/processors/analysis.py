@@ -38,7 +38,6 @@ class Analysis:
 
         # Testing for now.
         data["parsed_result"] = data["result"]
-        print(f"Fetched {len(data)} {cluster_type} clustering results.")
 
         return data
 
@@ -167,7 +166,7 @@ class Analysis:
     @staticmethod
     def plot_graph_clusters(results):
         """
-        Visualize graph-based clusters using NetworkX and Plotly.
+        Visualize graph-based clusters using NetworkX and Plotly with improved interactivity and layout.
         """
         graph = nx.Graph()
 
@@ -212,7 +211,7 @@ class Analysis:
             x, y = pos[node]
             node_x.append(x)
             node_y.append(y)
-            node_text.append(node)
+            node_text.append(f"Node: {node}<br>Cluster ID: {cluster_ids.get(node, 'N/A')}")
 
         node_trace = go.Scatter(
             x=node_x,
@@ -223,9 +222,9 @@ class Analysis:
             marker=dict(
                 showscale=True,
                 colorscale="YlGnBu",
-                size=10,
+                size=15,
                 color=color_map,
-                line_width=2,
+                line=dict(width=1, color="black"),
             ),
         )
 
@@ -233,13 +232,17 @@ class Analysis:
             data=[edge_trace, node_trace],
             layout=go.Layout(
                 title="Graph-Based Clustering",
+                title_x=0.5,
                 showlegend=False,
                 hovermode="closest",
-                margin=dict(b=0, l=0, r=0, t=0),
-                xaxis=dict(showgrid=False, zeroline=False),
-                yaxis=dict(showgrid=False, zeroline=False),
+                margin=dict(b=0, l=0, r=0, t=40),
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
             ),
         )
+
+        # Enable panning and zooming
+        fig.update_layout(dragmode="pan")
         return fig
 
     @staticmethod
@@ -248,28 +251,47 @@ class Analysis:
         Plot 2D scatter plot of clustered data using normalized features.
         """
         # Extract x and y features from the JSON data
-        results["x"] = results["result"].apply(lambda d: d["features"].get(features[0]))
-        results["y"] = results["result"].apply(lambda d: d["features"].get(features[1]))
+        results["x"] = results["result"].apply(lambda d: d["features"].get(features[0], None))
+        results["y"] = results["result"].apply(lambda d: d["features"].get(features[1], None))
 
-        # Create a scatter plot with clusters
+        # Filter out rows with None values in x or y
+        filtered_results = results.dropna(subset=["x", "y"])
+
         fig = go.Figure()
-        for cluster_id, cluster_data in results.groupby("cluster_id"):
+        for cluster_id, cluster_data in filtered_results.groupby("cluster_id"):
             fig.add_trace(
                 go.Scatter(
                     x=cluster_data["x"],
                     y=cluster_data["y"],
                     mode="markers",
                     name=f"Cluster {cluster_id}",
-                    marker=dict(size=10)
+                    marker=dict(size=10, opacity=0.8, line=dict(width=0.5, color="black")),
+                    text=[
+                        f"Feature 1: {x}<br>Feature 2: {y}"
+                        for x, y in zip(cluster_data["x"], cluster_data["y"])
+                    ],
+                    hoverinfo="text",
                 )
             )
 
         fig.update_layout(
             title="Cluster Scatter Plot",
+            title_x=0.5,
             xaxis_title=features[0],
             yaxis_title=features[1],
-            template="plotly_white"
+            template="plotly_white",
+            margin=dict(l=40, r=40, b=40, t=40),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+            ),
         )
+
+        # Enable zooming and panning
+        fig.update_layout(dragmode="zoom")
         return fig
 
     @staticmethod
