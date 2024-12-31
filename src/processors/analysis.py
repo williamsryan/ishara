@@ -261,8 +261,8 @@ class Analysis:
         Plot 2D scatter plot of clustered data using normalized features.
         """
         # Extract x and y features from the JSON data
-        results["x"] = results["result"].apply(lambda d: d.get("features", {}).get(features[0], None))
-        results["y"] = results["result"].apply(lambda d: d.get("features", {}).get(features[1], None))
+        results["x"] = results["result"].apply(lambda d: d.get("features", {}).get(features[0]))
+        results["y"] = results["result"].apply(lambda d: d.get("features", {}).get(features[1]))
 
         # Filter out rows with None values in x or y
         filtered_results = results.dropna(subset=["x", "y"])
@@ -290,12 +290,12 @@ class Analysis:
         fig = go.Figure()
         for cluster_id, cluster_data in filtered_results.groupby("cluster_id"):
             fig.add_trace(
-                go.Scatter(
+                go.Scattergl(  # Use Scattergl for fast rendering
                     x=cluster_data["x"],
                     y=cluster_data["y"],
                     mode="markers",
                     name=f"Cluster {cluster_id}",
-                    marker=dict(size=10, opacity=0.8, line=dict(width=0.5, color="black")),
+                    marker=dict(size=8, opacity=0.7, line=dict(width=0.5, color="black")),
                     text=[
                         f"Feature 1: {x}<br>Feature 2: {y}"
                         for x, y in zip(cluster_data["x"], cluster_data["y"])
