@@ -7,10 +7,11 @@ from src.fetchers.alpaca_realtime import fetch_real_time_data
 from src.dashboard.components.header import Header
 from src.dashboard.components.sidebar import Sidebar
 from src.dashboard.widgets.controls import Controls
-from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCharts
+from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCharts, KnnClusteringChart, GraphClusteringChart
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
+from src.processors.analysis import Analysis
 from src.utils.database import fetch_data
 
 # Initialize the app
@@ -22,10 +23,14 @@ app.config.suppress_callback_exceptions = True
 header = Header()
 # sidebar = Sidebar()
 controls = Controls()
-price_chart = PriceChart()
-alternative_data = AlternativeDataCharts()
 data_table = DataTable()
 analyses = Analyses()
+
+# Instantiate chart components
+price_chart = PriceChart()
+alternative_data_charts = AlternativeDataCharts()
+knn_chart = KnnClusteringChart()
+graph_chart = GraphClusteringChart()
 
 # Fetch distinct symbols once
 def get_symbols():
@@ -103,48 +108,93 @@ app.layout = dbc.Container(fluid=True, children=[
 
 @app.callback(
     Output("alternative-data-graphs", "children"),
-    [Input("symbol-selector", "value"), Input("metric-filter", "value")]
+    [
+        Input("metric-filter", "value"),
+        State("symbol-selector", "value")
+    ]
 )
-def update_alternative_data_graphs(selected_symbols, selected_metrics):
-    if not selected_symbols or not selected_metrics:
+def update_alternative_data_graphs(selected_metrics, symbols):
+    """
+    Update the alternative data graphs based on selected metrics and symbols.
+    """
+    if not symbols or not selected_metrics:
         return html.Div("⚠️ Please select symbols and metrics to display data.", className="text-warning p-3")
 
-    # Render graphs dynamically based on selected metrics
-    return alternative_data.render_graphs(selected_symbols, selected_metrics)
+    try:
+        return alternative_data_charts.render_graphs(symbols, selected_metrics)
+    except Exception as e:
+        print(f"❌ Error updating alternative data graphs: {e}")
+        return html.Div(f"❌ Error loading alternative data graphs: {str(e)}", className="text-danger p-3")
 
+# Callback to update tab content based on symbol and date selections
 @app.callback(
     Output("tab-content", "children"),
-    [Input("tabs", "value"), Input("symbol-selector", "value"),
-     Input("date-picker", "start_date"), Input("date-picker", "end_date"),
-     Input("overlay-toggle", "value")]
+    [
+        Input("tabs", "value"),
+        Input("symbol-selector", "value"),
+        Input("date-picker", "start_date"),
+        Input("date-picker", "end_date")
+    ]
 )
-def update_content(tab, symbols, start_date, end_date, overlay_toggle):
+def update_tab_content(tab, symbols, start_date, end_date):
+    """
+    Update the content of the selected tab dynamically.
+    """
     if not symbols:
-        return html.Div("⚠️ Please select symbols to display data.")
-    
-    # start_date = start_date or data["datetime"].min() if not data.empty else None
-    # end_date = end_date or data["datetime"].max() if not data.empty else None
-    # start_date, end_date = pd.to_datetime(start_date), pd.to_datetime(end_date)
+        return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
-        if tab == "data-table":
-            return data_table.layout(symbols, start_date, end_date)
-
-        elif tab == "price-chart":
+        if tab == "price-chart":
             return price_chart.layout(symbols, start_date, end_date, "historical_market_data")
 
         elif tab == "alternative-data":
-            return alternative_data.layout(symbols)
+            return alternative_data_charts.layout(symbols)
+
+        elif tab == "data-table":
+            return data_table.layout(symbols, start_date, end_date)
 
         elif tab == "analyses":
-            return analyses.layout()
+            return html.Div([
+                html.Div("K-NN Clustering", className="font-weight-bold mt-3"),
+                knn_chart.layout(symbols, start_date, end_date),
+                html.Div("Graph Clustering", className="font-weight-bold mt-5"),
+                graph_chart.layout(),
+            ])
 
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
+
     except Exception as e:
-        print(f"Error loading tab content: {e}")
+        print(f"❌ Error updating tab content: {e}")
         return html.Div(f"❌ Error loading content: {str(e)}", className="text-danger p-3")
 
+@app.callback(
+    Output("analyses-tab-content", "children"),
+    Input("analysis-type-dropdown", "value"),
+    State("symbol-selector", "value"),
+    State("date-picker", "start_date"),
+    State("date-picker", "end_date"),
+)
+def update_analyses_tab(analysis_type, symbols, start_date, end_date):
+    """
+    Update the analyses tab based on the selected analysis type.
+    """
+    if not symbols:
+        return html.Div("⚠️ Please select symbols to analyze.", className="text-warning")
+
+    try:
+        if analysis_type == "knn_clustering":
+            data = Analysis.perform_knn_clustering(symbols, start_date, end_date)
+            return dcc.Graph(figure=Analysis.plot_cluster_scatter(data, features=["feature1", "feature2"]))
+        elif analysis_type == "graph_clustering":
+            graph, communities = Analysis.perform_graph_clustering(symbols, start_date, end_date)
+            return dcc.Graph(figure=Analysis.plot_graph_clusters(graph))
+        else:
+            return html.Div("⚠️ Unsupported analysis type selected.", className="text-warning")
+    except Exception as e:
+        print(f"Error during analysis: {e}")
+        return html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger")
+    
 # Callback for triggering analyses
 @app.callback(
     Output("analysis-status", "children"),
@@ -152,8 +202,11 @@ def update_content(tab, symbols, start_date, end_date, overlay_toggle):
     [State("symbol-selector", "value"), State("date-picker", "start_date"), State("date-picker", "end_date")]
 )
 def run_analysis(n_clicks, symbols, start_date, end_date):
+    """
+    Run clustering analyses when the user clicks the 'Run Analysis' button.
+    """
     if not n_clicks:
-        return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3"), ""
+        return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     # Display running status
     status_message = "⏳ Running analyses... This may take a few moments."
@@ -163,7 +216,7 @@ def run_analysis(n_clicks, symbols, start_date, end_date):
         perform_clustering_analysis(symbols)
 
         # Update results in the tab
-        analyses_tab = analyses.layout()
+        analyses_tab = analyses.layout(symbols, start_date, end_date)
         status_message = "✅ Analysis complete! Results are updated."
         return analyses_tab, status_message
     except Exception as e:

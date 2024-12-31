@@ -32,39 +32,39 @@ class PriceChart:
 
 class AlternativeDataCharts:
     def layout(self, symbols):
-        # Fetch data
+        if not symbols:
+            return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
+
         query = f"""
-            SELECT datetime, metric, value, symbol
+            SELECT DISTINCT metric
             FROM alternative_data
             WHERE symbol IN ({','.join(['%s'] * len(symbols))})
         """
-        results = fetch_data(query, params=tuple(symbols))
+        params = tuple(symbols)
+        results = fetch_data(query, params=params)
 
         if results.empty:
             return html.Div("⚠️ No alternative data available for the selected symbols.", className="text-warning p-3")
 
-        # Generate metric options dynamically
         metrics = results["metric"].unique()
         metric_options = [{"label": metric.capitalize(), "value": metric} for metric in metrics]
 
-        # Controls for metric selection
-        controls = html.Div([
+        return html.Div([
             html.Label("Select Metrics to Display"),
             dcc.Checklist(
                 id="metric-filter",
                 options=metric_options,
                 value=metrics.tolist(),  # Default to all metrics
-                inline=True
-            )
-        ], className="mb-4")
+                inline=True,
+                className="mb-4"
+            ),
+            html.Div(id="alternative-data-graphs"),
+        ])
 
-        # Placeholder for graphs
-        graphs_container = html.Div(id="alternative-data-graphs")
-
-        return html.Div([controls, graphs_container], className="container")
-    
     def render_graphs(self, symbols, selected_metrics):
-        # Fetch data for the selected symbols and metrics
+        if not symbols or not selected_metrics:
+            return html.Div("⚠️ Please select symbols and metrics to display data.", className="text-warning p-3")
+
         query = f"""
             SELECT datetime, metric, value, symbol
             FROM alternative_data
@@ -76,7 +76,6 @@ class AlternativeDataCharts:
         if results.empty:
             return html.Div("⚠️ No data available for the selected metrics.", className="text-warning p-3")
 
-        # Generate a graph for each selected metric
         graphs = []
         for metric in selected_metrics:
             metric_data = results[results["metric"] == metric]
@@ -97,7 +96,7 @@ class AlternativeDataCharts:
         return html.Div(graphs)
 
 class KnnClusteringChart:
-    def layout(self):
+    def layout(self, symbols, start_date=None, end_date=None):
         query = """
             SELECT result
             FROM analysis_results
@@ -105,7 +104,7 @@ class KnnClusteringChart:
         """
         results = fetch_data(query)
 
-        if not results:
+        if results.empty:
             return html.Div("⚠️ No K-NN clustering results available.", className="text-warning p-3")
 
         # Parse and normalize JSON data
