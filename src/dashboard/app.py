@@ -77,32 +77,6 @@ app.layout = dbc.Container(fluid=True, children=[
     ]),
 ])
 
-# Callback to update the symbol dropdown dynamically
-# @app.callback(
-#     [Output("symbol-selector", "options"), Output("symbol-selector", "value")],
-#     [Input("symbol-selector", "value")]
-# )
-# def update_symbols(current_value):
-#     # Determine the data source based on logic (or keep default)
-#     data_source = "real_time_market_data"  # Or default to a primary data source
-
-#     # Fetch distinct symbols from the data source
-#     query = f"SELECT DISTINCT symbol FROM {data_source}"
-#     data = fetch_data(query)
-
-#     if data.empty:
-#         print(f"No symbols found for data source: {data_source}")
-#         return [], None
-
-#     options = [{"label": symbol, "value": symbol} for symbol in data["symbol"].unique()]
-
-#     # Preserve the current selection if it is valid
-#     if current_value and current_value in [opt["value"] for opt in options]:
-#         return options, current_value
-
-#     # Reset to None if the current value is invalid
-#     return options, None
-
 @app.callback(
     Output("alternative-data-graphs", "children"),
     [
@@ -143,16 +117,12 @@ def update_tab_content(tab, symbols, start_date, end_date):
     try:
         if tab == "price-chart":
             return price_chart.layout(symbols, start_date, end_date, "historical_market_data")
-
         elif tab == "alternative-data":
             return alternative_data_charts.layout(symbols)
-
         elif tab == "data-table":
             return data_table.layout(symbols, start_date, end_date)
-
         elif tab == "analyses":
             return analyses.layout(symbols, start_date, end_date)
-
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
 
@@ -166,9 +136,7 @@ def update_tab_content(tab, symbols, start_date, end_date):
         Output("analysis-status", "children"),
         Output("analyses-tab-content", "children"),
     ],
-    [
-        Input("run-analysis", "n_clicks"),
-    ],
+    [Input("run-analysis", "n_clicks")],
     [
         State("analysis-type-dropdown", "value"),
         State("symbol-selector", "value"),
@@ -182,7 +150,7 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
     """
     if not n_clicks:
         return (
-            html.Div("⚠️ Please select symbols and click 'Run Analysis'.", className="text-warning p-3"),
+            html.Div("⚠️ Please click 'Run Analysis' to start.", className="text-warning p-3"),
             html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
         )
 
@@ -193,37 +161,47 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
         )
 
     try:
-        # Run the selected analysis
+        # Step 1: Run the selected analysis
         if analysis_type == "knn_clustering":
             data = Analysis.perform_knn_clustering(symbols, start_date, end_date)
-
         elif analysis_type == "graph_clustering":
             graph, communities = Analysis.perform_graph_clustering(symbols, start_date, end_date)
-
         else:
             return (
                 html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3"),
                 html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
             )
 
-        # Fetch results for visualization
+        # Step 2: Fetch the results for visualization
         if analysis_type == "knn_clustering":
             results = Analysis.fetch_clustering_results("knn_clustering")
-            visualization = Analysis.plot_cluster_scatter(results, ["feature1", "feature2"])
-
+            # print(f"DEBUG: Fetched KNN clustering results: {results.head()}")
+            if results.empty:
+                return (
+                    html.Div("⚠️ No clustering results found.", className="text-warning p-3"),
+                    html.Div("⚠️ No visualization data available.", className="text-warning p-3"),
+                )
+            visualization = Analysis.plot_cluster_scatter(results, features=["low", "high"])
         elif analysis_type == "graph_clustering":
             results = Analysis.fetch_clustering_results("graph_clustering")
+            print(f"DEBUG: Fetched graph clustering results: {results.head()}")
+            if results.empty:
+                return (
+                    html.Div("⚠️ No graph clustering results found.", className="text-warning p-3"),
+                    html.Div("⚠️ No visualization data available.", className="text-warning p-3"),
+                )
             visualization = Analysis.plot_graph_clusters(results)
-
         else:
             visualization = html.Div("⚠️ Visualization not supported for this analysis type.", className="text-warning p-3")
 
+        # Step 3: Return success message and visualization
         return (
             html.Div("✅ Analysis complete! Results are updated.", className="text-success p-3"),
             dcc.Graph(figure=visualization),
         )
 
     except Exception as e:
+        # Handle any errors during analysis or visualization
         print(f"❌ Error during analysis: {e}")
         return (
             html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger p-3"),
