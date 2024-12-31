@@ -1,4 +1,5 @@
-from dash import Dash, dcc, html, Input, Output, State
+from dash import Dash, dcc, html, Input, Output, State, callback_context
+from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from threading import Thread
 import pandas as pd
@@ -76,6 +77,26 @@ app.layout = dbc.Container(fluid=True, children=[
         ], width=9),
     ]),
 ])
+
+@app.callback(
+    Output("symbol-selector", "value"),
+    [Input("select-all", "n_clicks"), Input("deselect-all", "n_clicks")],
+    State("symbol-selector", "options"),
+    prevent_initial_call=True
+)
+def select_deselect_symbols(select_all_clicks, deselect_all_clicks, options):
+    ctx = callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+
+    # Identify which button was clicked
+    clicked_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if clicked_id == "select-all":
+        # Select all options
+        return [option["value"] for option in options]
+    elif clicked_id == "deselect-all":
+        # Deselect all options
+        return []
 
 @app.callback(
     Output("alternative-data-graphs", "children"),

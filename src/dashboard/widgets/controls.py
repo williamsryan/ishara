@@ -40,6 +40,11 @@ class Controls:
                 placeholder="Loading symbols...",
                 className="mb-3",
             ),
+            # Select/Deselect Buttons
+            dbc.Row([
+                dbc.Col(dbc.Button("Select All", id="select-all", color="primary", className="me-2"), width="auto"),
+                dbc.Col(dbc.Button("Deselect All", id="deselect-all", color="secondary"), width="auto"),
+            ], className="mb-3"),
             html.Label("Select Time Range"),
             dcc.DatePickerRange(
                 id="date-picker",
