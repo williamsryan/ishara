@@ -1,40 +1,36 @@
-from dash import html, dcc
-import plotly.graph_objs as go
-from src.dashboard.widgets.chart_components import KnnClusteringChart, GraphClusteringChart
+from dash import dcc, html
+from dash.exceptions import PreventUpdate
+from src.processors.analysis import Analysis
 
 class Analyses:
     def layout(self, symbols=None, start_date=None, end_date=None):
         """
-        Renders the layout for the Analyses tab.
-        
-        Args:
-            symbols (list): List of symbols to analyze.
-            start_date (str): Start date for the analysis range.
-            end_date (str): End date for the analysis range.
-
-        Returns:
-            dash.html.Div: Layout for the Analyses tab.
+        Render the layout for the analyses tab.
         """
-        knn_chart = KnnClusteringChart()
-        graph_chart = GraphClusteringChart()
-
-        # Handle missing symbols, start_date, or end_date
         if not symbols:
-            return html.Div("⚠️ Please select symbols to display analysis.", className="text-warning p-3")
+            return html.Div("⚠️ Please select symbols to analyze.", className="text-warning p-3")
 
-        if not start_date or not end_date:
-            return html.Div("⚠️ Please select a valid date range for analysis.", className="text-warning p-3")
+        # Dropdown for selecting analysis type
+        analysis_dropdown = dcc.Dropdown(
+            id="analysis-type-dropdown",
+            options=[
+                {"label": "K-NN Clustering", "value": "knn_clustering"},
+                {"label": "Graph Clustering", "value": "graph_clustering"},
+            ],
+            placeholder="Select analysis type",
+            className="mb-3",
+        )
 
-        # Build the layout
+        # Analysis status and content
+        analysis_status = html.Div(id="analysis-status", className="text-muted mb-3")
+        analysis_results = html.Div(id="analyses-tab-content", className="mt-4")
+
+        # Return the layout
         return html.Div([
-            html.H4("Run Clustering Analyses", className="mb-4"),
-            dcc.Loading(type="circle", children=[
-                html.Div(id="analysis-status", className="text-info mb-3"),
-                html.Button("Run Analyses", id="run-analysis", className="btn btn-primary mb-4"),
-            ]),
-            html.Div("K-NN Clustering Results", className="font-weight-bold mt-3"),
-            knn_chart.layout(symbols, start_date, end_date),
-            html.Div("Graph-Based Clustering Results", className="font-weight-bold mt-5"),
-            graph_chart.layout(symbols, start_date, end_date),
+            html.H4("Run Analyses", className="mb-3"),
+            analysis_dropdown,
+            html.Button("Run Analysis", id="run-analysis", className="btn btn-primary mb-3"),
+            analysis_status,
+            analysis_results,
         ])
-    
+        
