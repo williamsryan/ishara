@@ -14,49 +14,56 @@ class Analysis:
         pass
 
     @staticmethod
-    def fetch_clustering_results(cluster_type):
+    def fetch_clustering_results(analysis_type, selected_symbols=None):
         """
-        Fetch clustering results from the analysis_results table.
-        """
-        query = f"""
-        SELECT symbol, cluster_id, result
-        FROM analysis_results
-        WHERE analysis_type = '{cluster_type}'
-        """
-        data = fetch_data(query)
-
-        if data.empty:
-            print(f"⚠️ No {cluster_type} clustering results found.")
-            return pd.DataFrame()
-
-        data = data[data["result"].notnull()]
-
-        # Deserialize JSON in the result column
-        # data["parsed_result"] = data["result"].apply(
-        #     lambda x: json.loads(x) if isinstance(x, str) else x
-        # )
-
-        # Testing for now.
-        data["parsed_result"] = data["result"]
-
-        return data
-
-    @staticmethod
-    def perform_knn_clustering(symbols, start_date, end_date):
-        """
-        Perform K-NN clustering for all available symbols.
+        Fetch clustering results for a specific analysis type.
+        Optionally filter by the selected symbols.
         """
         query = f"""
         SELECT *
+        FROM analysis_results
+        WHERE analysis_type = '{analysis_type}'
+        """
+        if selected_symbols:
+            query += f" AND input_symbols @> '{json.dumps(selected_symbols)}'"
+
+        results = fetch_data(query)
+        if results.empty:
+            print(f"⚠️ No results found for analysis type: {analysis_type} and symbols: {selected_symbols}")
+        return results
+
+    @staticmethod
+    def perform_knn_clustering(selected_symbols, start_date, end_date):
+        """
+        Perform K-NN clustering for the selected symbols within a date range.
+        """
+        if not selected_symbols:
+            raise ValueError("No symbols selected for clustering.")
+
+        # Query the historical market data for the selected symbols
+        symbols_filter = ", ".join(f"'{symbol}'" for symbol in selected_symbols)
+        query = f"""
+        SELECT *
         FROM historical_market_data
-        WHERE datetime BETWEEN '{start_date}' AND '{end_date}'
+        WHERE symbol IN ({symbols_filter})
         """
         data = fetch_data(query)
 
+        # Debugging: Check data size and preview
+        print(f"DEBUG: Retrieved {len(data)} rows for symbols: {selected_symbols}")
         if data.empty:
-            raise ValueError("No data available for the given date range.")
+            raise ValueError("No data available for the given symbols and date range.")
 
-        features = data.drop(columns=["datetime", "symbol"])
+        # Aggregate data to one row per symbol (if needed)
+        data = data.groupby("symbol").agg({
+            "open": "mean",
+            "high": "mean",
+            "low": "mean",
+            "close": "mean",
+            "volume": "sum"
+        }).reset_index()
+
+        features = data.drop(columns=["symbol"])
         scaler = StandardScaler()
         features_normalized = scaler.fit_transform(features)
 
@@ -76,6 +83,9 @@ class Analysis:
                 row["cluster_id"],
                 json.dumps(result_data)  # Serialize dict to JSON string
             ))
+
+        # Debugging: Check number of records to insert
+        print(f"DEBUG: Prepared {len(clustering_results)} clustering results for insertion.")
 
         insert_clustering_results(clustering_results)
         print(f"✅ Stored K-NN clustering results for {len(data)} rows.")
@@ -251,12 +261,32 @@ class Analysis:
         Plot 2D scatter plot of clustered data using normalized features.
         """
         # Extract x and y features from the JSON data
-        results["x"] = results["result"].apply(lambda d: d["features"].get(features[0], None))
-        results["y"] = results["result"].apply(lambda d: d["features"].get(features[1], None))
+        results["x"] = results["result"].apply(lambda d: d.get("features", {}).get(features[0], None))
+        results["y"] = results["result"].apply(lambda d: d.get("features", {}).get(features[1], None))
 
         # Filter out rows with None values in x or y
         filtered_results = results.dropna(subset=["x", "y"])
+        if filtered_results.empty:
+            print("⚠️ No valid data to plot for KNN clustering.")
+            return go.Figure(
+                layout=go.Layout(
+                    title="KNN Cluster Scatter Plot",
+                    xaxis_title=features[0],
+                    yaxis_title=features[1],
+                    template="plotly_white",
+                    annotations=[
+                        dict(
+                            text="No valid data available for plotting",
+                            xref="paper",
+                            yref="paper",
+                            showarrow=False,
+                            font=dict(size=16),
+                        )
+                    ],
+                )
+            )
 
+        # Create scatter plot
         fig = go.Figure()
         for cluster_id, cluster_data in filtered_results.groupby("cluster_id"):
             fig.add_trace(
@@ -275,11 +305,12 @@ class Analysis:
             )
 
         fig.update_layout(
-            title="Cluster Scatter Plot",
+            title="KNN Cluster Scatter Plot",
             title_x=0.5,
             xaxis_title=features[0],
             yaxis_title=features[1],
             template="plotly_white",
+            dragmode="pan",  # Enable panning
             margin=dict(l=40, r=40, b=40, t=40),
             legend=dict(
                 orientation="h",
@@ -291,7 +322,7 @@ class Analysis:
         )
 
         # Enable zooming and panning
-        fig.update_layout(dragmode="zoom")
+        fig.update_layout(dragmode="pan")
         return fig
 
     @staticmethod
