@@ -40,3 +40,4 @@ scikit-learn
 hmmlearn
 networkx
 requests_html
+packaging
