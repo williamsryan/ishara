@@ -18,20 +18,18 @@ class Controls:
             start_date = results.iloc[0]["start_date"]
             end_date = results.iloc[0]["end_date"]
 
+        # Define options for feature selection
+        feature_options = [
+            {"label": "Low", "value": "low"},
+            {"label": "High", "value": "high"},
+            {"label": "Open", "value": "open"},
+            {"label": "Close", "value": "close"},
+            {"label": "Volume", "value": "volume"}
+        ]
+
         return html.Div([
             html.H4("Controls", className="mb-3"),
-            # html.Label("Select Data Source"),
-            # dcc.Dropdown(
-            #     id="data-source",
-            #     options=[
-            #         {"label": "Real-Time Data", "value": "real_time_market_data"},
-            #         {"label": "Yahoo Finance", "value": "yahoo_finance_data"},
-            #         {"label": "Alternative Data", "value": "alternative_data"}
-            #     ],
-            #     value="real_time_market_data",
-            #     clearable=True,
-            #     className="mb-3"
-            # ),
+
             html.Label("Select Symbols"),
             dcc.Dropdown(
                 id="symbol-selector",
@@ -45,6 +43,7 @@ class Controls:
                 dbc.Col(dbc.Button("Select All", id="select-all", color="primary", className="me-2"), width="auto"),
                 dbc.Col(dbc.Button("Deselect All", id="deselect-all", color="secondary"), width="auto"),
             ], className="mb-3"),
+
             html.Label("Select Time Range"),
             dcc.DatePickerRange(
                 id="date-picker",
@@ -55,6 +54,23 @@ class Controls:
                 display_format="YYYY-MM-DD",
                 className="mb-3"
             ),
+
+            # Feature Selection Dropdowns
+            html.Label("Select Features for Analysis"),
+            dcc.Dropdown(
+                id="feature-selector",
+                options=[
+                    {"label": "Open", "value": "open"},
+                    {"label": "Close", "value": "close"},
+                    {"label": "High", "value": "high"},
+                    {"label": "Low", "value": "low"},
+                    {"label": "Volume", "value": "volume"},
+                ],
+                multi=True,
+                placeholder="Select features for clustering",
+                value=["low", "high"],  # Default features
+            ),
+
             dbc.Checklist(
                 options=[{"label": "Overlay Alternative Data", "value": 1}],
                 id="overlay-toggle",
