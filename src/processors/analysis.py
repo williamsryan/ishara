@@ -260,12 +260,21 @@ class Analysis:
         """
         Plot 2D scatter plot of clustered data using normalized features.
         """
+        # Ensure 'result' is properly parsed as JSON if not already
+        if isinstance(results["result"].iloc[0], str):
+            results["result"] = results["result"].apply(json.loads)
+
         # Extract x and y features from the JSON data
         results["x"] = results["result"].apply(lambda d: d.get("features", {}).get(features[0]))
         results["y"] = results["result"].apply(lambda d: d.get("features", {}).get(features[1]))
         results["volume"] = results["result"].apply(lambda d: d.get("features", {}).get("volume"))
 
-        # Filter out rows with None values in x or y
+        # Debugging: Check extracted data
+        # print(f"DEBUG: Extracted x, y, and volume columns:\n{results[['x', 'y', 'volume']].head()}")
+
+        # Filter out rows with None or invalid values in x or y
+        results["x"] = pd.to_numeric(results["x"], errors="coerce")
+        results["y"] = pd.to_numeric(results["y"], errors="coerce")
         filtered_results = results.dropna(subset=["x", "y"])
         if filtered_results.empty:
             print("⚠️ No valid data to plot for KNN clustering.")
@@ -312,9 +321,9 @@ class Analysis:
             )
 
         # Add cluster center annotations
-        for cluster_id, center in enumerate(filtered_results.groupby("cluster_id").mean()[["x", "y"]].values):
+        for cluster_id, center in filtered_results.groupby("cluster_id")[["x", "y"]].mean().iterrows():
             fig.add_trace(go.Scatter(
-                x=[center[0]], y=[center[1]],
+                x=[center["x"]], y=[center["y"]],
                 mode="markers+text",
                 text=[f"Cluster {cluster_id}"],
                 textposition="top center",
@@ -325,8 +334,8 @@ class Analysis:
         fig.update_layout(
             title="KNN Cluster Scatter Plot",
             title_x=0.5,
-            xaxis_title="Low Price (USD)",
-            yaxis_title="High Price (USD)",
+            xaxis_title=features[0],
+            yaxis_title=features[1],
             template="plotly_white",
             dragmode="pan",  # Enable panning
             margin=dict(l=40, r=40, b=40, t=40),
