@@ -120,9 +120,24 @@ CREATE TABLE IF NOT EXISTS derived_metrics (
     UNIQUE(symbol, datetime)
 );
 
+-- Table for backtest results
+CREATE TABLE IF NOT EXISTS backtest_results (
+    id SERIAL PRIMARY KEY,                       -- Unique identifier for each backtest result
+    strategy_name TEXT NOT NULL,                 -- Name of the strategy used in the backtest
+    symbol TEXT NOT NULL,                        -- Stock symbol being backtested
+    start_date TIMESTAMPTZ NOT NULL,             -- Start date of the backtest
+    end_date TIMESTAMPTZ NOT NULL,               -- End date of the backtest
+    initial_value NUMERIC NOT NULL,              -- Initial value of the portfolio
+    final_value NUMERIC NOT NULL,                -- Final value of the portfolio
+    return_percentage NUMERIC NOT NULL,          -- Percentage return over the backtest period
+    details JSONB,                               -- Additional details about the backtest
+    created_at TIMESTAMP DEFAULT NOW()           -- Timestamp of when the result was added
+);
+
 -- Indexes for fast querying
 CREATE INDEX IF NOT EXISTS idx_historical_market_data ON historical_market_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_yahoo_finance_data ON yahoo_finance_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_real_time_market_data ON real_time_market_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_alternative_data ON alternative_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_derived_metrics ON derived_metrics (symbol, datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_backtest_results ON backtest_results (strategy_name, symbol, created_at DESC);
