@@ -99,6 +99,28 @@ def select_deselect_symbols(select_all_clicks, deselect_all_clicks, options):
         return []
 
 @app.callback(
+    Output("price-chart", "figure"),
+    [
+        Input("symbol-selector", "value"),
+        Input("data-source-selector", "value"),
+        Input("date-picker", "start_date"),
+        Input("date-picker", "end_date"),
+        Input("indicator-selector", "value"),
+    ]
+)
+def update_price_chart(symbols, data_source, start_date, end_date, selected_indicators):
+    if not symbols:
+        return go.Figure()
+
+    return PriceChart.layout(
+                    symbols=symbols, 
+                    data_source=data_source, 
+                    start_date=start_date, 
+                    end_date=end_date,
+                    selected_indicators=selected_indicators
+                ).children[1].figure
+
+@app.callback(
     Output("alternative-data-graphs", "children"),
     [
         Input("metric-filter", "value"),
@@ -124,20 +146,29 @@ def update_alternative_data_graphs(selected_metrics, symbols):
     [
         Input("tabs", "value"),
         Input("symbol-selector", "value"),
+        Input("data-source-selector", "value"),
         Input("date-picker", "start_date"),
-        Input("date-picker", "end_date")
+        Input("date-picker", "end_date"),
     ]
 )
-def update_tab_content(tab, symbols, start_date, end_date):
+def update_tab_content(tab, symbols, data_source, start_date, end_date):
     """
     Update the content of the selected tab dynamically.
     """
+    # Ensure a default data source
+    if not data_source:
+        data_source = "historical_market_data"
     if not symbols:
         return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
         if tab == "price-chart":
-            return price_chart.layout(symbols, start_date, end_date, "historical_market_data")
+            return price_chart.layout(
+                    symbols=symbols, 
+                    data_source=data_source, 
+                    start_date=start_date, 
+                    end_date=end_date
+                )
         elif tab == "alternative-data":
             return alternative_data_charts.layout(symbols)
         elif tab == "data-table":
