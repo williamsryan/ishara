@@ -22,6 +22,18 @@ class Analyses:
             className="mb-3",
         )
 
+        # Radio items for toggling 2D/3D view
+        # view_toggle = dcc.RadioItems(
+        #     id="view-toggle",
+        #     options=[
+        #         {"label": "2D View", "value": "2d"},
+        #         {"label": "3D View", "value": "3d"},
+        #     ],
+        #     value="2d",
+        #     inline=True,
+        #     className="mb-3",
+        # )
+
         # Analysis status and content
         analysis_status = html.Div(id="analysis-status", className="text-muted mb-3")
         analysis_results = html.Div(id="analyses-tab-content", className="mt-4")
@@ -30,6 +42,7 @@ class Analyses:
         return html.Div([
             html.H4("Run Analyses", className="mb-3"),
             analysis_dropdown,
+            # view_toggle,
             html.Button("Run Analysis", id="run-analysis", className="btn btn-primary mb-3"),
             analysis_status,
             analysis_results,
