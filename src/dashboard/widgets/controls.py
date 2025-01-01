@@ -28,7 +28,19 @@ class Controls:
         ]
 
         return html.Div([
-            html.H4("Controls", className="mb-3"),
+            # html.H4("Controls", className="mb-3"),
+            # Data Source Dropdown
+            html.Label("Select Data Source", className="mb-2"),
+            dcc.Dropdown(
+                id="data-source-selector",
+                options=[
+                    {"label": "Real-Time Data", "value": "real_time_market_data"},
+                    {"label": "Historical Data", "value": "historical_market_data"}
+                ],
+                value="historical_market_data",  # Default to historical
+                clearable=False,
+                className="mb-3"
+            ),
 
             html.Label("Select Symbols"),
             dcc.Dropdown(
