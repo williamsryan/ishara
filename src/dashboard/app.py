@@ -161,7 +161,7 @@ def update_tab_content(tab, symbols, start_date, end_date):
         State("date-picker", "start_date"),
         State("date-picker", "end_date"),
         State("feature-selector", "value"),
-        State("reduction-method-dropdown", "value"),  # New dropdown for reduction method
+        State("reduction-method-dropdown", "value"), 
     ],
 )
 def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_date, selected_features, reduction_method):
@@ -178,8 +178,15 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
                 reduction_method=reduction_method
             )
             results = Analysis.fetch_clustering_results("knn_clustering")
-            visualization = Analysis.plot_cluster_scatter(results)
-
+            if results.empty:
+                return html.Div("⚠️ No results found for K-NN clustering.", className="text-warning p-3")
+            
+            scatter_fig, bar_fig, heatmap_fig = Analysis.plot_cluster_dashboard(results)
+            return html.Div([
+                dcc.Graph(figure=scatter_fig, id="knn-scatter-chart"),
+                dcc.Graph(figure=bar_fig, id="knn-bar-chart"),
+                dcc.Graph(figure=heatmap_fig, id="knn-heatmap-chart"),
+            ])
         elif analysis_type == "graph_clustering":
             Analysis.perform_graph_clustering(
                 selected_symbols=symbols,
@@ -189,11 +196,9 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
             )
             results = Analysis.fetch_clustering_results("graph_clustering")
             visualization = Analysis.plot_graph_clusters(results)
-
+            return dcc.Graph(figure=visualization, id="graph-clustering-chart")
         else:
             return html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3")
-
-        return dcc.Graph(figure=visualization)
 
     except Exception as e:
         print(f"❌ Error during analysis: {e}")
