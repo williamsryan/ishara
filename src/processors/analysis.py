@@ -35,7 +35,7 @@ class Analysis:
         return results
 
     @staticmethod
-    def perform_knn_clustering(selected_symbols, start_date, end_date, selected_features, reduction_method="tsne"):
+    def perform_knn_clustering(selected_symbols, start_date, end_date, selected_features, reduction_method="none"):
         """
         Perform K-NN clustering for the selected symbols and features within a date range.
         Includes dimensionality reduction for visualizing clusters.
@@ -214,68 +214,190 @@ class Analysis:
         return graph, clusters
 
     @staticmethod
-    def plot_cluster_scatter(results):
+    def plot_cluster_dashboard(results):
         """
-        Visualize clustering results with reduced dimensions (if applicable).
+        Enhanced visualization for K-NN clustering with multiple subplots, including scatter plot, 
+        bar chart for cluster sizes, and heatmap of cluster distances.
         """
+        # Parse and extract reduced dimensions and cluster centers
         results["parsed_results"] = results["result"].apply(
             lambda x: json.loads(x) if isinstance(x, str) else x
         )
-
         results["x"] = results["parsed_results"].apply(lambda r: r.get("reduced_dimensions", {}).get("x", None))
         results["y"] = results["parsed_results"].apply(lambda r: r.get("reduced_dimensions", {}).get("y", None))
+        results["cluster_center"] = results["parsed_results"].apply(lambda r: r.get("cluster_center", None))
 
         if results["x"].isnull().all() or results["y"].isnull().all():
             raise ValueError("No valid reduced dimensions found for visualization.")
 
-        # Create scatter plot
-        fig = go.Figure()
+        # Scatter Plot with Clusters
+        scatter_fig = go.Figure()
         for cluster_id, cluster_data in results.groupby("cluster_id"):
-            fig.add_trace(
+            scatter_fig.add_trace(
                 go.Scatter(
                     x=cluster_data["x"],
                     y=cluster_data["y"],
                     mode="markers",
                     name=f"Cluster {cluster_id}",
-                    marker=dict(size=10),
-                    text=[f"Symbol: {row['symbol']}" for _, row in cluster_data.iterrows()]
+                    marker=dict(
+                        size=10,
+                        color=cluster_id,
+                        colorscale="Viridis",
+                        line=dict(width=1, color="DarkSlateGrey"),
+                    ),
+                    text=[
+                        f"Symbol: {row['symbol']}<br>Cluster ID: {cluster_id}<br>Features: {row['parsed_results']['features']}"
+                        for _, row in cluster_data.iterrows()
+                    ],
+                    hoverinfo="text",
                 )
             )
 
-        fig.update_layout(
-            title="KNN Cluster Visualization",
-            xaxis_title="Dimension 1",
-            yaxis_title="Dimension 2",
+            # Add cluster centroid markers
+            centroid = cluster_data["cluster_center"].iloc[0]
+            if centroid:
+                scatter_fig.add_trace(
+                    go.Scatter(
+                        x=[centroid[0]],
+                        y=[centroid[1]],
+                        mode="markers+text",
+                        name=f"Centroid {cluster_id}",
+                        marker=dict(
+                            size=15,
+                            color="red",
+                            symbol="x",
+                            line=dict(width=2, color="black"),
+                        ),
+                        text=[f"Centroid<br>Cluster {cluster_id}"],
+                        textposition="top center",
+                        hoverinfo="text",
+                    )
+                )
+
+        scatter_fig.update_layout(
+            title="Cluster Visualization (Scatter Plot)",
+            xaxis=dict(title="Dimension 1"),
+            yaxis=dict(title="Dimension 2"),
+            template="plotly_white",
             dragmode="pan",
-            template="plotly_white"
         )
-        return fig
+
+        # Bar Chart for Cluster Sizes
+        cluster_sizes = results["cluster_id"].value_counts()
+        bar_fig = go.Figure()
+        bar_fig.add_trace(
+            go.Bar(
+                x=cluster_sizes.index.astype(str),
+                y=cluster_sizes.values,
+                name="Cluster Sizes",
+                marker=dict(color="purple"),
+                text=[f"Cluster {i}: {size} points" for i, size in zip(cluster_sizes.index, cluster_sizes.values)],
+                hoverinfo="text",
+            )
+        )
+        bar_fig.update_layout(
+            title="Cluster Size Distribution",
+            xaxis=dict(title="Cluster ID"),
+            yaxis=dict(title="Number of Points"),
+            template="plotly_white",
+        )
+
+        # Heatmap of Distances Between Cluster Centers
+        cluster_centers = results.groupby("cluster_id")["cluster_center"].first().dropna()
+        cluster_centers = np.array([np.array(center) for center in cluster_centers])
+        if cluster_centers.size > 0:
+            distances = np.linalg.norm(
+                cluster_centers[:, np.newaxis] - cluster_centers, axis=2
+            )
+            heatmap_fig = go.Figure(
+                data=go.Heatmap(
+                    z=distances,
+                    x=[f"Cluster {i}" for i in range(len(cluster_centers))],
+                    y=[f"Cluster {i}" for i in range(len(cluster_centers))],
+                    colorscale="Blues",
+                )
+            )
+            heatmap_fig.update_layout(
+                title="Inter-Cluster Distance Heatmap",
+                xaxis=dict(title="Cluster"),
+                yaxis=dict(title="Cluster"),
+                template="plotly_white",
+            )
+        else:
+            heatmap_fig = go.Figure()
+            heatmap_fig.update_layout(
+                title="Inter-Cluster Distance Heatmap (No Data)",
+                template="plotly_white",
+            )
+
+        return scatter_fig, bar_fig, heatmap_fig
+
+    @staticmethod
+    def _calculate_ellipse(mean_x, mean_y, covariance_matrix, n_std=2.0, resolution=100):
+        """
+        Generate a confidence ellipse for cluster visualization.
+        """
+        eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
+        order = eigenvalues.argsort()[::-1]
+        eigenvalues, eigenvectors = eigenvalues[order], eigenvectors[:, order]
+
+        # Compute width, height, and angle of the ellipse
+        theta = np.linspace(0, 2 * np.pi, resolution)
+        width, height = 2 * n_std * np.sqrt(eigenvalues)
+        angle = np.degrees(np.arctan2(*eigenvectors[:, 0][::-1]))
+
+        # Parametric ellipse equation
+        ellipse_coords = np.array([np.cos(theta) * width, np.sin(theta) * height])
+        rotation_matrix = np.array([[np.cos(np.radians(angle)), -np.sin(np.radians(angle))],
+                                    [np.sin(np.radians(angle)), np.cos(np.radians(angle))]])
+        rotated_coords = rotation_matrix @ ellipse_coords
+        ellipse_x, ellipse_y = rotated_coords[0] + mean_x, rotated_coords[1] + mean_y
+
+        return go.Scatter(
+            x=ellipse_x,
+            y=ellipse_y,
+            mode="lines",
+            name="Confidence Ellipse",
+            line=dict(color="rgba(0,100,80,0.2)", width=2),
+            hoverinfo="skip"
+        )
 
     @staticmethod
     def plot_graph_clusters(results):
         """
-        Visualize graph-based clusters using NetworkX and Plotly with improved interactivity and layout.
+        Visualize graph-based clusters with enhanced interactivity and grid markers.
         """
         graph = nx.Graph()
 
         # Build the graph using data from the 'result' column
         for _, row in results.iterrows():
-            result_data = row["result"]  # Assume this is already a dictionary
+            result_data = row["result"]
             connected_symbols = result_data.get("connected_symbols", [])
             for symbol in connected_symbols:
                 graph.add_edge(row["symbol"], symbol)
 
-        # Assign cluster colors based on cluster_id
-        cluster_ids = {row["symbol"]: row["cluster_id"] for _, row in results.iterrows()}
-        color_map = [cluster_ids.get(node, 0) for node in graph.nodes()]
+        # Calculate graph metrics
+        centrality = nx.degree_centrality(graph)
+        clustering_coeff = nx.clustering(graph)
+        betweenness = nx.betweenness_centrality(graph)
 
-        # Generate graph layout
+        # Community detection
+        communities = list(greedy_modularity_communities(graph))
+        community_map = {node: i for i, community in enumerate(communities) for node in community}
+
+        # Assign node attributes
+        for node in graph.nodes():
+            graph.nodes[node]["centrality"] = centrality.get(node, 0)
+            graph.nodes[node]["clustering_coeff"] = clustering_coeff.get(node, 0)
+            graph.nodes[node]["betweenness"] = betweenness.get(node, 0)
+            graph.nodes[node]["community"] = community_map.get(node, -1)
+
+        # Generate layout
         pos = nx.spring_layout(graph)
 
-        # Initialize edge trace
+        # Prepare edge data
         edge_x = []
         edge_y = []
-
         for edge in graph.edges():
             x0, y0 = pos[edge[0]]
             x1, y1 = pos[edge[1]]
@@ -290,16 +412,27 @@ class Analysis:
             mode="lines",
         )
 
-        # Initialize node trace
+        # Prepare node data
         node_x = []
         node_y = []
+        node_size = []
+        node_color = []
         node_text = []
 
         for node in graph.nodes():
             x, y = pos[node]
             node_x.append(x)
             node_y.append(y)
-            node_text.append(f"Node: {node}<br>Cluster ID: {cluster_ids.get(node, 'N/A')}")
+            node_size.append(10 + 30 * centrality[node])  # Scale size by centrality
+            node_color.append(community_map[node])  # Color by community
+            node_text.append(
+                f"Node: {node}<br>"
+                f"Community: {community_map[node]}<br>"
+                f"Degree: {graph.degree[node]}<br>"
+                f"Centrality: {centrality[node]:.2f}<br>"
+                f"Clustering Coefficient: {clustering_coeff[node]:.2f}<br>"
+                f"Betweenness: {betweenness[node]:.2f}"
+            )
 
         node_trace = go.Scatter(
             x=node_x,
@@ -309,27 +442,47 @@ class Analysis:
             hoverinfo="text",
             marker=dict(
                 showscale=True,
-                colorscale="YlGnBu",
-                size=15,
-                color=color_map,
+                colorscale="Viridis",
+                size=node_size,
+                color=node_color,
+                colorbar=dict(
+                    title="Community",
+                    thickness=15,
+                    xanchor="left",
+                    titleside="right",
+                ),
                 line=dict(width=1, color="black"),
             ),
         )
 
-        fig = go.Figure(
-            data=[edge_trace, node_trace],
-            layout=go.Layout(
-                title="Graph-Based Clustering",
-                title_x=0.5,
-                showlegend=False,
-                hovermode="closest",
-                margin=dict(b=0, l=0, r=0, t=40),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        # Adding grid markers
+        layout = go.Layout(
+            title="Interactive Graph-Based Clustering",
+            title_x=0.5,
+            showlegend=False,
+            hovermode="closest",
+            margin=dict(b=40, l=40, r=40, t=40),
+            xaxis=dict(
+                showgrid=True,  # Enable grid
+                zeroline=False,
+                showticklabels=False,
             ),
+            yaxis=dict(
+                showgrid=True,  # Enable grid
+                zeroline=False,
+                showticklabels=False,
+            ),
+            dragmode="pan",  # Allow dragging/panning
         )
 
-        # Enable panning and zooming
-        fig.update_layout(dragmode="pan")
+        # Create the figure
+        fig = go.Figure(data=[edge_trace, node_trace], layout=layout)
+
+        # Enable clicking into clusters (optional, can be extended to a callback system)
+        fig.update_traces(
+            selector=dict(mode="markers"),
+            customdata=node_text,
+        )
+
         return fig
     
