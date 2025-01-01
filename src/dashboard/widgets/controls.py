@@ -71,6 +71,18 @@ class Controls:
                 value=["low", "high"],  # Default features
             ),
 
+            # Reduction Method Dropdown
+            dcc.Dropdown(
+                id="reduction-method-dropdown",
+                options=[
+                    {"label": "t-SNE", "value": "tsne"},
+                    {"label": "PCA", "value": "pca"},
+                ],
+                value="tsne",  # Default
+                clearable=False,
+                className="mb-3",
+            ),
+
             dbc.Checklist(
                 options=[{"label": "Overlay Alternative Data", "value": 1}],
                 id="overlay-toggle",

@@ -8,6 +8,8 @@ from networkx.algorithms.community import greedy_modularity_communities
 import plotly.graph_objects as go
 import json
 from src.utils.database import fetch_data, insert_clustering_results
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 class Analysis:
     def __init__(self):
@@ -259,81 +261,88 @@ class Analysis:
         return fig
 
     @staticmethod
-    def plot_cluster_scatter(results, x_feature, y_feature, additional_features=[]):
+    def plot_cluster_scatter(results, selected_features, reduction_method="tsne"):
         """
-        Plot 2D scatter plot of clustered data with enhanced interactivity.
+        Visualize clusters using dimensionality reduction (t-SNE or PCA).
         """
-        # Ensure 'result' is parsed correctly
-        if isinstance(results["result"].iloc[0], str):
-            results["result"] = results["result"].apply(json.loads)
+        if not selected_features or len(selected_features) < 2:
+            raise ValueError("Please select at least two features for clustering.")
 
-        # Extract x, y features, and other details
-        results["x"] = results["result"].apply(lambda d: d.get("features", {}).get(x_feature))
-        results["y"] = results["result"].apply(lambda d: d.get("features", {}).get(y_feature))
-        hover_info = results["result"].apply(
-            lambda d: "<br>".join([f"{feature}: {d.get('features', {}).get(feature)}" for feature in additional_features])
+        # Parse JSON results
+        results["parsed_results"] = results["result"].apply(
+            lambda x: json.loads(x) if isinstance(x, str) else x
         )
-        results["cluster_center"] = results["result"].apply(lambda d: d.get("cluster_center"))
 
-        # Drop rows with missing data
-        filtered_results = results.dropna(subset=["x", "y", "cluster_center"])
-        if filtered_results.empty:
+        # Extract feature data
+        feature_data = []
+        for result in results["parsed_results"]:
+            features = list(result["features"].values())
+            # Validate feature lengths and types
+            if len(features) == len(selected_features) and all(
+                isinstance(f, (int, float)) for f in features
+            ):
+                feature_data.append(features)
+
+        # Ensure feature data is not empty
+        if not feature_data:
+            raise ValueError("No valid feature data available for dimensionality reduction.")
+
+        feature_data = np.array(feature_data)
+
+        # Apply dimensionality reduction
+        if reduction_method == "tsne":
+            reducer = TSNE(n_components=2, random_state=42)
+        elif reduction_method == "pca":
+            reducer = PCA(n_components=2)
+        else:
+            raise ValueError("Unsupported reduction method. Use 'tsne' or 'pca'.")
+
+        try:
+            reduced_data = reducer.fit_transform(feature_data)
+        except Exception as e:
+            raise ValueError(f"Error during dimensionality reduction: {e}")
+
+        # Assign reduced dimensions to results
+        results["x"] = reduced_data[:, 0]
+        results["y"] = reduced_data[:, 1]
+
+        # Drop rows with missing or invalid data
+        results = results.dropna(subset=["x", "y"])
+        if results.empty:
             return go.Figure(
-                layout=go.Layout(
-                    title="KNN Cluster Scatter Plot",
-                    xaxis_title=x_feature,
-                    yaxis_title=y_feature,
-                    template="plotly_white",
-                    annotations=[
-                        dict(
-                            text="No valid data available for plotting",
-                            xref="paper",
-                            yref="paper",
-                            showarrow=False,
-                            font=dict(size=16),
-                        )
-                    ],
+                layout=dict(
+                    title="No Data Available",
+                    xaxis_title="Dimension 1",
+                    yaxis_title="Dimension 2",
                 )
             )
 
-        # Create figure
+        # Create scatter plot
         fig = go.Figure()
-
-        # Plot each cluster
-        for cluster_id, cluster_data in filtered_results.groupby("cluster_id"):
+        for cluster_id, cluster_data in results.groupby("cluster_id"):
             fig.add_trace(
-                go.Scattergl(
+                go.Scatter(
                     x=cluster_data["x"],
                     y=cluster_data["y"],
                     mode="markers",
                     name=f"Cluster {cluster_id}",
-                    marker=dict(size=10, color=f"rgba({(cluster_id * 50) % 255}, {(cluster_id * 100) % 255}, {(cluster_id * 150) % 255}, 0.8)"),
-                    text=hover_info,
+                    marker=dict(size=10),
                     hoverinfo="text",
+                    text=[
+                        f"Symbol: {row['symbol']}<br>Features: {row['parsed_results']}"
+                        for _, row in cluster_data.iterrows()
+                    ],
                 )
             )
 
-        # Annotate cluster centers
-        for cluster_id, center in filtered_results.groupby("cluster_id")["cluster_center"].first().items():
-            fig.add_trace(
-                go.Scatter(
-                    x=[center[0]], y=[center[1]],
-                    mode="markers+text",
-                    text=[f"Cluster {cluster_id}"],
-                    textposition="top center",
-                    marker=dict(size=15, color="black", symbol="x"),
-                    name=f"Cluster {cluster_id} Center",
-                )
-            )
-
-        # Update layout
+        # Update layout for better visualization
         fig.update_layout(
-            title="KNN Cluster Scatter Plot",
-            xaxis=dict(title=x_feature, showgrid=True, zeroline=True),
-            yaxis=dict(title=y_feature, showgrid=True, zeroline=True),
-            template="plotly_white",
+            title="Cluster Visualization with Dimensionality Reduction",
+            xaxis_title="Dimension 1",
+            yaxis_title="Dimension 2",
             dragmode="pan",
-            margin=dict(l=40, r=40, b=40, t=40),
+            template="plotly_white",
+            margin=dict(l=40, r=40, t=40, b=40),
         )
 
         return fig

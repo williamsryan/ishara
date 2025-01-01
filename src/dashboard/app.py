@@ -153,43 +153,22 @@ def update_tab_content(tab, symbols, start_date, end_date):
     
 # Callback for triggering analyses
 @app.callback(
-    [
-        Output("analysis-status", "children"),
-        Output("analyses-tab-content", "children"),
-    ],
+    Output("analyses-tab-content", "children"),
     [Input("run-analysis", "n_clicks")],
     [
         State("analysis-type-dropdown", "value"),
         State("symbol-selector", "value"),
         State("date-picker", "start_date"),
         State("date-picker", "end_date"),
-        State("feature-selector", "value"),  # Dropdown for features
+        State("feature-selector", "value"),
+        State("reduction-method-dropdown", "value"),  # New dropdown for reduction method
     ],
 )
-def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_date, selected_features):
-    """
-    Run the selected analysis and update the analyses tab content.
-    """
+def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_date, selected_features, reduction_method):
     if not n_clicks:
-        return (
-            html.Div("⚠️ Please click 'Run Analysis' to start.", className="text-warning p-3"),
-            html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
-        )
-
-    if not symbols or not analysis_type:
-        return (
-            html.Div("⚠️ Please select symbols and analysis type.", className="text-warning p-3"),
-            html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
-        )
-
-    if not selected_features or len(selected_features) < 2:
-        return (
-            html.Div("⚠️ Please select at least two features for analysis.", className="text-warning p-3"),
-            html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
-        )
+        return html.Div("⚠️ Please click 'Run Analysis' to start.", className="text-warning p-3")
 
     try:
-        # Run the selected analysis
         if analysis_type == "knn_clustering":
             Analysis.perform_knn_clustering(
                 selected_symbols=symbols,
@@ -198,7 +177,7 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
                 selected_features=selected_features
             )
             results = Analysis.fetch_clustering_results("knn_clustering")
-            visualization = Analysis.plot_cluster_scatter(results, selected_features)
+            visualization = Analysis.plot_cluster_scatter(results, selected_features, reduction_method)
 
         elif analysis_type == "graph_clustering":
             Analysis.perform_graph_clustering(
@@ -210,24 +189,13 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
             visualization = Analysis.plot_graph_clusters(results)
 
         else:
-            return (
-                html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3"),
-                html.Div("⚠️ No analysis results to display.", className="text-warning p-3"),
-            )
+            return html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3")
 
-        # Return success message and visualization
-        return (
-            html.Div("✅ Analysis complete! Results are updated.", className="text-success p-3"),
-            dcc.Graph(figure=visualization),
-        )
+        return dcc.Graph(figure=visualization)
 
     except Exception as e:
-        # Handle errors during analysis or visualization
         print(f"❌ Error during analysis: {e}")
-        return (
-            html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger p-3"),
-            html.Div(f"❌ Error displaying results: {str(e)}", className="text-danger p-3"),
-        )
+        return html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger p-3")
 
 @app.callback(
     Output("knn-chart", "figure"),
