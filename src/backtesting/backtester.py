@@ -1,24 +1,79 @@
 import backtrader as bt
-from src.utils.data_loader import load_data_from_db
-from src.utils.database import connect_to_db
+import pandas as pd
+from src.utils.database import fetch_data, insert_backtest_results
 from src.backtesting.strategies.moving_avg import MovingAverageCrossover
 from src.backtesting.strategies.momentum import MomentumStrategy
 import plotly.graph_objects as go
 
-from sqlalchemy import text
+def load_data_from_db(symbol, start_date, end_date):
+    """
+    Fetch stock data using fetch_data for Backtrader.
+
+    Args:
+        symbol (str): Stock ticker.
+        start_date (str): Start date of data.
+        end_date (str): End date of data.
+
+    Returns:
+        pd.DataFrame: Stock data formatted for Backtrader.
+    """
+    query = """
+    SELECT datetime, open, high, low, close, volume
+    FROM historical_market_data
+    WHERE symbol = %s AND datetime BETWEEN %s AND %s
+    ORDER BY datetime ASC
+    """
+    params = (symbol, start_date, end_date)
+    data = fetch_data(query, params)
+
+    if data.empty:
+        raise ValueError(f"No data found for {symbol} between {start_date} and {end_date}.")
+
+    data["datetime"] = pd.to_datetime(data["datetime"])
+    data.set_index("datetime", inplace=True)
+    return data
+
+def store_backtest_result(strategy_name, portfolio_results, start_date, end_date):
+    """
+    Store aggregated backtest results in the database.
+
+    Args:
+        strategy_name (str): Strategy name.
+        portfolio_results (dict): Results with symbols and their final values.
+        start_date (str): Start date of backtest.
+        end_date (str): End date of backtest.
+    """
+    records = []
+    for symbol, result in portfolio_results.items():
+        initial_value = result["initial_value"]
+        final_value = result["final_value"]
+        return_percentage = ((final_value - initial_value) / initial_value) * 100
+        records.append((
+            strategy_name,
+            symbol,
+            start_date,
+            end_date,
+            initial_value,
+            final_value,
+            return_percentage
+        ))
+
+    # Use the new insert method
+    inserted_count = insert_backtest_results(records)
+    print(f"✅ Stored {inserted_count} backtest results for strategy '{strategy_name}'")
 
 def run_portfolio_backtest(portfolio, start_date, end_date, strategy_name):
     """
-    Run backtests for a portfolio of stocks and aggregate results.
+    Run backtest for a portfolio of stocks.
 
     Args:
-        portfolio (dict): Portfolio stocks and weights, e.g., {"AAPL": 0.5, "MSFT": 0.5}.
-        start_date (str): Start date for backtesting.
-        end_date (str): End date for backtesting.
-        strategy_name (str): Strategy to apply (e.g., "MovingAverageCrossover").
+        portfolio (dict): Portfolio stocks and weights.
+        start_date (str): Start date.
+        end_date (str): End date.
+        strategy_name (str): Strategy to apply.
 
     Returns:
-        dict: Results containing equity curves and portfolio value over time.
+        dict: Portfolio results and equity curves.
     """
     strategies = {
         "MovingAverageCrossover": MovingAverageCrossover,
@@ -28,129 +83,49 @@ def run_portfolio_backtest(portfolio, start_date, end_date, strategy_name):
     if strategy_name not in strategies:
         raise ValueError(f"Invalid strategy: {strategy_name}")
 
-    # Initialize Backtrader engine
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategies[strategy_name])
 
-    # Add data and weights for each stock in the portfolio
+    portfolio_results = {}
     for symbol, weight in portfolio.items():
         print(f"Adding {symbol} to portfolio with weight {weight}...")
         data = load_data_from_db(symbol, start_date, end_date)
         data_feed = bt.feeds.PandasData(dataname=data)
         cerebro.adddata(data_feed, name=symbol)
 
-    # Set broker starting cash
     cerebro.broker.set_cash(100000)
-
-    # Store portfolio value over time
-    portfolio_values = []
-    timestamps = []
-
-    # Custom analyzer to track portfolio value
-    class ValueTracker(bt.Analyzer):
-        def __init__(self):
-            self.values = []
-            self.timestamps = []
-
-        def notify_timer(self, broker):
-            self.values.append(broker.getvalue())
-            # Extract timestamp from the data
-            self.timestamps.append(broker.datetime.datetime())
-
-        def get_analysis(self):
-            return self.values, self.timestamps
-
-    cerebro.addanalyzer(ValueTracker, _name="value_tracker")
-
-    # Run backtest
     results = cerebro.run()
-    portfolio_values, timestamps = results[0].analyzers.value_tracker.get_analysis()
+    final_value = cerebro.broker.getvalue()
 
-    return {
-        "portfolio_value": portfolio_values,
-        "time_series": timestamps,
-    }
+    for symbol, weight in portfolio.items():
+        portfolio_results[symbol] = {
+            "initial_value": 100000 * weight,
+            "final_value": final_value,
+        }
 
-def store_backtest_result(strategy_name, symbol, start_date, end_date, initial_value, final_value):
+    return portfolio_results
+
+def run_backtests(symbols, start_date, end_date, strategy_name):
     """
-    Store backtest results in the database.
+    Run backtests for the specified symbols and strategy.
 
     Args:
-        strategy_name (str): Name of the strategy.
-        symbol (str): Stock ticker.
-        start_date (str): Start date of the backtest.
-        end_date (str): End date of the backtest.
-        initial_value (float): Starting portfolio value.
-        final_value (float): Ending portfolio value.
-    """
-    engine = connect_to_db()
-    return_percentage = ((final_value - initial_value) / initial_value) * 100
+        symbols (list): List of stock tickers.
+        start_date (str): Start date.
+        end_date (str): End date.
+        strategy_name (str): Strategy to apply.
 
-    query = text("""
-    INSERT INTO backtest_results (strategy_name, symbol, start_date, end_date, initial_value, final_value, return_percentage)
-    VALUES (:strategy_name, :symbol, :start_date, :end_date, :initial_value, :final_value, :return_percentage)
-    """)
-
-    params = {
-        "strategy_name": strategy_name,
-        "symbol": symbol,
-        "start_date": start_date,
-        "end_date": end_date,
-        "initial_value": initial_value,
-        "final_value": final_value,
-        "return_percentage": return_percentage,
-    }
-
-    try:
-        with engine.begin() as conn:  # Use `begin()` to auto-commit
-            conn.execute(query, params)
-            print(f"Results for {strategy_name} on {symbol} stored successfully.")
-    except Exception as e:
-        print(f"Error storing backtest result: {e}")
-
-def run_backtests(symbols, start_date=None, end_date=None):
-    """
-    Run multiple backtests for different strategies using data from the database.
-
-    Args:
-        symbols (list): List of stock tickers to backtest.
-        start_date (str): Start date for backtesting.
-        end_date (str): End date for backtesting.
+    Returns:
+        None
     """
     strategies = {
         "MovingAverageCrossover": MovingAverageCrossover,
         "MomentumStrategy": MomentumStrategy,
     }
 
-    for symbol in symbols:
-        print(f"Running backtests for {symbol}...")
+    if strategy_name not in strategies:
+        raise ValueError(f"Invalid strategy: {strategy_name}")
 
-        for strategy_name, strategy_class in strategies.items():
-            print(f" - Testing strategy: {strategy_name}")
-
-            # Initialize Backtrader engine
-            cerebro = bt.Cerebro()
-            cerebro.addstrategy(strategy_class)
-
-            # Load data
-            data = load_data_from_db(symbol, start_date, end_date)
-            data_feed = bt.feeds.PandasData(dataname=data)
-            cerebro.adddata(data_feed)
-
-            # Set broker starting cash
-            initial_cash = 100000
-            cerebro.broker.set_cash(initial_cash)
-
-            # Run backtest
-            cerebro.run()
-
-            # Calculate final portfolio value
-            final_cash = cerebro.broker.getvalue()
-
-            # Store results in the database
-            store_backtest_result(strategy_name, symbol, start_date, end_date, initial_cash, final_cash)
-
-if __name__ == "__main__":
-    stock_symbols = ["AAPL", "MSFT", "GOOGL"]
-    run_backtests(stock_symbols, start_date="2020-01-01", end_date="2022-12-31")
-    
+    portfolio = {symbol: 1 / len(symbols) for symbol in symbols}
+    results = run_portfolio_backtest(portfolio, start_date, end_date, strategy_name=strategy_name)
+    store_backtest_result(strategy_name, results, start_date, end_date)

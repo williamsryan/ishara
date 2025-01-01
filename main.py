@@ -8,6 +8,7 @@ from src.fetchers.quiverquant_fetcher import process_congressional_trades
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
 from src.processors.derived_metrics import populate_derived_metrics
+from src.backtesting.backtester import run_backtests
 from src.dashboard.app import run_dashboard
 import json
 
@@ -64,6 +65,24 @@ def main():
     analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")
     analysis_parser.add_argument("type", choices=["clustering", "regime"], help="Type of analysis to perform.")
 
+    backtest_parser = subparsers.add_parser("backtest", help="Run a backtest.")
+    backtest_parser.add_argument(
+        "-s", "--symbols", type=str, required=True,
+        help="Comma-separated list of stock symbols (e.g., AAPL,MSFT,GOOGL)"
+    )
+    backtest_parser.add_argument(
+        "-sd", "--start-date", type=str, required=True,
+        help="Start date for the backtest in YYYY-MM-DD format"
+    )
+    backtest_parser.add_argument(
+        "-ed", "--end-date", type=str, required=True,
+        help="End date for the backtest in YYYY-MM-DD format"
+    )
+    backtest_parser.add_argument(
+        "-st", "--strategy", type=str, required=True,
+        help="Strategy to backtest (e.g., MovingAverageCrossover, MomentumStrategy)"
+    )
+
     # Subcommand: Launch UI
     subparsers.add_parser("ui", help="Launch the Ishara dashboard UI.")
 
@@ -77,6 +96,18 @@ def main():
         populate_database(args.target)
     elif args.command == "analyze":
         run_analysis(args.type)
+    elif args.command == "backtest":
+        symbols = [symbol.strip() for symbol in args.symbols.split(",")]
+        start_date = args.start_date
+        end_date = args.end_date
+        strategy_name = args.strategy
+
+        print(f"Running backtest with strategy: {strategy_name}")
+        try:
+            run_backtests(symbols, start_date, end_date, strategy_name)
+            print(f"Backtesting completed for strategy: {strategy_name}")
+        except Exception as e:
+            print(f"❌ Error during backtesting: {e}")
     elif args.command == "ui":
         run_dashboard()
     elif args.command == "load":

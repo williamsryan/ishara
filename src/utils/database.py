@@ -259,6 +259,33 @@ def insert_clustering_results(data):
 
     return insert_data(table_name, data, columns)
 
+def insert_backtest_results(data):
+    """
+    Insert backtest results into the database.
+
+    Args:
+        data (list): List of tuples containing backtest results. Each tuple should contain:
+            - strategy_name (str)
+            - symbol (str)
+            - start_date (str)
+            - end_date (str)
+            - initial_value (float)
+            - final_value (float)
+            - return_percentage (float)
+    """
+    table_name = TABLES["backtest_results"]
+    columns = [
+        "strategy_name",
+        "symbol",
+        "start_date",
+        "end_date",
+        "initial_value",
+        "final_value",
+        "return_percentage"
+    ]
+
+    return insert_data(table_name, data, columns)
+
 # -------------------- FETCH METHODS --------------------
 
 def fetch_data(query, params=None):
