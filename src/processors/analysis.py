@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
+from scipy.spatial import ConvexHull
 import networkx as nx
 from networkx.algorithms.community import greedy_modularity_communities
 import plotly.graph_objects as go
@@ -43,10 +44,10 @@ class Analysis:
         - selected_symbols: List of symbols to filter data (optional).
 
         Returns:
-        - DataFrame containing 'expiration_date', 'implied_volatility', and 'strike'.
+        - DataFrame containing 'expiration_date', 'implied_volatility', 'strike', and 'symbol'.
         """
         query = """
-        SELECT expiration_date, implied_volatility, strike
+        SELECT symbol, expiration_date, implied_volatility, strike
         FROM options_data
         WHERE implied_volatility IS NOT NULL AND strike IS NOT NULL
         """
@@ -56,7 +57,10 @@ class Analysis:
 
         data = fetch_data(query)
         if data.empty:
-            print("⚠️ No option data found.")
+            print(f"⚠️ No option data found for symbols: {selected_symbols}")
+        else:
+            print(f"✅ Retrieved regime data for {len(data)} rows.")
+
         return data
 
     @staticmethod
@@ -512,15 +516,17 @@ class Analysis:
         return fig
     
     @staticmethod
-    def plot_regime_dashboard(data):
+    def plot_regime_dashboard(data, clusters=None, view="3d"):
         """
-        Generate a 3D scatter plot for option data.
+        Generate toggleable 2D and 3D scatter plots for option data with cluster highlighting.
         
         Parameters:
-        - data: DataFrame containing columns 'expiration', 'implied_volatility', and 'price'.
+        - data: DataFrame containing columns 'expiration_date', 'implied_volatility', and 'strike'.
+        - clusters: Optional; A dictionary of cluster IDs mapped to list of symbol indices.
+        - view: "2d" or "3d"; Determines the default view for the scatter plot.
 
         Returns:
-        - A Plotly figure for a 3D scatter plot.
+        - A Plotly figure with interactive features.
         """
         if data.empty:
             raise ValueError("No data available to plot.")
@@ -531,42 +537,138 @@ class Analysis:
             if column not in data.columns:
                 raise ValueError(f"Missing required column: {column}")
 
-        # Create the 3D scatter plot
-        fig = go.Figure()
+        # Create scatter plots
+        color_scale = "Viridis"
 
-        fig.add_trace(
-            go.Scatter3d(
-                x=data["expiration_date"],
-                y=data["implied_volatility"],
-                z=data["strike"],
-                mode="markers",
-                marker=dict(
-                    size=5,
-                    color=data["implied_volatility"],  # Color by implied volatility
-                    colorscale="Viridis",
-                    showscale=True,
-                    opacity=0.8,
-                ),
-                text=[
-                    f"Expiration: {row['expiration_date']}<br>"
-                    f"Volatility: {row['implied_volatility']:.2f}<br>"
-                    f"Price: {row['strike']:.2f}"
-                    for _, row in data.iterrows()
-                ],
-                hoverinfo="text",
+        if view == "3d":
+            fig = go.Figure()
+
+            fig.add_trace(
+                go.Scatter3d(
+                    x=data["expiration_date"],
+                    y=data["implied_volatility"],
+                    z=data["strike"],
+                    mode="markers",
+                    marker=dict(
+                        size=5,
+                        color=data["implied_volatility"],
+                        colorscale=color_scale,
+                        opacity=0.6,
+                        showscale=True,
+                        colorbar=dict(
+                            title="Implied Volatility",
+                            titleside="right",
+                            tickformat=".2f",
+                            x=1.1
+                        ),
+                    ),
+                    text=[
+                        f"Expiration: {row['expiration_date']}<br>"
+                        f"Volatility: {row['implied_volatility']:.2f}<br>"
+                        f"Strike: {row['strike']:.2f}<br>"
+                        f"Symbol: {row.get('symbol', 'N/A')}"
+                        for _, row in data.iterrows()
+                    ],
+                    hoverinfo="text",
+                )
             )
-        )
 
-        fig.update_layout(
-            title="3D Scatter Plot: Expiration vs. Volatility vs. Price",
-            scene=dict(
-                xaxis_title="Expiration Time",
-                yaxis_title="Implied Volatility",
-                zaxis_title="Price",
-            ),
-            template="plotly_white",
-            margin=dict(l=0, r=0, b=0, t=50),
-        )
+            fig.update_layout(
+                title="3D Scatter Plot: Expiration vs. Volatility vs. Strike",
+                scene=dict(
+                    xaxis=dict(
+                        title="Expiration Time (Days)",
+                        backgroundcolor="rgb(200, 200, 230)",
+                        gridcolor="white",
+                        showgrid=True
+                    ),
+                    yaxis=dict(
+                        title="Implied Volatility (%)",
+                        backgroundcolor="rgb(230, 200, 230)",
+                        gridcolor="white",
+                        showgrid=True
+                    ),
+                    zaxis=dict(
+                        title="Strike (USD)",
+                        backgroundcolor="rgb(230, 230, 200)",
+                        gridcolor="white",
+                        showgrid=True
+                    ),
+                ),
+                margin=dict(l=0, r=0, b=0, t=60),
+                template="plotly_white",
+                legend=dict(
+                    x=0.9,
+                    y=0.9,
+                    title="Legend",
+                    bgcolor="rgba(255,255,255,0.8)",
+                ),
+                height=800,
+            )
+            return fig
 
-        return fig
+        elif view == "2d":
+            fig = go.Figure()
+
+            # Add scatter points
+            fig.add_trace(
+                go.Scatter(
+                    x=data["expiration_date"],
+                    y=data["implied_volatility"],
+                    mode="markers",
+                    marker=dict(
+                        size=8,
+                        color=data["strike"],
+                        colorscale=color_scale,
+                        opacity=0.7,
+                        showscale=True,
+                        colorbar=dict(
+                            title="Strike Price",
+                            titleside="right",
+                            tickformat=".2f",
+                        ),
+                    ),
+                    text=[
+                        f"Expiration: {row['expiration_date']}<br>"
+                        f"Volatility: {row['implied_volatility']:.2f}<br>"
+                        f"Strike: {row['strike']:.2f}<br>"
+                        f"Symbol: {row.get('symbol', 'N/A')}"
+                        for _, row in data.iterrows()
+                    ],
+                    hoverinfo="text",
+                )
+            )
+
+            # Add convex hulls for clusters if provided
+            if clusters:
+                for cluster_id, indices in clusters.items():
+                    cluster_points = data.iloc[indices][["expiration_date", "implied_volatility"]].values
+                    if len(cluster_points) >= 3:  # ConvexHull requires at least 3 points
+                        hull = ConvexHull(cluster_points)
+                        hull_points = cluster_points[hull.vertices]
+
+                        fig.add_trace(
+                            go.Scatter(
+                                x=hull_points[:, 0],
+                                y=hull_points[:, 1],
+                                mode="lines",
+                                line=dict(color="rgba(0, 100, 80, 0.5)", width=2),
+                                fill="toself",
+                                name=f"Cluster {cluster_id}",
+                                hoverinfo="skip",
+                            )
+                        )
+
+            fig.update_layout(
+                title="2D Scatter Plot: Expiration vs. Volatility",
+                xaxis=dict(title="Expiration Time (Days)", gridcolor="lightgrey"),
+                yaxis=dict(title="Implied Volatility (%)", gridcolor="lightgrey"),
+                template="plotly_white",
+                margin=dict(l=0, r=0, b=0, t=60),
+                dragmode="pan",
+                height=800,
+            )
+            return fig
+        else:
+            raise ValueError("Invalid view specified. Choose '2d' or '3d'.")
     
