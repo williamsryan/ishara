@@ -197,6 +197,13 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
             results = Analysis.fetch_clustering_results("graph_clustering")
             visualization = Analysis.plot_graph_clusters(results)
             return dcc.Graph(figure=visualization, id="graph-clustering-chart")
+        elif analysis_type == "regime_analysis":
+            results = Analysis.fetch_regime_results()
+            if results.empty:
+                return html.Div("⚠️ No results found for regime analysis.", className="text-warning p-3")
+            
+            visualization = Analysis.plot_regime_dashboard(results)
+            return dcc.Graph(figure=visualization, id="regime-analysis-chart")
         else:
             return html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3")
 

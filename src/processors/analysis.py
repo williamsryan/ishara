@@ -35,6 +35,31 @@ class Analysis:
         return results
 
     @staticmethod
+    def fetch_regime_results(selected_symbols=None):
+        """
+        Fetch data for option expiration, implied volatility, and price.
+
+        Parameters:
+        - selected_symbols: List of symbols to filter data (optional).
+
+        Returns:
+        - DataFrame containing 'expiration_date', 'implied_volatility', and 'strike'.
+        """
+        query = """
+        SELECT expiration_date, implied_volatility, strike
+        FROM options_data
+        WHERE implied_volatility IS NOT NULL AND strike IS NOT NULL
+        """
+        if selected_symbols:
+            symbols_filter = ", ".join(f"'{symbol}'" for symbol in selected_symbols)
+            query += f" AND symbol IN ({symbols_filter})"
+
+        data = fetch_data(query)
+        if data.empty:
+            print("⚠️ No option data found.")
+        return data
+
+    @staticmethod
     def perform_knn_clustering(selected_symbols, start_date, end_date, selected_features, reduction_method="none"):
         """
         Perform K-NN clustering for the selected symbols and features within a date range.
@@ -482,6 +507,65 @@ class Analysis:
         fig.update_traces(
             selector=dict(mode="markers"),
             customdata=node_text,
+        )
+
+        return fig
+    
+    @staticmethod
+    def plot_regime_dashboard(data):
+        """
+        Generate a 3D scatter plot for option data.
+        
+        Parameters:
+        - data: DataFrame containing columns 'expiration', 'implied_volatility', and 'price'.
+
+        Returns:
+        - A Plotly figure for a 3D scatter plot.
+        """
+        if data.empty:
+            raise ValueError("No data available to plot.")
+
+        # Ensure required columns exist
+        required_columns = ["expiration_date", "implied_volatility", "strike"]
+        for column in required_columns:
+            if column not in data.columns:
+                raise ValueError(f"Missing required column: {column}")
+
+        # Create the 3D scatter plot
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Scatter3d(
+                x=data["expiration_date"],
+                y=data["implied_volatility"],
+                z=data["strike"],
+                mode="markers",
+                marker=dict(
+                    size=5,
+                    color=data["implied_volatility"],  # Color by implied volatility
+                    colorscale="Viridis",
+                    showscale=True,
+                    opacity=0.8,
+                ),
+                text=[
+                    f"Expiration: {row['expiration_date']}<br>"
+                    f"Volatility: {row['implied_volatility']:.2f}<br>"
+                    f"Price: {row['strike']:.2f}"
+                    for _, row in data.iterrows()
+                ],
+                hoverinfo="text",
+            )
+        )
+
+        fig.update_layout(
+            title="3D Scatter Plot: Expiration vs. Volatility vs. Price",
+            scene=dict(
+                xaxis_title="Expiration Time",
+                yaxis_title="Implied Volatility",
+                zaxis_title="Price",
+            ),
+            template="plotly_white",
+            margin=dict(l=0, r=0, b=0, t=50),
         )
 
         return fig
