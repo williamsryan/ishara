@@ -7,9 +7,9 @@ import networkx as nx
 from networkx.algorithms.community import greedy_modularity_communities
 import plotly.graph_objects as go
 import json
-from src.utils.database import fetch_data, insert_clustering_results
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+from src.utils.database import fetch_data, insert_clustering_results
 
 class Analysis:
     def __init__(self):
@@ -35,9 +35,10 @@ class Analysis:
         return results
 
     @staticmethod
-    def perform_knn_clustering(selected_symbols, start_date, end_date, selected_features):
+    def perform_knn_clustering(selected_symbols, start_date, end_date, selected_features, reduction_method="tsne"):
         """
         Perform K-NN clustering for the selected symbols and features within a date range.
+        Includes dimensionality reduction for visualizing clusters.
         """
         if not selected_symbols:
             raise ValueError("No symbols selected for clustering.")
@@ -58,7 +59,7 @@ class Analysis:
         if data.empty:
             raise ValueError("No data available for the given symbols and date range.")
 
-        # Aggregate data to one row per symbol (if needed)
+        # Aggregate data to one row per symbol
         data = data.groupby("symbol").agg({
             "open": "mean",
             "high": "mean",
@@ -68,24 +69,58 @@ class Analysis:
         }).reset_index()
 
         # Filter only selected features
-        features = data[selected_features]
+        features = data[selected_features].dropna()
+        feature_indices = features.index  # Save the indices of rows with valid features
         scaler = StandardScaler()
         features_normalized = scaler.fit_transform(features)
 
+        # Perform K-Means clustering
         kmeans = KMeans(n_clusters=3, random_state=42)
-        data["cluster_id"] = kmeans.fit_predict(features_normalized)
+        cluster_ids = kmeans.fit_predict(features_normalized)
+
+        # Perform dimensionality reduction if selected
+        if reduction_method != "none":
+            if features_normalized.shape[0] < 2:
+                raise ValueError("Not enough data points for dimensionality reduction.")
+
+            try:
+                if reduction_method == "tsne":
+                    reducer = TSNE(n_components=2, perplexity=min(30, features_normalized.shape[0] // 2), random_state=42)
+                elif reduction_method == "pca":
+                    reducer = PCA(n_components=2)
+                else:
+                    raise ValueError("Unsupported reduction method. Choose 'tsne' or 'pca'.")
+
+                reduced_data = reducer.fit_transform(features_normalized)
+            except Exception as e:
+                raise ValueError(f"Dimensionality reduction failed: {e}")
+
+            # Align reduced dimensions to the DataFrame
+            data["x"] = reduced_data[:, 0]
+            data["y"] = reduced_data[:, 1]
+        else:
+            # No dimensionality reduction; fallback to default cluster visualization
+            data["x"] = features_normalized[:, 0]
+            data["y"] = features_normalized[:, 1]
+
+        # Align cluster IDs and reduced dimensions back to the original DataFrame
+        data = data.loc[feature_indices].copy()
+        data["cluster_id"] = cluster_ids
+        data["x"] = reduced_data[:, 0]
+        data["y"] = reduced_data[:, 1]
 
         # Prepare results for insertion
         clustering_results = []
         for _, row in data.iterrows():
             result_data = {
-                "features": row[features.columns].to_dict(),
-                "cluster_center": kmeans.cluster_centers_[int(row["cluster_id"])].tolist()
+                "features": row[selected_features].to_dict(),
+                "cluster_center": kmeans.cluster_centers_[int(row["cluster_id"])].tolist(),
+                "reduced_dimensions": {"x": row["x"], "y": row["y"]}
             }
             clustering_results.append((
                 row["symbol"],
                 "knn_clustering",
-                row["cluster_id"],
+                int(row["cluster_id"]),
                 json.dumps(result_data)  # Serialize dict to JSON string
             ))
 
@@ -97,9 +132,9 @@ class Analysis:
         return data
 
     @staticmethod
-    def perform_graph_clustering(symbols, start_date, end_date):
+    def perform_graph_clustering(selected_symbols, start_date, end_date, selected_features):
         """
-        Perform graph-based clustering for the given symbols.
+        Perform graph-based clustering using selected features.
         """
         # Historical data query
         historical_query = f"""
@@ -122,7 +157,7 @@ class Analysis:
 
         if options_data.empty:
             raise ValueError("No options data available for clustering analysis.")
-
+        
         # Derived metrics
         historical_data["log_returns"] = np.log(historical_data["close"] / historical_data["open"])
         historical_features = historical_data.groupby("symbol").agg({"log_returns": "mean"}).reset_index()
@@ -177,6 +212,44 @@ class Analysis:
             print("⚠️ No graph clustering results to store.")
 
         return graph, clusters
+
+    @staticmethod
+    def plot_cluster_scatter(results):
+        """
+        Visualize clustering results with reduced dimensions (if applicable).
+        """
+        results["parsed_results"] = results["result"].apply(
+            lambda x: json.loads(x) if isinstance(x, str) else x
+        )
+
+        results["x"] = results["parsed_results"].apply(lambda r: r.get("reduced_dimensions", {}).get("x", None))
+        results["y"] = results["parsed_results"].apply(lambda r: r.get("reduced_dimensions", {}).get("y", None))
+
+        if results["x"].isnull().all() or results["y"].isnull().all():
+            raise ValueError("No valid reduced dimensions found for visualization.")
+
+        # Create scatter plot
+        fig = go.Figure()
+        for cluster_id, cluster_data in results.groupby("cluster_id"):
+            fig.add_trace(
+                go.Scatter(
+                    x=cluster_data["x"],
+                    y=cluster_data["y"],
+                    mode="markers",
+                    name=f"Cluster {cluster_id}",
+                    marker=dict(size=10),
+                    text=[f"Symbol: {row['symbol']}" for _, row in cluster_data.iterrows()]
+                )
+            )
+
+        fig.update_layout(
+            title="KNN Cluster Visualization",
+            xaxis_title="Dimension 1",
+            yaxis_title="Dimension 2",
+            dragmode="pan",
+            template="plotly_white"
+        )
+        return fig
 
     @staticmethod
     def plot_graph_clusters(results):
@@ -258,119 +331,5 @@ class Analysis:
 
         # Enable panning and zooming
         fig.update_layout(dragmode="pan")
-        return fig
-
-    @staticmethod
-    def plot_cluster_scatter(results, selected_features, reduction_method="tsne"):
-        """
-        Visualize clusters using dimensionality reduction (t-SNE or PCA).
-        """
-        if not selected_features or len(selected_features) < 2:
-            raise ValueError("Please select at least two features for clustering.")
-
-        # Parse JSON results
-        results["parsed_results"] = results["result"].apply(
-            lambda x: json.loads(x) if isinstance(x, str) else x
-        )
-
-        # Extract feature data
-        feature_data = []
-        for result in results["parsed_results"]:
-            features = list(result["features"].values())
-            # Validate feature lengths and types
-            if len(features) == len(selected_features) and all(
-                isinstance(f, (int, float)) for f in features
-            ):
-                feature_data.append(features)
-
-        # Ensure feature data is not empty
-        if not feature_data:
-            raise ValueError("No valid feature data available for dimensionality reduction.")
-
-        feature_data = np.array(feature_data)
-
-        # Apply dimensionality reduction
-        if reduction_method == "tsne":
-            reducer = TSNE(n_components=2, random_state=42)
-        elif reduction_method == "pca":
-            reducer = PCA(n_components=2)
-        else:
-            raise ValueError("Unsupported reduction method. Use 'tsne' or 'pca'.")
-
-        try:
-            reduced_data = reducer.fit_transform(feature_data)
-        except Exception as e:
-            raise ValueError(f"Error during dimensionality reduction: {e}")
-
-        # Assign reduced dimensions to results
-        results["x"] = reduced_data[:, 0]
-        results["y"] = reduced_data[:, 1]
-
-        # Drop rows with missing or invalid data
-        results = results.dropna(subset=["x", "y"])
-        if results.empty:
-            return go.Figure(
-                layout=dict(
-                    title="No Data Available",
-                    xaxis_title="Dimension 1",
-                    yaxis_title="Dimension 2",
-                )
-            )
-
-        # Create scatter plot
-        fig = go.Figure()
-        for cluster_id, cluster_data in results.groupby("cluster_id"):
-            fig.add_trace(
-                go.Scatter(
-                    x=cluster_data["x"],
-                    y=cluster_data["y"],
-                    mode="markers",
-                    name=f"Cluster {cluster_id}",
-                    marker=dict(size=10),
-                    hoverinfo="text",
-                    text=[
-                        f"Symbol: {row['symbol']}<br>Features: {row['parsed_results']}"
-                        for _, row in cluster_data.iterrows()
-                    ],
-                )
-            )
-
-        # Update layout for better visualization
-        fig.update_layout(
-            title="Cluster Visualization with Dimensionality Reduction",
-            xaxis_title="Dimension 1",
-            yaxis_title="Dimension 2",
-            dragmode="pan",
-            template="plotly_white",
-            margin=dict(l=40, r=40, t=40, b=40),
-        )
-
-        return fig
-
-    @staticmethod
-    def plot_community_summary(results):
-        """
-        Plot community sizes as a bar chart.
-        """
-        # Count the number of symbols in each cluster
-        communities = results.groupby("cluster_id").size().reset_index(name="count")
-
-        fig = go.Figure(
-            data=[
-                go.Bar(
-                    x=communities["cluster_id"],
-                    y=communities["count"],
-                    text=communities["count"],
-                    textposition="auto",
-                )
-            ]
-        )
-
-        fig.update_layout(
-            title="Community Size Summary",
-            xaxis_title="Community ID",
-            yaxis_title="Number of Symbols",
-            template="plotly_white",
-        )
         return fig
     
