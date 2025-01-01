@@ -174,16 +174,18 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
                 selected_symbols=symbols,
                 start_date=start_date,
                 end_date=end_date,
-                selected_features=selected_features
+                selected_features=selected_features,
+                reduction_method=reduction_method
             )
             results = Analysis.fetch_clustering_results("knn_clustering")
-            visualization = Analysis.plot_cluster_scatter(results, selected_features, reduction_method)
+            visualization = Analysis.plot_cluster_scatter(results)
 
         elif analysis_type == "graph_clustering":
             Analysis.perform_graph_clustering(
                 selected_symbols=symbols,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
+                selected_features=selected_features
             )
             results = Analysis.fetch_clustering_results("graph_clustering")
             visualization = Analysis.plot_graph_clusters(results)

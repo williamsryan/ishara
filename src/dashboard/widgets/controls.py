@@ -72,6 +72,7 @@ class Controls:
             ),
 
             # Reduction Method Dropdown
+            html.Label("Select Dimensionality Reduction Method"),
             dcc.Dropdown(
                 id="reduction-method-dropdown",
                 options=[
