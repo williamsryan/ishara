@@ -16,6 +16,7 @@ class Analyses:
             options=[
                 {"label": "K-NN Clustering", "value": "knn_clustering"},
                 {"label": "Graph Clustering", "value": "graph_clustering"},
+                {"label": "Regime Analysis", "value": "regime_analysis"},
             ],
             placeholder="Select analysis type",
             className="mb-3",
