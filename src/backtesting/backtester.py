@@ -59,7 +59,6 @@ class BacktestManager:
                 close="close",
                 volume="volume",
                 timeframe=bt.TimeFrame.Days,
-                compression=1,
             )
             self.cerebro.adddata(data_feed, name=symbol)
 
@@ -67,12 +66,12 @@ class BacktestManager:
         self.cerebro.addstrategy(strategy_class)
 
         # Run the backtest
+        initial_value = 10000
+        self.cerebro.broker.setcash(initial_value)
         self.cerebro.run()
 
-        # Collect results
-        self.results = self._process_results()
-        self._store_results(strategy_input, symbols, start_date, end_date)
-
+        # Process and store results
+        self.results = self._process_results(strategy_input, symbols, start_date, end_date, initial_value)
         return self.results
     
     def _wrap_dynamic_strategy(self, strategy_func):
@@ -93,30 +92,48 @@ class BacktestManager:
 
         return DynamicStrategy
 
-    def _process_results(self):
+    def _process_results(self, strategy_name, symbols, start_date, end_date, initial_value):
         """
-        Extracts backtesting results from Backtrader.
+        Extracts and formats backtesting results for database storage and visualization.
         """
-        portfolio_value = self.cerebro.broker.getvalue()
-        trades = [{"datetime": datetime.now(), "value": portfolio_value}]  # Example structure
-        return pd.DataFrame(trades)
+        results = []
+        final_value = self.cerebro.broker.getvalue()
+        return_percentage = ((final_value - initial_value) / initial_value) * 100
 
-    def _store_results(self, strategy_name, symbols, start_date, end_date):
-        """
-        Stores the backtest results in the database.
-        """
-        if self.results is None:
-            raise ValueError("No results to store.")
+        # Gather results for each symbol
+        for symbol in symbols:
+            result = {
+                "strategy": strategy_name,
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "initial_value": initial_value,
+                "final_value": final_value,
+                "return_percentage": return_percentage,
+            }
+            results.append(result)
 
-        for _, row in self.results.iterrows():
-            insert_backtest_results(
-                symbol=row.get("symbol", ""),
-                strategy=strategy_name,
-                datetime=row["datetime"],
-                returns=row.get("returns", 0),
-                start_date=start_date,
-                end_date=end_date,
+        # Insert results into the database
+        self._store_results(results)
+        return pd.DataFrame(results)
+
+    def _store_results(self, results):
+        """
+        Save backtest results to the database.
+        """
+        data_to_insert = [
+            (
+                result["strategy"],
+                result["symbol"],
+                result["start_date"],
+                result["end_date"],
+                result["initial_value"],
+                result["final_value"],
+                result["return_percentage"]
             )
+            for result in results
+        ]
+        insert_backtest_results(data_to_insert)
 
     def generate_performance_chart(self):
         """
