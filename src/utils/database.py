@@ -286,6 +286,25 @@ def insert_backtest_results(data):
 
     return insert_data(table_name, data, columns)
 
+def insert_symbols(data):
+    """
+    Insert symbol data into the symbols table.
+
+    Args:
+        data (list of tuples): List of tuples containing symbol data. Each tuple should contain:
+            - symbol (str): Stock ticker symbol
+            - name (str): Full company name
+            - sector (str): Sector or industry
+            - exchange (str): Stock exchange
+
+    Returns:
+        int: Number of rows successfully inserted.
+    """
+    table_name = "symbols"
+    columns = ["symbol", "name", "sector", "exchange"]
+
+    return insert_data(table_name, data, columns)
+
 # -------------------- FETCH METHODS --------------------
 
 def fetch_data(query, params=None):
