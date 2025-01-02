@@ -1,4 +1,4 @@
-from dash import Dash, dcc, html, Input, Output, State, callback_context
+from dash import Dash, dcc, html, Input, Output, State, callback_context, ctx
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from threading import Thread
@@ -13,7 +13,7 @@ from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCh
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
 from src.processors.analysis import Analysis
-from src.utils.database import fetch_data
+from src.utils.database import fetch_as_dataframe
 from src.utils.config import FINNHUB_API_KEY
 
 # Initialize the app
@@ -31,21 +31,6 @@ analyses = Analyses()
 # Instantiate chart components
 price_chart = PriceChart()
 alternative_data_charts = AlternativeDataCharts()
-
-# Fetch distinct symbols once
-def get_symbols():
-    data_source = "historical_market_data"  # Default data source
-    query = f"SELECT DISTINCT symbol FROM {data_source}"
-    data = fetch_data(query)
-
-    if data.empty:
-        print("⚠️ No symbols found in the database.")
-        return []
-
-    return [{"label": symbol, "value": symbol} for symbol in data["symbol"].unique()]
-
-# Load symbols globally
-SYMBOL_OPTIONS = get_symbols()
 
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
@@ -84,26 +69,39 @@ app.layout = dbc.Container(fluid=True, children=[
 @app.callback(
     Output("symbol-selector", "options"),
     Input("symbol-selector", "search_value"),
+    State("data-source-selector", "value"),
     prevent_initial_call=True
 )
-def update_symbol_selector_options(search_value):
-    """Update symbol selector options dynamically based on user input."""
+def update_symbol_selector(search_value, data_source):
+    """
+    Dynamically fetch symbols based on the search input and data source.
+    """
     if not search_value:
         raise PreventUpdate
 
-    query = f"""
-    SELECT symbol, name FROM symbols
-    WHERE symbol ILIKE '%{search_value}%' OR name ILIKE '%{search_value}%'
-    LIMIT 20
-    """
-    results = fetch_data(query)
-    if results.empty:
-        return [{"label": "No matches found", "value": ""}]
-
-    return [
-        {"label": f"{row['symbol']} - {row['name']}", "value": row["symbol"]}
-        for _, row in results.iterrows()
-    ]
+    if data_source == "real_time_market_data":
+        # Query a live API or preloaded real-time data symbols
+        query = f"""
+        SELECT DISTINCT symbol FROM symbols
+        WHERE symbol ILIKE '%{search_value}%'
+        LIMIT 20
+        """
+    else:
+        # Historical data source query
+        query = f"""
+        SELECT DISTINCT symbol FROM historical_market_data
+        """
+    try:
+        results = fetch_as_dataframe(query)
+        if results.empty:
+            return [{"label": "No matches found", "value": ""}]
+        return [
+            {"label": symbol, "value": symbol}
+            for symbol in results["symbol"].unique()
+        ]
+    except Exception as e:
+        print(f"❌ Error fetching symbols: {e}")
+        return [{"label": "Error fetching symbols", "value": ""}]
 
 @app.callback(
     Output("date-picker", "disabled"),

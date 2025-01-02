@@ -52,7 +52,7 @@ class Controls:
             dcc.Dropdown(
                 id="symbol-selector",
                 multi=True,
-                options=[],
+                options=[], # Dynamically fetched
                 value=None,
                 searchable=True,
                 placeholder="Loading symbols...",
