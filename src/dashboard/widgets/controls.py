@@ -3,7 +3,7 @@ import dash_bootstrap_components as dbc
 from src.utils.database import fetch_data
 
 class Controls:
-    def render(self, symbol_options):
+    def render(self):
         # Fetch the default date range from the database
         query = """
             SELECT MIN(datetime) AS start_date, MAX(datetime) AS end_date
@@ -37,16 +37,24 @@ class Controls:
                     {"label": "Real-Time Data", "value": "real_time_market_data"},
                     {"label": "Historical Data", "value": "historical_market_data"}
                 ],
-                value="historical_market_data",  # Default to historical
+                value="real_time_market_data",  # Default to real-time
                 clearable=False,
                 className="mb-3"
+            ),
+
+            dcc.Interval(
+                id="update-interval",
+                interval=30*1000,  # Update every 30 seconds
+                n_intervals=0
             ),
 
             html.Label("Select Symbols"),
             dcc.Dropdown(
                 id="symbol-selector",
                 multi=True,
-                options=symbol_options,
+                options=[],
+                value=None,
+                searchable=True,
                 placeholder="Loading symbols...",
                 className="mb-3",
             ),

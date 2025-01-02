@@ -17,6 +17,15 @@ CREATE DATABASE ishara;
 -- Connect to the new database
 \c ishara;
 
+CREATE TABLE IF NOT EXISTS symbols (
+    id SERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL UNIQUE,  -- Stock ticker symbol
+    name TEXT NOT NULL,           -- Company name
+    sector TEXT,                  -- Sector/Industry
+    exchange TEXT,                -- Exchange (e.g., NASDAQ, NYSE)
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Table for historical market data (e.g., OHLC data)
 CREATE TABLE IF NOT EXISTS historical_market_data (
     id SERIAL PRIMARY KEY,

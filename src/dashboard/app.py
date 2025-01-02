@@ -3,6 +3,7 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from threading import Thread
 import pandas as pd
+import requests
 import plotly.graph_objs as go
 from src.fetchers.alpaca_realtime import fetch_real_time_data
 from src.dashboard.components.header import Header
@@ -13,6 +14,7 @@ from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
 from src.processors.analysis import Analysis
 from src.utils.database import fetch_data
+from src.utils.config import FINNHUB_API_KEY
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
@@ -53,7 +55,7 @@ app.layout = dbc.Container(fluid=True, children=[
     # Sidebar and Tabs
     dbc.Row([
         dbc.Col(
-            controls.render(symbol_options=SYMBOL_OPTIONS),
+            controls.render(),
             width=3,
             className="bg-light p-4 border-end vh-100 sticky-top overflow-auto"
         ),
@@ -66,6 +68,7 @@ app.layout = dbc.Container(fluid=True, children=[
                     dcc.Tab(label="📊 Alternative Data", value="alternative-data"),
                     dcc.Tab(label="🗃 Data Table", value="data-table"),
                     dcc.Tab(label="📐 Analyses", value="analyses"),
+                    dcc.Tab(label="🛠️ Strategy Builder", value="strategies"),
                 ],
                 className="mb-3",
             ),
@@ -78,17 +81,41 @@ app.layout = dbc.Container(fluid=True, children=[
     ]),
 ])
 
-# @app.callback(
-#     Output("date-picker", "disabled"),
-#     Input("data-source", "value")
-# )
-# def toggle_date_picker(data_source):
-#     """
-#     Disable the date picker if the data source is 'real_time_market_data'.
-#     """
-#     disabled_state = data_source == "real_time_market_data"
-#     print(f"Data source: {data_source} | Date Picker Disabled: {disabled_state}")
-#     return disabled_state
+@app.callback(
+    Output("symbol-selector", "options"),
+    Input("symbol-selector", "search_value"),
+    prevent_initial_call=True
+)
+def update_symbol_selector_options(search_value):
+    """Update symbol selector options dynamically based on user input."""
+    if not search_value:
+        raise PreventUpdate
+
+    query = f"""
+    SELECT symbol, name FROM symbols
+    WHERE symbol ILIKE '%{search_value}%' OR name ILIKE '%{search_value}%'
+    LIMIT 20
+    """
+    results = fetch_data(query)
+    if results.empty:
+        return [{"label": "No matches found", "value": ""}]
+
+    return [
+        {"label": f"{row['symbol']} - {row['name']}", "value": row["symbol"]}
+        for _, row in results.iterrows()
+    ]
+
+@app.callback(
+    Output("date-picker", "disabled"),
+    Input("data-source-selector", "value")
+)
+def toggle_date_picker(data_source):
+    """
+    Disable the date picker if the data source is 'real_time_market_data'.
+    """
+    disabled_state = data_source == "real_time_market_data"
+    # print(f"Data source: {data_source} | Date Picker Disabled: {disabled_state}")
+    return disabled_state
 
 @app.callback(
     Output("symbol-selector", "value"),
@@ -118,11 +145,16 @@ def select_deselect_symbols(select_all_clicks, deselect_all_clicks, options):
         Input("date-picker", "start_date"),
         Input("date-picker", "end_date"),
         Input("indicator-selector", "value"),
+        Input("update-interval", "n_intervals"),
     ]
 )
-def update_price_chart(symbols, data_source, start_date, end_date, selected_indicators):
+def update_price_chart(symbols, data_source, start_date, end_date, selected_indicators, n_intervals):
     if not symbols:
         return go.Figure()
+    
+    if data_source == "real_time_market_data":
+        # Ensure date filters are ignored for real-time data
+        start_date, end_date = None, None
 
     return PriceChart.layout(
                     symbols=symbols, 
@@ -187,6 +219,8 @@ def update_tab_content(tab, symbols, data_source, start_date, end_date):
             return data_table.layout(symbols, start_date, end_date)
         elif tab == "analyses":
             return analyses.layout(symbols, start_date, end_date)
+        elif tab == "strategies":
+            pass
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
 
@@ -258,6 +292,52 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
         print(f"❌ Error during analysis: {e}")
         return html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger p-3")
 
+# @app.callback(
+#     Output("backtest-results", "children"),
+#     Input("run-backtest", "n_clicks"),
+#     [
+#         State("strategy-selector", "value"),
+#         State("parameter-input", "value"),
+#         State("symbol-selector", "value"),
+#         State("strategy-date-picker", "start_date"),
+#         State("strategy-date-picker", "end_date")
+#     ]
+# )
+# def run_backtest(n_clicks, strategy, params, symbols, start_date, end_date):
+#     if not n_clicks or not strategy or not symbols:
+#         return html.Div("⚠️ Please provide all inputs to run the backtest.", className="text-warning p-3")
+
+#     try:
+#         # Parse parameters into a dictionary
+#         param_dict = {}
+#         if params:
+#             param_pairs = [p.split(":") for p in params.split(",")]
+#             param_dict = {key.strip(): float(value.strip()) for key, value in param_pairs}
+
+#         # Run backtesting
+#         backtest_results = perform_backtest(
+#             strategy=strategy,
+#             symbols=symbols,
+#             params=param_dict,
+#             start_date=start_date,
+#             end_date=end_date
+#         )
+
+#         # Generate Visualizations
+#         performance_chart = generate_performance_chart(backtest_results)
+#         trades_chart = generate_trades_chart(backtest_results)
+#         trades_summary = generate_trades_table(backtest_results)
+
+#         return html.Div([
+#             dcc.Graph(figure=performance_chart, id="performance-chart"),
+#             dcc.Graph(figure=trades_chart, id="trades-chart"),
+#             trades_summary
+#         ])
+
+#     except Exception as e:
+#         print(f"❌ Error running backtest: {e}")
+#         return html.Div(f"❌ Error during backtesting: {str(e)}", className="text-danger p-3")
+    
 @app.callback(
     Output("knn-chart", "figure"),
     [Input("x-feature", "value"), Input("y-feature", "value")],

@@ -5,6 +5,7 @@ from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
 from src.fetchers.google_trends_fetcher import fetch_google_trends
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.fetchers.quiverquant_fetcher import process_congressional_trades
+from src.fetchers.symbol_fetcher import populate_symbols_table
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
 from src.processors.derived_metrics import populate_derived_metrics
@@ -25,6 +26,8 @@ def populate_database(target):
         fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
         populate_derived_metrics()
         # fetch_real_time_data()
+    elif target == "symbols":
+        populate_symbols_table()
     elif target == "alpaca_historical":
         insert_historical_data(DEFAULT_TICKERS)
     elif target == "alpaca_realtime":
@@ -59,7 +62,7 @@ def main():
 
     # Subcommand: Populate Database
     populate_parser = subparsers.add_parser("populate", help="Populate the database with data.")
-    populate_parser.add_argument("target", choices=["all", "alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit", "quiver", "derived"], help="Data source to populate.")
+    populate_parser.add_argument("target", choices=["all", "symbols", "alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit", "quiver", "derived"], help="Data source to populate.")
 
     # Subcommand: Run Analyses
     analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")

@@ -22,18 +22,28 @@ class PriceChart:
         if not symbols:
             return html.Div("⚠️ No symbols selected. Please select symbols to display data.", className="text-warning p-3")
 
-        query = f"""
-            SELECT datetime, close, open, high, low, volume, symbol
-            FROM {data_source}
-            WHERE symbol IN ({','.join(['%s'] * len(symbols))})
-        """
-        params = list(symbols)
-        if start_date and end_date:
-            query += " AND datetime BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        query += " ORDER BY datetime ASC"
+        if data_source == "real_time_market_data":
+            query = f"""
+                SELECT datetime, close, open, high, low, volume, symbol
+                FROM {data_source}
+                WHERE symbol IN ({','.join(['%s'] * len(symbols))})
+                ORDER BY datetime ASC
+            """
+            params = symbols  # No time filtering for real-time data
+        else:
+            query = f"""
+                SELECT datetime, close, open, high, low, volume, symbol
+                FROM {data_source}
+                WHERE symbol IN ({','.join(['%s'] * len(symbols))})
+            """
+            params = symbols
+            if start_date and end_date:
+                query += " AND datetime BETWEEN %s AND %s"
+                params.extend([start_date, end_date])
+            query += " ORDER BY datetime ASC"
 
         results = fetch_data(query, tuple(params))
+
         if results.empty:
             return html.Div("⚠️ No data available for the selected criteria.", className="text-warning p-3")
         
