@@ -66,6 +66,10 @@ app.layout = dbc.Container(fluid=True, children=[
     ]),
 ])
 
+HISTORICAL_SYMBOLS = [{"label": symbol, "value": symbol} for symbol in fetch_as_dataframe(
+    "SELECT DISTINCT symbol FROM historical_market_data"
+)["symbol"].tolist()]
+
 @app.callback(
     Output("symbol-selector", "options"),
     Input("symbol-selector", "search_value"),
@@ -80,12 +84,19 @@ def update_symbol_selector(search_value, data_source):
         raise PreventUpdate
 
     if data_source == "real_time_market_data":
-        # Query a live API or preloaded real-time data symbols
-        query = f"""
-        SELECT DISTINCT symbol FROM symbols
-        WHERE symbol ILIKE '%{search_value}%'
-        LIMIT 20
-        """
+        if not search_value:
+            # If no search value is provided, show top popular symbols or an empty list
+            query = """
+            SELECT DISTINCT symbol FROM symbols
+            LIMIT 20
+            """
+        else:
+            # Perform a search with the given value
+            query = f"""
+            SELECT DISTINCT symbol FROM symbols
+            WHERE symbol ILIKE '%{search_value}%'
+            LIMIT 20
+            """
     else:
         # Historical data source query
         query = f"""
@@ -197,6 +208,8 @@ def update_tab_content(tab, symbols, data_source, start_date, end_date):
     """
     Update the content of the selected tab dynamically.
     """
+
+
     # Ensure a default data source
     if not data_source:
         data_source = "historical_market_data"
@@ -363,7 +376,7 @@ def run_dashboard():
     stream_thread = Thread(target=fetch_real_time_data)
     stream_thread.daemon = True
     stream_thread.start()
-    app.run_server(host="0.0.0.0", port="8050", debug=False)
+    app.run_server(host="0.0.0.0", port="8050", debug=True)
 
 if __name__ == "__main__":
     run_dashboard()
