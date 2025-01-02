@@ -1,20 +1,17 @@
-from dash import Dash, dcc, html, Input, Output, State, callback_context, ctx
+from dash import Dash, dcc, html, Input, Output, State, callback_context
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 from threading import Thread
 import pandas as pd
-import requests
 import plotly.graph_objs as go
 from src.fetchers.alpaca_realtime import fetch_real_time_data
 from src.dashboard.components.header import Header
-from src.dashboard.components.sidebar import Sidebar
 from src.dashboard.widgets.controls import Controls
 from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCharts
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
 from src.processors.analysis import Analysis
 from src.utils.database import fetch_as_dataframe
-from src.utils.config import FINNHUB_API_KEY
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
