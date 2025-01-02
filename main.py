@@ -107,11 +107,16 @@ def main():
 
         print(f"Running backtest with strategy: {strategy_name}")
         backtester = BacktestManager()
-        try:
-            backtester.perform_backtest(symbols, start_date, end_date, strategy_name)
-            print(f"Backtesting completed for strategy: {strategy_name}")
-        except Exception as e:
-            print(f"❌ Error during backtesting: {e}")
+
+        # Check if the strategy name is predefined or dynamic
+        if strategy_name in backtester.strategies:
+            try:
+                backtester.perform_backtest(strategy_name, symbols, start_date, end_date)
+                print(f"Backtesting completed for strategy: {strategy_name}")
+            except Exception as e:
+                print(f"❌ Error during backtesting: {e}")
+        else:
+            print(f"❌ Strategy '{strategy_name}' not found. Please define it in the strategies dictionary.")
     elif args.command == "ui":
         run_dashboard()
     elif args.command == "load":
