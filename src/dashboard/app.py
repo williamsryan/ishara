@@ -99,9 +99,7 @@ def update_symbol_selector(search_value, data_source):
             """
     else:
         # Historical data source query
-        query = f"""
-        SELECT DISTINCT symbol FROM historical_market_data
-        """
+        return HISTORICAL_SYMBOLS
     try:
         results = fetch_as_dataframe(query)
         if results.empty:
