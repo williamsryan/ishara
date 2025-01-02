@@ -273,7 +273,7 @@ def run_dashboard():
     stream_thread = Thread(target=fetch_real_time_data)
     stream_thread.daemon = True
     stream_thread.start()
-    app.run_server(debug=True)
+    app.run_server(host="0.0.0.0", port="8050", debug=False)
 
 if __name__ == "__main__":
     run_dashboard()
