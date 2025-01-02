@@ -9,7 +9,7 @@ from src.fetchers.symbol_fetcher import populate_symbols_table
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
 from src.processors.derived_metrics import populate_derived_metrics
-from src.backtesting.backtester import run_backtests
+from src.backtesting.backtester import BacktestManager
 from src.dashboard.app import run_dashboard
 import json
 
@@ -106,8 +106,9 @@ def main():
         strategy_name = args.strategy
 
         print(f"Running backtest with strategy: {strategy_name}")
+        backtester = BacktestManager()
         try:
-            run_backtests(symbols, start_date, end_date, strategy_name)
+            backtester.perform_backtest(symbols, start_date, end_date, strategy_name)
             print(f"Backtesting completed for strategy: {strategy_name}")
         except Exception as e:
             print(f"❌ Error during backtesting: {e}")

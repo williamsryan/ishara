@@ -10,6 +10,7 @@ from src.dashboard.widgets.controls import Controls
 from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCharts
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
+from src.dashboard.widgets.strategy_editor import StrategyEditor
 from src.processors.analysis import Analysis
 from src.utils.database import fetch_as_dataframe
 
@@ -28,6 +29,7 @@ analyses = Analyses()
 # Instantiate chart components
 price_chart = PriceChart()
 alternative_data_charts = AlternativeDataCharts()
+strategy_editor = StrategyEditor()
 
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
@@ -202,11 +204,10 @@ def update_tab_content(tab, symbols, data_source, start_date, end_date):
     Update the content of the selected tab dynamically.
     """
 
-
     # Ensure a default data source
     if not data_source:
         data_source = "historical_market_data"
-    if not symbols:
+    if not symbols and tab != "strategies":
         return html.Div("⚠️ Please select symbols to display data.", className="text-warning p-3")
 
     try:
@@ -224,7 +225,7 @@ def update_tab_content(tab, symbols, data_source, start_date, end_date):
         elif tab == "analyses":
             return analyses.layout(symbols, start_date, end_date)
         elif tab == "strategies":
-            pass
+            return strategy_editor.layout()
         else:
             return html.Div("⚠️ Invalid tab selected.", className="text-danger p-3")
 
@@ -295,52 +296,6 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
     except Exception as e:
         print(f"❌ Error during analysis: {e}")
         return html.Div(f"❌ Error performing analysis: {str(e)}", className="text-danger p-3")
-
-# @app.callback(
-#     Output("backtest-results", "children"),
-#     Input("run-backtest", "n_clicks"),
-#     [
-#         State("strategy-selector", "value"),
-#         State("parameter-input", "value"),
-#         State("symbol-selector", "value"),
-#         State("strategy-date-picker", "start_date"),
-#         State("strategy-date-picker", "end_date")
-#     ]
-# )
-# def run_backtest(n_clicks, strategy, params, symbols, start_date, end_date):
-#     if not n_clicks or not strategy or not symbols:
-#         return html.Div("⚠️ Please provide all inputs to run the backtest.", className="text-warning p-3")
-
-#     try:
-#         # Parse parameters into a dictionary
-#         param_dict = {}
-#         if params:
-#             param_pairs = [p.split(":") for p in params.split(",")]
-#             param_dict = {key.strip(): float(value.strip()) for key, value in param_pairs}
-
-#         # Run backtesting
-#         backtest_results = perform_backtest(
-#             strategy=strategy,
-#             symbols=symbols,
-#             params=param_dict,
-#             start_date=start_date,
-#             end_date=end_date
-#         )
-
-#         # Generate Visualizations
-#         performance_chart = generate_performance_chart(backtest_results)
-#         trades_chart = generate_trades_chart(backtest_results)
-#         trades_summary = generate_trades_table(backtest_results)
-
-#         return html.Div([
-#             dcc.Graph(figure=performance_chart, id="performance-chart"),
-#             dcc.Graph(figure=trades_chart, id="trades-chart"),
-#             trades_summary
-#         ])
-
-#     except Exception as e:
-#         print(f"❌ Error running backtest: {e}")
-#         return html.Div(f"❌ Error during backtesting: {str(e)}", className="text-danger p-3")
     
 @app.callback(
     Output("knn-chart", "figure"),
