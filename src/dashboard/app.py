@@ -78,6 +78,18 @@ app.layout = dbc.Container(fluid=True, children=[
     ]),
 ])
 
+# @app.callback(
+#     Output("date-picker", "disabled"),
+#     Input("data-source", "value")
+# )
+# def toggle_date_picker(data_source):
+#     """
+#     Disable the date picker if the data source is 'real_time_market_data'.
+#     """
+#     disabled_state = data_source == "real_time_market_data"
+#     print(f"Data source: {data_source} | Date Picker Disabled: {disabled_state}")
+#     return disabled_state
+
 @app.callback(
     Output("symbol-selector", "value"),
     [Input("select-all", "n_clicks"), Input("deselect-all", "n_clicks")],
