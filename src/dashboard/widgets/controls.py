@@ -52,8 +52,8 @@ class Controls:
             dcc.Dropdown(
                 id="symbol-selector",
                 multi=True,
-                options=[], # Dynamically fetched
-                value=None,
+                # options=[], # Dynamically fetched
+                # value=None,
                 searchable=True,
                 placeholder="Loading symbols...",
                 className="mb-3",

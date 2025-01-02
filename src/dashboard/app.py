@@ -104,10 +104,8 @@ def update_symbol_selector(search_value, data_source):
         results = fetch_as_dataframe(query)
         if results.empty:
             return [{"label": "No matches found", "value": ""}]
-        return [
-            {"label": symbol, "value": symbol}
-            for symbol in results["symbol"].unique()
-        ]
+        options = [{"label": symbol, "value": symbol} for symbol in results["symbol"].tolist()]
+        return options
     except Exception as e:
         print(f"❌ Error fetching symbols: {e}")
         return [{"label": "Error fetching symbols", "value": ""}]
