@@ -1,5 +1,6 @@
 import backtrader as bt
 import pandas as pd
+from datetime import datetime
 from src.utils.database import fetch_data, insert_backtest_results
 from src.backtesting.strategies.moving_avg import MovingAverageCrossover
 from src.backtesting.strategies.momentum import MomentumStrategy
@@ -9,37 +10,96 @@ class BacktestManager:
     """
     Manages backtesting execution and results visualization.
     """
+    strategies = {
+        "MovingAverageCrossover": MovingAverageCrossover,
+        "MomentumStrategy": MomentumStrategy,
+    }
+
     def __init__(self):
         self.results = None
+        self.cerebro = bt.Cerebro()
 
-    def perform_backtest(self, strategy_name, symbols, start_date, end_date):
+    def perform_backtest(self, strategy_input, symbols, start_date, end_date):
         """
         Executes the backtest logic.
         """
-        # Simulate fetching historical data for the backtest
-        query = f"""
-        SELECT * FROM historical_market_data
-        WHERE symbol IN ({','.join(f"'{s}'" for s in symbols)})
-        AND datetime BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY datetime ASC
-        """
-        data = fetch_data(query)
+        # Determine if `strategy_input` is a string (predefined strategy) or callable (custom strategy)
+        if isinstance(strategy_input, str):
+            if strategy_input not in self.strategies:
+                raise ValueError(f"Invalid strategy name. Available strategies: {list(self.strategies.keys())}")
+            strategy_class = self.strategies[strategy_input]
+        elif callable(strategy_input):
+            strategy_class = self._wrap_dynamic_strategy(strategy_input)
+        else:
+            raise ValueError("Invalid strategy input. Provide a strategy name or a callable function.")
 
-        if data.empty:
-            raise ValueError("No historical data available for the selected symbols and date range.")
+        # Clear previous data
+        self.cerebro = bt.Cerebro()
 
-        # Simulate backtesting logic based on strategy
-        results = []
         for symbol in symbols:
-            symbol_data = data[data["symbol"] == symbol].copy()
-            symbol_data["strategy"] = strategy_name
-            symbol_data["returns"] = symbol_data["close"].pct_change().fillna(0)
-            results.append(symbol_data)
+            query = f"""
+            SELECT datetime, open, high, low, close, volume
+            FROM historical_market_data
+            WHERE symbol = '{symbol}' 
+            AND datetime BETWEEN '{start_date}' AND '{end_date}'
+            ORDER BY datetime ASC
+            """
+            data = fetch_data(query)
 
-        # Combine results for all symbols
-        self.results = pd.concat(results)
-        self._store_results(strategy_name, symbols, start_date, end_date)
+            if data.empty:
+                raise ValueError(f"No data found for symbol {symbol} in the specified range.")
+
+            # Prepare the data feed for Backtrader
+            data_feed = bt.feeds.PandasData(
+                dataname=data,
+                datetime="datetime",
+                open="open",
+                high="high",
+                low="low",
+                close="close",
+                volume="volume",
+                timeframe=bt.TimeFrame.Days,
+                compression=1,
+            )
+            self.cerebro.adddata(data_feed, name=symbol)
+
+        # Add the selected strategy
+        self.cerebro.addstrategy(strategy_class)
+
+        # Run the backtest
+        self.cerebro.run()
+
+        # Collect results
+        self.results = self._process_results()
+        self._store_results(strategy_input, symbols, start_date, end_date)
+
         return self.results
+    
+    def _wrap_dynamic_strategy(self, strategy_func):
+        """
+        Wraps a dynamic strategy function into a Backtrader-compatible strategy class.
+        """
+        class DynamicStrategy(bt.Strategy):
+            def __init__(self):
+                self.strategy_func = strategy_func
+
+            def next(self):
+                data = {field: getattr(self.data, field)[0] for field in ['datetime', 'open', 'high', 'low', 'close', 'volume']}
+                decision = self.strategy_func(data)
+                if decision.get("buy"):
+                    self.buy()
+                if decision.get("sell"):
+                    self.sell()
+
+        return DynamicStrategy
+
+    def _process_results(self):
+        """
+        Extracts backtesting results from Backtrader.
+        """
+        portfolio_value = self.cerebro.broker.getvalue()
+        trades = [{"datetime": datetime.now(), "value": portfolio_value}]  # Example structure
+        return pd.DataFrame(trades)
 
     def _store_results(self, strategy_name, symbols, start_date, end_date):
         """
@@ -50,10 +110,10 @@ class BacktestManager:
 
         for _, row in self.results.iterrows():
             insert_backtest_results(
-                symbol=row["symbol"],
+                symbol=row.get("symbol", ""),
                 strategy=strategy_name,
                 datetime=row["datetime"],
-                returns=row["returns"],
+                returns=row.get("returns", 0),
                 start_date=start_date,
                 end_date=end_date,
             )
@@ -131,3 +191,4 @@ class BacktestManager:
         )
         trades["Daily Return"] = trades["Daily Return"].round(4)
         return trades
+    
