@@ -36,7 +36,7 @@ class PriceChart:
         results = fetch_data(query, tuple(params))
         if results.empty:
             return html.Div("⚠️ No data available for the selected criteria.", className="text-warning p-3")
-
+        
         # Create dropdown for selecting indicators
         indicator_dropdown = dcc.Dropdown(
             id="indicator-selector",

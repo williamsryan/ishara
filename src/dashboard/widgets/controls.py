@@ -64,7 +64,15 @@ class Controls:
                 start_date=start_date,
                 end_date=end_date,
                 display_format="YYYY-MM-DD",
+                disabled=False,
                 className="mb-3"
+            ),
+            dbc.Tooltip(
+                "Date selection is not applicable for real-time data.",
+                target="date-picker",
+                id="date-picker-tooltip",
+                placement="top",
+                is_open=False
             ),
 
             # Feature Selection Dropdowns
