@@ -155,6 +155,14 @@ CREATE TABLE IF NOT EXISTS backtest_results (
     created_at TIMESTAMP DEFAULT NOW()           -- Timestamp of when the result was added
 );
 
+CREATE TABLE IF NOT EXISTS symbol_labels (
+    id SERIAL PRIMARY KEY, -- Unique identifier for each label entry
+    symbol TEXT NOT NULL,  -- Symbol for the stock or entity being labeled
+    label TEXT NOT NULL,   -- User-defined label
+    created_at TIMESTAMP DEFAULT NOW(), -- Timestamp of when the label was created
+    UNIQUE(symbol, label) -- Ensure unique symbol-label combinations
+);
+
 -- Indexes for fast querying
 CREATE INDEX IF NOT EXISTS idx_historical_market_data ON historical_market_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_yahoo_finance_data ON yahoo_finance_data (symbol, datetime DESC);
