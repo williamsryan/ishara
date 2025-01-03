@@ -48,6 +48,17 @@ CREATE TABLE IF NOT EXISTS analysis_results (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS trade_logs (
+    id SERIAL PRIMARY KEY,
+    strategy TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    action TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    price FLOAT NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    pnl FLOAT NOT NULL
+);
+
 -- Table for Yahoo Finance data (historical and metrics)
 CREATE TABLE IF NOT EXISTS yahoo_finance_data (
     id SERIAL PRIMARY KEY,                  -- Unique identifier for each record

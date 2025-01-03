@@ -182,9 +182,34 @@ def insert_trade_logs(data):
     Insert trade logs into the database.
 
     Args:
-        data (list): List of tuples [(strategy_name, symbol, action, quantity, price_per_share, datetime, pnl), ...].
+        data (list): List of dictionaries containing trade log entries. Each dictionary should contain:
+            - strategy (str): The name of the strategy.
+            - symbol (str): The stock ticker symbol.
+            - action (str): The trade action ('BUY' or 'SELL').
+            - quantity (int): The number of shares traded.
+            - price (float): The price per share.
+            - datetime (datetime): The date and time of the trade.
+            - pnl (float): The profit or loss from the trade.
     """
-    return insert_data(TABLES["trade_logs"], data, ["strategy_name", "symbol", "action", "quantity", "price_per_share", "datetime", "pnl"])
+    table_name = TABLES["trade_logs"]
+    columns = ["strategy", "symbol", "action", "quantity", "price", "datetime", "pnl"]
+
+    # Ensure data is in the correct format
+    formatted_data = [
+        (
+            trade["strategy"],
+            trade["symbol"],
+            trade["action"],
+            trade["quantity"],
+            trade["price"],
+            trade["datetime"],
+            trade.get("pnl", None),  # Default to None if 'pnl' is not provided
+        )
+        for trade in data
+    ]
+
+    # Insert formatted data
+    return insert_data(table_name, formatted_data, columns)
 
 def insert_options_data(data):
     """
@@ -264,14 +289,17 @@ def insert_backtest_results(data):
     Insert backtest results into the database.
 
     Args:
-        data (list): List of tuples containing backtest results. Each tuple should contain:
-            - strategy_name (str)
-            - symbol (str)
-            - start_date (str)
-            - end_date (str)
-            - initial_value (float)
-            - final_value (float)
-            - return_percentage (float)
+        data (list): List of dictionaries containing backtest results. Each dictionary should contain:
+            - strategy (str): Name of the strategy.
+            - symbol (str): Stock ticker symbol.
+            - start_date (str): Start date of the backtest.
+            - end_date (str): End date of the backtest.
+            - initial_value (float): Starting value of the portfolio.
+            - final_value (float): Final value of the portfolio.
+            - return_percentage (float): Portfolio return percentage.
+
+    Returns:
+        int: Number of rows successfully inserted.
     """
     table_name = TABLES["backtest_results"]
     columns = [
@@ -281,10 +309,25 @@ def insert_backtest_results(data):
         "end_date",
         "initial_value",
         "final_value",
-        "return_percentage"
+        "return_percentage",
     ]
 
-    return insert_data(table_name, data, columns)
+    # Convert list of dictionaries into list of tuples
+    formatted_data = [
+        (
+            result["strategy"],
+            result["symbol"],
+            result["start_date"],
+            result["end_date"],
+            result["initial_value"],
+            result["final_value"],
+            result["return_percentage"],
+        )
+        for result in data
+    ]
+
+    # Insert data using the generic insert_data method
+    return insert_data(table_name, formatted_data, columns)
 
 def insert_symbols(data):
     """
