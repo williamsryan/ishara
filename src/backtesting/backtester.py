@@ -43,6 +43,8 @@ class BacktestManager:
             data = self._fetch_data(symbol, start_date, end_date)
             if data.empty:
                 raise ValueError(f"No data found for symbol {symbol} between {start_date} and {end_date}.")
+            print(f"📊 Data preview for {symbol}:\n{data.head()}")
+            print(f"Data index type: {type(data.index[0])}")
             data_feed = self._prepare_backtrader_feed(data, symbol)
             self.cerebro.adddata(data_feed)
 
@@ -70,9 +72,6 @@ class BacktestManager:
         return self._process_results(strategy_input, symbols, start_date, end_date, cash)
     
     def _fetch_data(self, symbol, start_date, end_date):
-        """
-        Fetch historical market data for a given symbol and date range.
-        """
         query = f"""
         SELECT datetime, open, high, low, close, volume
         FROM historical_market_data
@@ -81,22 +80,24 @@ class BacktestManager:
         ORDER BY datetime ASC
         """
         data = fetch_as_dataframe(query)
-        data["datetime"] = pd.to_datetime(data["datetime"])  # Ensure datetime conversion
+        if data.empty or not set(["datetime", "open", "high", "low", "close", "volume"]).issubset(data.columns):
+            raise ValueError(f"Invalid data for symbol {symbol}. Please check the database.")
+
         return data
     
     def _prepare_backtrader_feed(self, data, symbol):
-        """
-        Convert a DataFrame into a Backtrader-compatible data feed.
-        """
+        if not pd.api.types.is_datetime64_any_dtype(data["datetime"]):
+            raise ValueError("The datetime column must be a valid datetime type.")
+
+        data.set_index("datetime", inplace=True)
         return bt.feeds.PandasData(
             dataname=data,
-            datetime="datetime",
             open="open",
             high="high",
             low="low",
             close="close",
             volume="volume",
-            timeframe=bt.TimeFrame.Days,
+            timeframe=bt.TimeFrame.Minutes,
             name=symbol,
         )
     
@@ -109,23 +110,41 @@ class BacktestManager:
                 self.strategy_func = strategy_func
 
             def next(self):
-                # Fetch current bar data
-                current_data = {
-                    field: getattr(self.datas[0], field)[0]
-                    for field in ['datetime', 'open', 'high', 'low', 'close', 'volume']
-                }
-                print(f"📊 Current data: {current_data}")
+                try:
+                    # Create a DataFrame from the current data
+                    current_data = {
+                        field: [getattr(self.datas[0], field)[0]]
+                        for field in ["open", "high", "low", "close", "volume"]
+                    }
+                    current_data["datetime"] = [self.datas[0].datetime.datetime(0)]  # Wrap in list to create a DataFrame
 
-                # Call the user-defined strategy function
-                decision = self.strategy_func(current_data)
+                    # Convert to a DataFrame
+                    current_df = pd.DataFrame(current_data)
 
-                # Execute buy/sell based on the decision
-                if decision.get("buy"):
-                    print("📈 Buy signal detected.")
-                    self.buy()
-                elif decision.get("sell"):
-                    print("📉 Sell signal detected.")
-                    self.sell()
+                    # print(f"📊 Current data (DataFrame):\n{current_df}")
+
+                    # Pass the DataFrame to the strategy function
+                    decision = self.strategy_func(current_df)
+
+                    # Explicitly handle Series or ambiguous values
+                    if isinstance(decision.get("buy"), pd.Series):
+                        buy_signal = decision.get("buy").iloc[0]
+                    else:
+                        buy_signal = bool(decision.get("buy"))
+
+                    if isinstance(decision.get("sell"), pd.Series):
+                        sell_signal = decision.get("sell").iloc[0]
+                    else:
+                        sell_signal = bool(decision.get("sell"))
+
+                    if buy_signal:
+                        print("📈 Buy signal detected.")
+                        self.buy()
+                    elif sell_signal:
+                        print("📉 Sell signal detected.")
+                        self.sell()
+                except Exception as e:
+                    print(f"❌ Error processing next step in strategy: {e}")
 
         return DynamicStrategy
 
