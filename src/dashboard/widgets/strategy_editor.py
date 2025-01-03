@@ -159,11 +159,11 @@ class StrategyEditor:
             backtest_manager = BacktestManager()
             results = backtest_manager.perform_backtest(strategy_function, symbols, start_date, end_date)
 
-            # print(f"DEBUG: Backtest results: {results}")
+            print(f"DEBUG: Backtest results: {results}")
 
             # Use BacktestManager for visualizations
-            performance_chart = dcc.Graph(figure=backtest_manager.generate_performance_chart(results))
-            trades_chart = dcc.Graph(figure=backtest_manager.generate_trades_chart(results))
+            performance_chart = dcc.Graph(figure=backtest_manager.generate_performance_chart())
+            trades_chart = dcc.Graph(figure=backtest_manager.generate_trades_chart())
             trades_table = dash_table.DataTable(
                 columns=[{"name": col, "id": col} for col in results["trades"].columns],
                 data=results["trades"].to_dict("records"),
