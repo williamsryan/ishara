@@ -1,3 +1,4 @@
+from flask import Flask
 from dash import Dash, dcc, html, Input, Output, State, callback_context
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -14,9 +15,16 @@ from src.dashboard.widgets.strategy_editor import StrategyEditor
 from src.dashboard.widgets.regression_integration import RegressionInterface
 from src.processors.analysis import Analysis
 from src.utils.database import fetch_as_dataframe
+from src.auth import auth, session as auth_session
 
-# Initialize the app
-app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
+# Initialize the Flask app
+flask_app = Flask(__name__)
+flask_app.secret_key = "your-secret-key"  # Replace with a secure random key
+auth_session.configure_sessions(flask_app)
+flask_app.register_blueprint(auth, url_prefix="/auth")
+
+# Wrap the Flask app in Dash
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUX], server=flask_app)
 app.title = "📊 Ishara Trading Dashboard"
 app.config.suppress_callback_exceptions = True
 
@@ -346,6 +354,7 @@ def run_dashboard():
     stream_thread = Thread(target=fetch_real_time_data)
     stream_thread.daemon = True
     stream_thread.start()
+
     app.run_server(host="0.0.0.0", port="8050", debug=True)
 
 if __name__ == "__main__":
