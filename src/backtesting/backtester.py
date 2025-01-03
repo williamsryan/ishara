@@ -14,12 +14,13 @@ class BacktestManager:
     def __init__(self):
         self.results = None
         self.cerebro = bt.Cerebro()
+        self.initial_capital = 100000
         self.strategies = {
             "MovingAverageCrossover": MovingAverageCrossover,
             "MomentumStrategy": MomentumStrategy
         }
 
-    def perform_backtest(self, strategy_input, symbols, start_date, end_date, cash=100000):
+    def perform_backtest(self, strategy_input, symbols, start_date, end_date):
         """
         Perform backtesting using the specified strategy and symbols.
 
@@ -28,14 +29,13 @@ class BacktestManager:
             symbols (list): List of symbols to backtest.
             start_date (str): Start date (YYYY-MM-DD).
             end_date (str): End date (YYYY-MM-DD).
-            cash (float): Initial cash for the portfolio.
 
         Returns:
             dict: Backtest results including performance and trades data.
         """
         # Initialize Backtrader
         self.cerebro = bt.Cerebro()
-        self.cerebro.broker.set_cash(cash)
+        self.cerebro.broker.set_cash(self.initial_capital)
         self.cerebro.broker.setcommission(commission=0.001)
 
         # Add data for each symbol
@@ -43,8 +43,8 @@ class BacktestManager:
             data = self._fetch_data(symbol, start_date, end_date)
             if data.empty:
                 raise ValueError(f"No data found for symbol {symbol} between {start_date} and {end_date}.")
-            print(f"📊 Data preview for {symbol}:\n{data.head()}")
-            print(f"Data index type: {type(data.index[0])}")
+            # print(f"📊 Data preview for {symbol}:\n{data.head()}")
+            # print(f"Data index type: {type(data.index[0])}")
             data_feed = self._prepare_backtrader_feed(data, symbol)
             self.cerebro.adddata(data_feed)
 
@@ -69,7 +69,31 @@ class BacktestManager:
         portfolio_value = self.cerebro.broker.getvalue()
 
         # Process and save results
-        return self._process_results(strategy_input, symbols, start_date, end_date, cash)
+        results = self._process_results(strategy_input, symbols, start_date, end_date, self.initial_capital)
+
+        trades = [] 
+        for trade in self.cerebro.broker.orders:
+            trades.append({
+                "symbol": trade.symbol,
+                "price": trade.executed.price,
+                "size": trade.executed.size,
+                "datetime": trade.executed.dt,
+                "pnl": trade.executed.pnl,
+            })
+
+        self.results = {
+            "portfolio_value": portfolio_value,
+            "pnl": portfolio_value - self.initial_capital,
+            "trades": pd.DataFrame(trades),  # Include detailed trades
+            "cumulative_returns": self._compute_cumulative_returns(),
+        }
+
+        return {
+            "portfolio_value": portfolio_value,
+            "pnl": self.results["pnl"],
+            "trades": self.results["trades"],
+            "cumulative_returns": self.results["cumulative_returns"],
+        }
     
     def _fetch_data(self, symbol, start_date, end_date):
         query = f"""
@@ -153,13 +177,13 @@ class BacktestManager:
         portfolio_value = self.cerebro.broker.getvalue()
         pnl = portfolio_value - cash
 
+        if callable(strategy_name):
+            strategy_name = strategy_name.__name__
+
         for strat in self.cerebro.runstrats:
             strategy = strat[0]
             if hasattr(strategy, "orders") and isinstance(strategy.orders, list):
-                print(f"📈 Processing trades for strategy '{strategy_name}'...")
                 for order in strategy.orders:
-                    # print(f"DEBUG: Trade details - {order}")
-                    # print(f"DEBUG: Price: {order.get("price_per_share")}")
                     trades.append((
                         strategy_name,
                         order.get("symbol"),
@@ -173,12 +197,11 @@ class BacktestManager:
         trades_df = pd.DataFrame(trades, columns=["strategy", "symbol", "action", "quantity", "price", "datetime", "pnl"])
         if not trades_df.empty:
             try:
-                insert_trade_logs(trades_df.to_dict("records"))  # Insert as list of dicts
+                insert_trade_logs(trades_df.to_dict("records"))
                 print(f"✅ Logged {len(trades_df)} trades into the database.")
             except Exception as e:
                 print(f"❌ Error inserting data into trade_logs: {e}")
 
-        # Prepare backtest results
         backtest_results = [{
             "strategy": strategy_name,
             "symbol": ", ".join(symbols),
@@ -189,7 +212,6 @@ class BacktestManager:
             "return_percentage": round((pnl / cash) * 100, 4),
         }]
 
-        # Insert backtest results into the database
         try:
             insert_backtest_results(backtest_results)
             print(f"✅ Backtest results saved for strategy '{strategy_name}'.")
@@ -204,6 +226,23 @@ class BacktestManager:
             "portfolio_value": portfolio_value,
             "pnl": pnl,
         }
+    
+    def _compute_cumulative_returns(self):
+        all_data = []
+        for symbol in self.cerebro.datas:
+            symbol_name = symbol.params.name
+            data = {
+                "datetime": [bt.num2date(dt) for dt in symbol.datetime.array],
+                "close": symbol.close.array,
+                "symbol": symbol_name,
+            }
+            df = pd.DataFrame(data)
+            df["returns"] = df["close"].pct_change().fillna(0)
+            df["cumulative_returns"] = (1 + df["returns"]).cumprod()
+            all_data.append(df)
+
+        # Concatenate all DataFrames
+        return pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
 
     def _store_results(self, results):
         """
@@ -227,26 +266,30 @@ class BacktestManager:
         """
         Generates a performance chart for the backtest.
         """
-        if self.results is None:
-            raise ValueError("No backtest results available for visualization.")
+        if self.results is None or not isinstance(self.results.get("cumulative_returns"), pd.DataFrame):
+            raise ValueError("No backtest results available for visualization or cumulative_returns is not a DataFrame.")
+
+        cumulative_returns = self.results["cumulative_returns"]  # This should now be a DataFrame
+        print(f"DEBUG: Type of cumulative_returns: {type(self.results['cumulative_returns'])}")
 
         fig = go.Figure()
-        for symbol, group in self.results.groupby("symbol"):
+        for symbol, group in cumulative_returns.groupby("symbol"):
             fig.add_trace(
                 go.Scatter(
                     x=group["datetime"],
-                    y=(1 + group["returns"]).cumprod(),
+                    y=group["cumulative_returns"],
                     mode="lines",
-                    name=symbol,
+                    name=f"{symbol} Cumulative Returns",
                     line=dict(width=2)
                 )
             )
 
         fig.update_layout(
-            title="Backtest Performance",
+            title="Cumulative Returns",
             xaxis_title="Date",
             yaxis_title="Cumulative Returns",
-            template="plotly_white"
+            template="plotly_white",
+            height=600,
         )
         return fig
 
