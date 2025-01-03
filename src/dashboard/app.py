@@ -11,6 +11,7 @@ from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCh
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
 from src.dashboard.widgets.strategy_editor import StrategyEditor
+from src.dashboard.widgets.observable_integration import ObservableIntegration
 from src.processors.analysis import Analysis
 from src.utils.database import fetch_as_dataframe
 
@@ -30,6 +31,7 @@ analyses = Analyses()
 price_chart = PriceChart()
 alternative_data_charts = AlternativeDataCharts()
 strategy_editor = StrategyEditor()
+observation_integration = ObservableIntegration()
 
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
@@ -78,33 +80,33 @@ HISTORICAL_SYMBOLS = [{"label": symbol, "value": symbol} for symbol in fetch_as_
 def update_symbol_selector(search_value, data_source):
     """
     Dynamically fetch symbols based on the search input and data source.
+    Handles both real-time and historical data sources.
     """
-    if not search_value:
-        raise PreventUpdate
-
-    if data_source == "real_time_market_data":
-        if not search_value:
-            # If no search value is provided, show top popular symbols or an empty list
-            query = """
-            SELECT DISTINCT symbol FROM symbols
-            LIMIT 20
-            """
-        else:
-            # Perform a search with the given value
+    if not search_value and data_source == "real_time_market_data":
+        return [{"label": "Type to search for symbols", "value": ""}]
+    
+    try:
+        if data_source == "real_time_market_data":
+            # Query for real-time data source based on search input
             query = f"""
             SELECT DISTINCT symbol FROM symbols
             WHERE symbol ILIKE '%{search_value}%'
             LIMIT 20
+            """ if search_value else """
+            SELECT DISTINCT symbol FROM symbols
+            LIMIT 20
             """
-    else:
-        # Historical data source query
-        return HISTORICAL_SYMBOLS
-    try:
-        results = fetch_as_dataframe(query)
-        if results.empty:
-            return [{"label": "No matches found", "value": ""}]
-        options = [{"label": symbol, "value": symbol} for symbol in results["symbol"].tolist()]
-        return options
+            results = fetch_as_dataframe(query)
+
+            if results.empty:
+                return [{"label": "No matches found", "value": ""}]
+
+            options = [{"label": symbol, "value": symbol} for symbol in results["symbol"].tolist()]
+            return options
+
+        elif data_source == "historical_market_data":
+            return HISTORICAL_SYMBOLS
+
     except Exception as e:
         print(f"❌ Error fetching symbols: {e}")
         return [{"label": "Error fetching symbols", "value": ""}]
@@ -131,6 +133,10 @@ def select_deselect_symbols(select_all_clicks, deselect_all_clicks, options):
     ctx = callback_context
     if not ctx.triggered:
         raise PreventUpdate
+
+    if not options:  # Handle case where options are None
+        print("⚠️ No options available for selection.")
+        return []
 
     # Identify which button was clicked
     clicked_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -290,6 +296,20 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
                 ])
             except Exception as e:
                 return html.Div(f"❌ Error displaying regime dashboard: {str(e)}")
+        elif analysis_type == "trend-line":
+            # return html.Div("🚧 Trend Line Regression analysis is under construction.", className="text-warning")
+            cluster_results = Analysis.fetch_clustering_results("knn_clustering", selected_symbols=None)
+            if cluster_results.empty:
+                # TODO: run clustering if there are no available results.
+                return html.Div("⚠️ No clustering data available.", className="text-warning p-3")
+            
+            # Assume cluster_data is the original DataFrame from the database
+            preprocessed_data = ObservableIntegration.preprocess_cluster_data(cluster_results)
+
+            # Generate visualization
+            observable_component = ObservableIntegration.plot_trend_line_regression(preprocessed_data)
+
+            return observable_component
         else:
             return html.Div("⚠️ Unsupported analysis type.", className="text-warning p-3")
 

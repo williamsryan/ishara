@@ -17,6 +17,7 @@ class Analyses:
                 {"label": "K-NN Clustering", "value": "knn_clustering"},
                 {"label": "Graph Clustering", "value": "graph_clustering"},
                 {"label": "Regime Analysis", "value": "regime_analysis"},
+                {"label": "Trend Line Regression", "value": "trend-line"},
             ],
             placeholder="Select analysis type",
             className="mb-3",
