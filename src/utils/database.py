@@ -2,6 +2,7 @@ import psycopg2
 from psycopg2.extras import execute_batch, RealDictCursor
 from contextlib import contextmanager
 import pandas as pd
+import hashlib
 from sqlalchemy import create_engine
 from src.utils.config import DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
 
@@ -59,14 +60,16 @@ def get_sqlalchemy_engine():
 
 # -------------------- GENERIC INSERT METHODS --------------------
 
-def insert_data(table_name, data, columns):
+def insert_data(table_name, data, columns, conflict_target=None, conflict_action="DO NOTHING"):
     """
-    Insert data into a specified table with deduplication.
+    Insert data into a specified table with optional conflict handling.
 
     Args:
         table_name (str): The name of the table.
         data (list): List of tuples containing the data to insert.
         columns (list): List of column names corresponding to the data.
+        conflict_target (str | list, optional): Column(s) to apply conflict resolution on.
+        conflict_action (str, optional): Action to perform on conflict (default: "DO NOTHING").
 
     Returns:
         int: Number of rows successfully inserted.
@@ -75,10 +78,15 @@ def insert_data(table_name, data, columns):
         print("⚠️ No data to insert.")
         return 0
 
+    conflict_clause = ""
+    if conflict_target:
+        target = f"({', '.join(conflict_target)})" if isinstance(conflict_target, list) else f"({conflict_target})"
+        conflict_clause = f"ON CONFLICT {target} {conflict_action}"
+
     query = f"""
         INSERT INTO {table_name} ({', '.join(columns)})
         VALUES ({', '.join(['%s'] * len(columns))})
-        ON CONFLICT DO NOTHING
+        {conflict_clause}
     """
     with connect_to_db() as conn:
         try:
@@ -282,7 +290,19 @@ def insert_clustering_results(data):
     table_name = TABLES["analysis_results"]
     columns = ["symbol", "analysis_type", "cluster_id", "result"]
 
-    return insert_data(table_name, data, columns)
+    # Add conflict handling for unique analysis ID
+    formatted_data = [
+        (
+            symbol,
+            analysis_type,
+            cluster_id,
+            result,
+            generate_analysis_id(symbol, analysis_type, cluster_id, result),
+        )
+        for symbol, analysis_type, cluster_id, result in data
+    ]
+
+    return insert_data(table_name, formatted_data, columns + ["analysis_id"], conflict_target="analysis_id")
 
 def insert_backtest_results(data):
     """
@@ -438,3 +458,10 @@ def delete_duplicates(table_name, unique_columns):
         except Exception as e:
             conn.rollback()
             print(f"❌ Error removing duplicates from {table_name}: {e}")
+
+def generate_analysis_id(symbol, analysis_type, cluster_id, result):
+    """
+    Generate a unique hash for an analysis result.
+    """
+    hash_input = f"{symbol}-{analysis_type}-{cluster_id}-{result}"
+    return hashlib.md5(hash_input.encode()).hexdigest()

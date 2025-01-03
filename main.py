@@ -20,6 +20,7 @@ def populate_database(target):
     Populate the database with data from selected sources.
     """
     if target == "all":
+        populate_symbols_table()
         insert_historical_data(DEFAULT_TICKERS)
         fetch_yahoo_finance_data(DEFAULT_TICKERS)
         fetch_google_trends(DEFAULT_TICKERS)

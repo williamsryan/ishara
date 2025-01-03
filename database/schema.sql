@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS analysis_results (
     analysis_type TEXT NOT NULL,  -- E.g., 'clustering', 'regime_detection'
     cluster_id INTEGER,           -- Nullable for other analyses
     result JSONB,                 -- To store additional analysis data in a flexible format
+    analysis_id TEXT UNIQUE,      -- Unique identifier for the analysis
     created_at TIMESTAMP DEFAULT NOW()
 );
 

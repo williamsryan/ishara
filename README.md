@@ -66,3 +66,49 @@ ishara/
 ├── README.md               # Documentation
 ├── run.py                  # Entry point to launch the system
 ```
+
+## Data Source Notes
+
+### Feature Selection for Clustering
+Here’s a breakdown of the most relevant features for clustering in a financial context:
+
+1. **Price and Volume Metrics**
+  - **Use Case**: Cluster symbols based on trading activity and price ranges.
+  - **Features**: open, close, high, low, volume.
+  - **Why**: These features capture the raw market behavior, which may reveal clusters of high vs. low activity symbols or stocks with similar trading ranges.
+
+2. **Volatility**
+  - **Use Case**: Group symbols by their risk profile.
+  - **Features**: Standard deviation of returns, or high/low price range divided by the mean.
+  - **Why**: Stocks with high volatility often behave differently than low-volatility ones, which can be useful for risk-aware strategies.
+
+3. **Price Momentum**
+  - **Use Case**: Detect symbols with similar momentum trends.
+  - **Features**: Momentum indicators like close - SMA(close), RSI.
+  - **Why**: Momentum clusters can highlight trending vs. mean-reverting stocks.
+
+4. **Returns**
+  - **Use Case**: Classify symbols by profitability.
+  - **Features**: Daily, weekly, or monthly returns.
+  - **Why**: Helps identify outperforming vs. underperforming symbols over various time frames.
+
+5. **Liquidity**
+  - **Use Case**: Identify high vs. low liquidity stocks.
+  - **Features**: volume, bid-ask spread.
+  - **Why**: Liquidity affects transaction costs and volatility.
+
+### Current Approach Plan
+
+1. **Initial Clustering Features**:
+  - **Start with**: high/low, volume, and volatility.
+  - **Why**: These are straightforward and often reveal meaningful groupings.
+
+2. **Advanced Features**:
+  - **Add**: moving averages or returns over a time window for trend analysis.
+  - **Use**: volatility-adjusted metrics to refine the clusters.
+
+3. **Normalization**:
+  - **Normalize**: all features to ensure scale differences (e.g., volume vs. close) don’t distort the clustering.
+
+4. **Dimensionality Reduction**:
+  - **Use**: PCA, t-SNE, or UMAP if the feature space is large, to reduce dimensions while preserving meaningful relationships.
