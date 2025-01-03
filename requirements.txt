@@ -42,3 +42,4 @@ networkx
 requests_html
 # umap-learn
 dash_ace
+dash-deck
