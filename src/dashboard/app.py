@@ -11,7 +11,7 @@ from src.dashboard.widgets.chart_components import PriceChart, AlternativeDataCh
 from src.dashboard.widgets.data_table import DataTable
 from src.dashboard.widgets.analyses import Analyses
 from src.dashboard.widgets.strategy_editor import StrategyEditor
-from src.dashboard.widgets.observable_integration import ObservableIntegration
+from src.dashboard.widgets.regression_integration import RegressionInterface
 from src.processors.analysis import Analysis
 from src.utils.database import fetch_as_dataframe
 
@@ -31,7 +31,7 @@ analyses = Analyses()
 price_chart = PriceChart()
 alternative_data_charts = AlternativeDataCharts()
 strategy_editor = StrategyEditor()
-observation_integration = ObservableIntegration()
+regression_integration = RegressionInterface()
 
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
@@ -304,10 +304,10 @@ def run_and_fetch_analysis(n_clicks, analysis_type, symbols, start_date, end_dat
                 return html.Div("⚠️ No clustering data available.", className="text-warning p-3")
             
             # Assume cluster_data is the original DataFrame from the database
-            preprocessed_data = ObservableIntegration.preprocess_cluster_data(cluster_results)
+            preprocessed_data = regression_integration.preprocess_cluster_data(cluster_results)
 
             # Generate visualization
-            observable_component = ObservableIntegration.plot_trend_line_regression(preprocessed_data)
+            observable_component = regression_integration.plot_trend_line_regression(preprocessed_data)
 
             return observable_component
         else:
