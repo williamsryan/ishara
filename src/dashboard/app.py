@@ -33,6 +33,8 @@ alternative_data_charts = AlternativeDataCharts()
 strategy_editor = StrategyEditor()
 regression_integration = RegressionInterface()
 
+# data_table.register_callbacks(app)
+
 # App Layout
 app.layout = dbc.Container(fluid=True, children=[
     # Header
