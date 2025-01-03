@@ -1,71 +1,70 @@
 from dash import html, dash_table
-from src.utils.database import fetch_data
+import dash_bootstrap_components as dbc
+from src.utils.database import fetch_as_dataframe
 
 class DataTable:
-    @staticmethod
-    def layout(symbols, start_date=None, end_date=None):
+    def layout(self, symbols, start_date, end_date):
         """
-        Generate the layout for the data table with enhanced features.
-
-        Args:
-            symbols (list): List of symbols to fetch data for.
-            start_date (str, optional): Start date for the query range.
-            end_date (str, optional): End date for the query range.
-
-        Returns:
-            dash.html.Div or dash.dash_table.DataTable: DataTable or message if no data available.
+        Layout for the Data Table with pagination and editable labels.
         """
         if not symbols:
-            return html.Div("⚠️ No symbols selected. Please select symbols to display data.", className="text-warning p-3")
-
-        query = f"""
-            SELECT *
-            FROM historical_market_data
-            WHERE symbol IN ({','.join(['%s'] * len(symbols))})
-        """
-        params = list(symbols)
-        if start_date and end_date:
-            query += " AND datetime BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        query += " ORDER BY datetime DESC"
-
+            return html.Div("⚠️ No symbols selected.", className="text-warning p-3")
+        
+        # Fetch data
         try:
-            results = fetch_data(query, tuple(params))
-            if results.empty:
-                return html.Div("⚠️ No data available for the selected criteria.", className="text-warning p-3")
+            query = f"""
+                SELECT *
+                FROM historical_market_data
+                WHERE symbol IN ({','.join([f"'{s}'" for s in symbols])})
+                AND datetime BETWEEN '{start_date}' AND '{end_date}'
+                ORDER BY datetime DESC
+            """
+            data = fetch_as_dataframe(query)
+            if data.empty:
+                return html.Div("⚠️ No data available for the selected symbols and date range.", className="text-warning p-3")
+        except Exception as e:
+            print(f"❌ Error fetching data: {e}")
+            return html.Div(f"❌ Error fetching data: {str(e)}", className="text-danger p-3")
 
-            return dash_table.DataTable(
-                data=results.to_dict("records"),
-                columns=[{"name": col, "id": col} for col in results.columns],
-                style_table={"overflowX": "auto", "marginTop": "20px"},
+        # Add editable "Label" column
+        data["Label"] = ""
+
+        return html.Div([
+            dash_table.DataTable(
+                id="data-table",
+                columns=[{"name": col, "id": col, "deletable": False, "selectable": True} for col in data.columns],
+                data=data.to_dict("records"),
+                editable=True,  # Enable editing of all cells
+                filter_action="native",  # Allow filtering within the table
+                sort_action="native",  # Enable sorting on columns
+                sort_mode="multi",  # Allow multi-column sorting
+                row_deletable=False,  # Prevent row deletion
+                page_action="native",  # Enable pagination
+                page_current=0,  # Start at the first page
+                page_size=10,  # Number of rows per page
+                style_table={"overflowX": "auto"},
                 style_header={
-                    "backgroundColor": "#202020",
+                    "backgroundColor": "#f8f9fa",
                     "fontWeight": "bold",
-                    "border": "1px solid white",
-                    "color": "white",
+                    "border": "1px solid #dee2e6"
                 },
                 style_cell={
-                    "padding": "10px",
+                    "backgroundColor": "white",
+                    "color": "black",
                     "textAlign": "left",
-                    "border": "1px solid grey",
-                    "backgroundColor": "#303030",
-                    "color": "#F0F0F0",
-                    "fontFamily": "Arial, sans-serif",
+                    "border": "1px solid #dee2e6"
+                },
+                style_data={
+                    "border": "1px solid #dee2e6"
                 },
                 style_data_conditional=[
-                    {"if": {"row_index": "odd"}, "backgroundColor": "#282828"},
+                    {"if": {"row_index": "odd"}, "backgroundColor": "#f9f9f9"}
                 ],
-                filter_action="native",
-                sort_action="native",
-                sort_mode="multi",
-                page_action="native",
-                page_current=0,
-                page_size=15,
-                export_format="csv",
-                export_headers="display",
-                merge_duplicate_headers=True,
+                style_filter={
+                    "backgroundColor": "white",
+                    "border": "1px solid #dee2e6",
+                    "padding": "0.5rem"
+                }
             )
-        except Exception as e:
-            print(f"❌ Error loading data: {e}")
-            return html.Div(f"❌ Error loading data: {str(e)}", className="text-danger p-3")
-        
+        ])
+    
