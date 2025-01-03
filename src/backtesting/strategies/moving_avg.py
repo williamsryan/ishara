@@ -135,6 +135,5 @@ def backtest():
     # Show the portfolio's final value and plot the results
     cerebro.plot()
 
-
 if __name__ == "__main__":
     backtest()

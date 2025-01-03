@@ -1,5 +1,6 @@
 from dash import dcc, html, Input, Output, State, callback, dash_table
 import dash_bootstrap_components as dbc
+import pandas as pd
 from dash_ace import DashAceEditor
 from src.utils.database import fetch_as_dataframe
 from src.backtesting.backtester import BacktestManager
@@ -8,16 +9,22 @@ from src.backtesting.backtester import BacktestManager
 PREDEFINED_STRATEGIES = {
     "MovingAverageCrossover": """# Simple Moving Average Crossover Strategy
 def MovingAverageCrossover(data):
+    import pandas as pd
+
+    # Convert data to DataFrame if necessary
+    if isinstance(data, dict):
+        data = pd.DataFrame(data)
+
     # Calculate short-term and long-term moving averages
     short_ma = data['close'].rolling(10).mean()
     long_ma = data['close'].rolling(30).mean()
-    
+
     # Generate buy and sell signals
     buy_signal = short_ma > long_ma
     sell_signal = short_ma <= long_ma
-    
-    # Return buy/sell signal as a boolean mask
-    return buy_signal, sell_signal
+
+    # Return buy/sell signals
+    return {"buy": buy_signal, "sell": sell_signal}
 """,
     "MomentumStrategy": """# Momentum Strategy
 def MomentumStrategy(data):
@@ -150,14 +157,16 @@ class StrategyEditor:
 
             # Perform the backtest
             backtest_manager = BacktestManager()
-            backtest_manager.perform_backtest(strategy_function, symbols, start_date, end_date)
+            results = backtest_manager.perform_backtest(strategy_function, symbols, start_date, end_date)
 
-            # Generate visualizations
-            performance_chart = dcc.Graph(figure=backtest_manager.generate_performance_chart())
-            trades_chart = dcc.Graph(figure=backtest_manager.generate_trades_chart())
+            print(f"DEBUG: Backtest results: {results}")
+
+            # Use BacktestManager for visualizations
+            performance_chart = dcc.Graph(figure=backtest_manager.generate_performance_chart(results))
+            trades_chart = dcc.Graph(figure=backtest_manager.generate_trades_chart(results))
             trades_table = dash_table.DataTable(
-                columns=[{"name": col, "id": col} for col in backtest_manager.generate_trades_table().columns],
-                data=backtest_manager.generate_trades_table().to_dict("records"),
+                columns=[{"name": col, "id": col} for col in results["trades"].columns],
+                data=results["trades"].to_dict("records"),
                 style_table={"overflowX": "auto"},
                 style_cell={"textAlign": "left"},
             )
