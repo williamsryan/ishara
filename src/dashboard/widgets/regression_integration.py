@@ -109,7 +109,7 @@ class RegressionInterface:
 
         # Update layout for better aesthetics
         fig.update_layout(
-            title="Cluster Trend Lines with Detailed Hover Info",
+            title="Cluster Trend Lines",
             xaxis_title="Low",
             yaxis_title="High",
             height=600,

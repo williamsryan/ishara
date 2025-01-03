@@ -87,6 +87,7 @@ class Controls:
             html.Label("Select Features for Analysis"),
             dcc.Dropdown(
                 id="feature-selector",
+                clearable=True,
                 options=[
                     {"label": "Open", "value": "open"},
                     {"label": "Close", "value": "close"},
