@@ -1,0 +1,26 @@
+site_name: WASLC Documentation
+site_url: https://your-project-url.com
+repo_url: https://github.com/your-username/WASLC
+theme:
+  name: readthedocs
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: getting_started.md
+      - Installation: installation.md
+  - Modules:
+      - Test Case Generation: test_case_gen.md
+      - Execution: execution.md
+      - Analysis: analysis.md
+  - Kernel:
+      - Kernel Module: kernel.md
+      - Makefile: makefile.md
+  - Contributing: contributing.md
+plugins:
+  - search
+  # - mkdocs-git-revision-date-plugin
+markdown_extensions:
+  - codehilite
+  - admonition
+  - toc
+
