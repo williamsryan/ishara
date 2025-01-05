@@ -44,7 +44,6 @@ requests_html
 dash_ace
 dash-deck
 
-
 # User sessions and all that
 Flask-Session
 Flask-Redis
@@ -52,3 +51,6 @@ flask-bcrypt
 python-dotenv
 flask_httpauth
 flask-login
+
+confluent-kafka
+elasticsearch

@@ -1,21 +1,21 @@
 -- Connect to the default 'postgres' database first
-\c postgres;
+-- \c postgres;
 
--- Terminate all active connections to the target database
-DO $$ BEGIN
-    PERFORM pg_terminate_backend(pg_stat_activity.pid)
-    FROM pg_stat_activity
-    WHERE pg_stat_activity.datname = 'ishara' AND pid <> pg_backend_pid();
-END $$;
+-- -- Terminate all active connections to the target database
+-- DO $$ BEGIN
+--     PERFORM pg_terminate_backend(pg_stat_activity.pid)
+--     FROM pg_stat_activity
+--     WHERE pg_stat_activity.datname = 'ishara' AND pid <> pg_backend_pid();
+-- END $$;
 
 -- Drop the database if it exists
-DROP DATABASE IF EXISTS ishara;
+-- DROP DATABASE IF EXISTS ishara;
 
 -- Create the database
-CREATE DATABASE ishara;
+-- CREATE DATABASE ishara;
 
 -- Connect to the new database
-\c ishara;
+-- \c ishara;
 
 CREATE TABLE IF NOT EXISTS symbols (
     id SERIAL PRIMARY KEY,

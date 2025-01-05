@@ -4,18 +4,16 @@ from contextlib import contextmanager
 import pandas as pd
 import hashlib
 from sqlalchemy import create_engine
-from src.utils.config import DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
+from src.utils.config import POSTGRES
 
 # Database Configuration
-DB_CONFIG = {
-    "host": DATABASE_HOST,
-    "dbname": DATABASE_NAME,
-    "user": DATABASE_USER,
-    "password": DATABASE_PASSWORD
-}
+db_host = POSTGRES["host"]
+db_name = POSTGRES["dbname"]
+db_user = POSTGRES["user"]
+db_password = POSTGRES["password"]
 
 # SQLAlchemy Connection String
-SQLALCHEMY_DB_URI = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
+SQLALCHEMY_DB_URI = f"postgresql+psycopg2://{POSTGRES['user']}:{POSTGRES['password']}@{POSTGRES['host']}/{POSTGRES['dbname']}"
 
 # Table Names
 TABLES = {
@@ -39,7 +37,7 @@ def connect_to_db():
     """
     conn = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**POSTGRES)
         yield conn
     except Exception as e:
         print(f"❌ Database connection error: {e}")

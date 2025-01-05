@@ -1,46 +1,54 @@
 services:
+  # PostgreSQL Service
   postgres:
     image: postgres:14
-    container_name: postgres
+    container_name: ishara_postgres
     environment:
-      POSTGRES_USER: ishara_user
-      POSTGRES_PASSWORD: ishara_password
-      POSTGRES_DB: ishara_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Homertime3890!
+      POSTGRES_DB: ishara
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # Redis Service
   redis:
     image: redis:6.2
-    container_name: redis
+    container_name: ishara_redis
     ports:
       - "6379:6379"
 
+  # Elasticsearch Service
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
-    container_name: elasticsearch
+    container_name: ishara_elasticsearch
     environment:
       discovery.type: single-node
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "true"            # Enable security features
+      xpack.security.transport.ssl.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  # Zookeeper Service (Required for Kafka)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
+    container_name: ishara_zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
 
+  # Kafka Service
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
+    container_name: ishara_kafka
     depends_on:
       - zookeeper
     environment:
@@ -51,40 +59,18 @@ services:
     ports:
       - "9092:9092"
 
+  # Grafana for Visualization (Optional)
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
+    container_name: ishara_grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
     ports:
       - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - postgres
       - elasticsearch
-
-  crawl4ai:
-    image: python:3.9-slim
-    container_name: crawl4ai
-    volumes:
-      - ./crawl4ai:/app
-    working_dir: /app
-    command: ["sh", "-c", "pip install -r requirements.txt && python crawl4ai_runner.py"]
-    depends_on:
-      - kafka
-      - postgres
-      - redis
-      - elasticsearch
-    environment:
-      KAFKA_BROKER: kafka:9092
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: ishara_user
-      POSTGRES_PASSWORD: ishara_password
-      POSTGRES_DB: ishara_db
-      REDIS_HOST: redis
-      ELASTICSEARCH_HOST: http://elasticsearch:9200
 
 volumes:
   postgres_data:
   elasticsearch_data:
-
