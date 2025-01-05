@@ -409,6 +409,9 @@ class Analysis:
         centrality = nx.degree_centrality(graph)
         clustering_coeff = nx.clustering(graph)
         betweenness = nx.betweenness_centrality(graph)
+        closeness = nx.closeness_centrality(graph)
+        eigenvector = nx.eigenvector_centrality(graph)
+        pagerank = nx.pagerank(graph)
 
         # Community detection
         communities = list(greedy_modularity_communities(graph))
@@ -420,6 +423,9 @@ class Analysis:
             graph.nodes[node]["clustering_coeff"] = clustering_coeff.get(node, 0)
             graph.nodes[node]["betweenness"] = betweenness.get(node, 0)
             graph.nodes[node]["community"] = community_map.get(node, -1)
+            graph.nodes[node]["closeness"] = closeness.get(node, 0)
+            graph.nodes[node]["eigenvector"] = eigenvector.get(node, 0)
+            graph.nodes[node]["pagerank"] = pagerank.get(node, 0)
 
         # Generate layout
         pos = nx.spring_layout(graph)
@@ -452,15 +458,18 @@ class Analysis:
             x, y = pos[node]
             node_x.append(x)
             node_y.append(y)
-            node_size.append(10 + 30 * centrality[node])  # Scale size by centrality
-            node_color.append(community_map[node])  # Color by community
+            node_size.append(10 + 30 * centrality[node])    # Scale size by centrality
+            node_color.append(community_map[node])          # Color by community
             node_text.append(
                 f"Node: {node}<br>"
                 f"Community: {community_map[node]}<br>"
                 f"Degree: {graph.degree[node]}<br>"
                 f"Centrality: {centrality[node]:.2f}<br>"
                 f"Clustering Coefficient: {clustering_coeff[node]:.2f}<br>"
-                f"Betweenness: {betweenness[node]:.2f}"
+                f"Betweenness: {betweenness[node]:.2f}<br>"
+                f"Closeness: {closeness[node]:.2f}<br>"
+                f"Eigenvector: {eigenvector[node]:.2f}<br>"
+                f"PageRank: {pagerank[node]:.2f}"
             )
 
         node_trace = go.Scatter(
