@@ -1,6 +1,6 @@
-site_name: WASLC Documentation
-site_url: https://your-project-url.com
-repo_url: https://github.com/your-username/WASLC
+site_name: Ishara Documentation
+site_url: https://github.com/williamsryan/ishara
+repo_url: https://github.com/williamsryan/ishara
 theme:
   name: readthedocs
 nav:
