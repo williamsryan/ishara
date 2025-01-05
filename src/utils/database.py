@@ -388,6 +388,26 @@ def fetch_data(query, params=None):
     except Exception as e:
         print(f"❌ Error fetching data: {e}")
         return pd.DataFrame()
+    
+def fetch_as_dataframe(query, params=None):
+    """
+    Fetch data from the database and return it as a Pandas DataFrame.
+    
+    Args:
+        query (str): SQL query to execute.
+        params (tuple): Parameters for the query.
+    
+    Returns:
+        pd.DataFrame: DataFrame containing query results.
+    """
+    engine = get_sqlalchemy_engine() 
+    try:
+        # Execute the query and fetch results as a DataFrame
+        df = pd.read_sql_query(query, con=engine, params=params)
+        return df
+    except Exception as e:
+        print(f"❌ Error fetching data as DataFrame: {e}")
+        return pd.DataFrame()
 
 # -------------------- UTILITIES --------------------
 
@@ -414,24 +434,6 @@ def execute_query(query, params=None, fetch=False):
             print(f"❌ Query execution error: {e}")
             conn.rollback()
     return None
-
-def fetch_as_dataframe(query, params=None):
-    """
-    Fetch data from the database and return it as a Pandas DataFrame.
-    
-    Args:
-        query (str): SQL query to execute.
-        params (tuple): Parameters for the query.
-    
-    Returns:
-        pd.DataFrame: DataFrame containing query results.
-    """
-    with connect_to_db() as conn:
-        try:
-            return pd.read_sql_query(query, conn, params=params)
-        except Exception as e:
-            print(f"❌ Error fetching data as DataFrame: {e}")
-            return pd.DataFrame()
 
 def delete_duplicates(table_name, unique_columns):
     """
