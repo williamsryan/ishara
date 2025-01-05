@@ -14,6 +14,7 @@ from src.dashboard.app import run_dashboard
 import json
 
 DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA"]
+DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
 
 def populate_database(target):
     """
@@ -38,7 +39,7 @@ def populate_database(target):
     elif target == "google_trends":
         fetch_google_trends(DEFAULT_TICKERS)
     elif target == "reddit":
-        fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
+        fetch_reddit_sentiment(DEFAULT_SUBREDDITS, DEFAULT_TICKERS)
     elif target == "quiver":
         process_congressional_trades()
     elif target == "derived":
