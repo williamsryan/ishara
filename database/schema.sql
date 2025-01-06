@@ -163,6 +163,17 @@ CREATE TABLE IF NOT EXISTS symbol_labels (
     UNIQUE(symbol, label) -- Ensure unique symbol-label combinations
 );
 
+CREATE TABLE IF NOT EXISTS scraped_data (
+    id SERIAL PRIMARY KEY,
+    source VARCHAR(255) NOT NULL,
+    symbol VARCHAR(10),
+    headline TEXT,
+    summary TEXT,
+    sentiment VARCHAR(10),
+    publish_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for fast querying
 CREATE INDEX IF NOT EXISTS idx_historical_market_data ON historical_market_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_yahoo_finance_data ON yahoo_finance_data (symbol, datetime DESC);

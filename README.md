@@ -112,3 +112,10 @@ Here’s a breakdown of the most relevant features for clustering in a financial
 
 4. **Dimensionality Reduction**:
   - **Use**: PCA, t-SNE, or UMAP if the feature space is large, to reduce dimensions while preserving meaningful relationships.
+
+---
+
+### Development Notes
+
+The tested version of Python that works with PyTorch is 3.11.6.
+This was developed using v3.13 which didn't allow the scraper to work.

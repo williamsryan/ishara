@@ -26,6 +26,7 @@ TABLES = {
     "derived_metrics": "derived_metrics",
     "options": "options_data",
     "analysis_results": "analysis_results",
+    "scraped_data": "scraped_data",
 }
 
 # -------------------- CONTEXT MANAGER --------------------
@@ -365,6 +366,41 @@ def insert_symbols(data):
     columns = ["symbol", "name", "sector", "exchange"]
 
     return insert_data(table_name, data, columns)
+
+def insert_scraped_data(data):
+    """
+    Insert financial data into the scraped_data table.
+
+    Args:
+        data (list of tuples): List of tuples containing financial data. Each tuple should contain:
+            - source (str): Source of the data.
+            - symbol (str): Stock ticker symbol (optional).
+            - headline (str): Headline of the article or report.
+            - summary (str): Summary of the content (optional).
+            - sentiment (str): Sentiment label (e.g., 'positive', 'neutral', 'negative').
+            - publish_date (datetime): Publish date of the content.
+
+    Returns:
+        int: Number of rows successfully inserted.
+    """
+    table_name = "scraped_data"
+    columns = ["source", "symbol", "headline", "summary", "sentiment", "publish_date"]
+
+    # Ensure data is in the correct format
+    formatted_data = [
+        (
+            record.get("source"),
+            record.get("symbol"),
+            record.get("headline"),
+            record.get("summary"),
+            record.get("sentiment"),
+            record.get("publish_date"),
+        )
+        for record in data
+    ]
+
+    # Use the generic insert_data function
+    return insert_data(table_name, formatted_data, columns)
 
 # -------------------- FETCH METHODS --------------------
 
