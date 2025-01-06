@@ -25,7 +25,7 @@ scipy
 python-dateutil
 
 # Etc.
-# alpaca-trade-api # Alpaca API - DEPRECATED
+alpaca-trade-api # Alpaca API - DEPRECATED
 alpaca-py
 quiverquant
 dash
