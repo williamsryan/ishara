@@ -54,3 +54,9 @@ flask-login
 
 confluent-kafka
 elasticsearch
+pydantic 
+
+crawl4ai
+transformers
+torch
+torchvision
