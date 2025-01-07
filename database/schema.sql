@@ -114,31 +114,45 @@ CREATE TABLE IF NOT EXISTS real_time_market_data (
     UNIQUE(symbol, datetime)
 );
 
--- Table for alternative data (e.g., sentiment, trends)
-CREATE TABLE IF NOT EXISTS alternative_data (
+-- Table for Google Trends data
+CREATE TABLE IF NOT EXISTS google_trends_data (
     id SERIAL PRIMARY KEY,
-    source TEXT NOT NULL,
-    symbol TEXT NOT NULL,
-    datetime TIMESTAMPTZ NOT NULL,
-    metric TEXT NOT NULL,
-    value NUMERIC,
-    details TEXT,
-    UNIQUE(symbol, datetime, metric)
+    ticker VARCHAR(10) NOT NULL,
+    trend_date DATE NOT NULL,
+    trend_score NUMERIC NOT NULL
+);
+
+-- Table for Reddit sentiment data
+CREATE TABLE IF NOT EXISTS reddit_sentiment_data (
+    id SERIAL PRIMARY KEY,
+    ticker VARCHAR(10) NOT NULL,
+    subreddit VARCHAR(50) NOT NULL,
+    sentiment_score NUMERIC NOT NULL,
+    post_date TIMESTAMP NOT NULL
+);
+
+-- Table for Quiver Quantitative data
+CREATE TABLE IF NOT EXISTS quiverquant_data (
+    id SERIAL PRIMARY KEY,
+    ticker VARCHAR(10) NOT NULL,
+    source VARCHAR(50) NOT NULL,
+    reported_date TIMESTAMP NOT NULL,
+    metric_name VARCHAR(100) NOT NULL,
+    metric_value NUMERIC NOT NULL
 );
 
 -- Create the new derived_metrics table with additional fields
 CREATE TABLE IF NOT EXISTS derived_metrics (
     id SERIAL PRIMARY KEY,
-    symbol TEXT NOT NULL,
-    datetime TIMESTAMPTZ NOT NULL,
-    log_returns NUMERIC,               -- Logarithmic returns
-    pe_ratio NUMERIC,                  -- Price-to-earnings ratio
-    market_cap NUMERIC,                -- Market capitalization
-    moving_avg_50 NUMERIC,             -- 50-day moving average
-    moving_avg_200 NUMERIC,            -- 200-day moving average
-    rsi NUMERIC,                       -- Relative Strength Index
-    macd NUMERIC,                      -- Moving Average Convergence Divergence
-    UNIQUE(symbol, datetime)
+    symbol VARCHAR(10) NOT NULL,
+    datetime TIMESTAMP NOT NULL,
+    log_returns NUMERIC,
+    rsi NUMERIC,
+    macd NUMERIC,
+    macd_signal NUMERIC,
+    macd_hist NUMERIC,
+    sma_50 NUMERIC,
+    sma_200 NUMERIC
 );
 
 -- Table for backtest results
@@ -178,6 +192,8 @@ CREATE TABLE IF NOT EXISTS scraped_data (
 CREATE INDEX IF NOT EXISTS idx_historical_market_data ON historical_market_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_yahoo_finance_data ON yahoo_finance_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_real_time_market_data ON real_time_market_data (symbol, datetime DESC);
-CREATE INDEX IF NOT EXISTS idx_alternative_data ON alternative_data (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_derived_metrics ON derived_metrics (symbol, datetime DESC);
 CREATE INDEX IF NOT EXISTS idx_backtest_results ON backtest_results (strategy_name, symbol, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_google_trends_ticker_date ON google_trends_data (ticker, trend_date DESC);
+CREATE INDEX IF NOT EXISTS idx_reddit_sentiment_ticker_date ON reddit_sentiment_data (ticker, post_date DESC);
+CREATE INDEX IF NOT EXISTS idx_quiverquant_ticker_date ON quiverquant_data (ticker, reported_date DESC);

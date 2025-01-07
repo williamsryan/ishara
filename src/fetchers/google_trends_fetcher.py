@@ -1,45 +1,49 @@
 from pytrends.request import TrendReq
-from datetime import datetime
-from src.utils.database import insert_alternative_data
 import pandas as pd
+import logging
+from src.utils.database import insert_google_trends_data
 
-def fetch_google_trends(symbols):
+# Initialize PyTrends API
+pytrends = TrendReq(hl='en-US', tz=360)
+
+def fetch_google_trends(tickers, timeframe="today 5-y"):
     """
-    Fetch Google Trends data for the given symbols and insert it into the database.
+    Fetch Google Trends data for specified tickers.
 
     Args:
-        symbols (list): List of symbols to fetch trends data for.
+        tickers (list): List of tickers to fetch trends for.
+        timeframe (str): Timeframe for trends (default: "today 5-y").
+
+    Returns:
+        pd.DataFrame: Google Trends data with columns ['ticker', 'date', 'trend_score'].
     """
-    pytrends = TrendReq(hl='en-US', tz=360)
-    data_to_insert = []
+    trends_data = []
+    for ticker in tickers:
+        logging.info(f"Fetching Google Trends data for {ticker}...")
+        pytrends.build_payload([ticker], timeframe=timeframe)
+        data = pytrends.interest_over_time()
+        if not data.empty:
+            for date, score in data[ticker].items():
+                trends_data.append({"ticker": ticker, "date": date, "trend_score": score})
+    return pd.DataFrame(trends_data)
 
-    for symbol in symbols:
-        print(f"🔍 Fetching Google Trends data for {symbol}...")
-        pytrends.build_payload([symbol], timeframe="now 7-d")
-        trends = pytrends.interest_over_time()
+def insert_google_trends(tickers, timeframe="today 5-y"):
+    """
+    Fetch and store Google Trends data.
 
-        if trends.empty:
-            print(f"⚠️ No trends data found for {symbol}.")
-            continue
-
-        for date, row in trends.iterrows():
-            if 'isPartial' in row and row['isPartial']:
-                continue
-            data_to_insert.append((
-                "google_trends",  # Source
-                symbol,
-                pd.Timestamp(date).to_pydatetime(),  # Convert to native datetime
-                "interest_over_time",
-                int(row[symbol]),   # Cast numpy.int64 to int
-                None  # Details
-            ))
-
-    # Insert data into the database
-    if data_to_insert:
-        insert_alternative_data(data_to_insert)
+    Args:
+        tickers (list): List of tickers.
+        timeframe (str): Timeframe for trends.
+    """
+    trends_data = fetch_google_trends(tickers, timeframe)
+    if not trends_data.empty:
+        insert_google_trends_data(trends_data.to_dict("records"))
+        logging.info("✅ Google Trends data inserted successfully.")
     else:
-        print("⚠️ No data fetched to insert.")
+        logging.warning("⚠️ No trends data fetched.")
 
 if __name__ == "__main__":
-    fetch_google_trends(["AAPL", "MSFT", "GOOGL", "AMZN"])
+    logging.basicConfig(level=logging.INFO)
+    tickers = ["AAPL", "MSFT", "TSLA"]
+    insert_google_trends(tickers)
     
