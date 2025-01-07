@@ -74,7 +74,14 @@ def setup_kafka():
     """Set up Kafka topics."""
     try:
         print("[Kafka] Connecting to Kafka...")
-        admin_client = AdminClient({"bootstrap.servers": KAFKA["broker"]})
+        admin_client = AdminClient({
+            "bootstrap.servers": KAFKA["broker"],
+            "security.protocol": "PLAINTEXT",  # Change to SSL if needed
+            # Uncomment and configure these if using SSL
+            # "ssl.certificate.location": "/path/to/client-cert.pem",
+            # "ssl.key.location": "/path/to/client-key.pem",
+            # "ssl.ca.location": "/path/to/ca-cert.pem"
+        })
 
         # Define topics
         topics = ["market_data_stream", "analysis_results_stream"]
