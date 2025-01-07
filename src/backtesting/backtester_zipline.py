@@ -40,11 +40,13 @@ class BacktesterZipline:
             AND datetime BETWEEN '{self.start_date}' AND '{self.end_date}'
             ORDER BY datetime
         """
+        print(f"Executing query:\n{query}")  # Debugging query
         data = fetch_data(query)
         if data.empty:
             raise ValueError("No data available for the specified symbols and date range.")
 
         # Ensure data is indexed by normalized datetime and symbol
+        print(f"Fetched data:\n{data.head()}")  # Debugging fetched data
         data["datetime"] = pd.to_datetime(data["datetime"], utc=True)  # Ensure UTC alignment
         data["datetime"] = data["datetime"].dt.tz_convert(None)  # Convert to timezone-naive
         data["datetime"] = data["datetime"].dt.normalize()  # Remove time component
@@ -85,12 +87,8 @@ class BacktesterZipline:
         """
         # Get the trading calendar
         trading_calendar = get_calendar("XNYS")
-        all_sessions = trading_calendar.sessions_in_range(self.start_date, self.end_date + pd.Timedelta(days=1))
-        all_sessions = all_sessions.tz_localize(None)  # Ensure sessions are timezone-naive
-
-        # Synchronize all_sessions with symbol_data
-        valid_sessions = self.data.index.get_level_values(0).unique()
-        all_sessions = all_sessions[all_sessions.isin(valid_sessions)]  # Keep only valid sessions
+        all_sessions = trading_calendar.sessions_in_range(self.start_date, self.end_date)
+        all_sessions = all_sessions.tz_localize(None).normalize()  # Ensure timezone-naive and normalized
 
         # Create a mapping of symbols to integer SIDs
         symbol_to_sid = {symbol: i for i, symbol in enumerate(self.symbols)}
@@ -106,44 +104,39 @@ class BacktesterZipline:
                 # Extract data for the symbol
                 symbol_data = self.data.xs(symbol, level="symbol")
                 if symbol_data.empty:
-                    print(f"Warning: No data for symbol {symbol}")
+                    print(f"No data available for symbol {symbol}. Skipping...")
                     continue
 
-                # Align data with trading calendar
-                symbol_data = symbol_data.reindex(all_sessions)
-                symbol_data.index = symbol_data.index.tz_localize(None)  # Ensure timezone-naive index
+                # Normalize symbol_data index
+                symbol_data.index = symbol_data.index.normalize()
 
-                # Drop rows with missing values
-                symbol_data = symbol_data.dropna(how="any")
+                # Align data with valid sessions
+                valid_sessions = symbol_data.index.intersection(all_sessions)
+                print(f"Normalized symbol_data index for {symbol}: {symbol_data.index}")
+                print(f"Normalized all_sessions: {all_sessions}")
 
-                # Debugging: Validate no NaN rows remain
-                if symbol_data.isna().any().any():
-                    print(f"ERROR: NaN values found in symbol_data for SID {sid}:\n{symbol_data[symbol_data.isna().any(axis=1)]}")
-                    raise ValueError(f"NaN values detected for SID {sid}.")
+                if valid_sessions.empty:
+                    print(f"Warning: No valid sessions for symbol {symbol}. Using available data.")
+                    valid_sessions = symbol_data.index
 
-                # Debugging: Check data structure
-                if sid == 0:
-                    print(f"DEBUG: Full symbol_data for SID {sid}:\n{symbol_data}")
+                symbol_data = symbol_data.loc[valid_sessions]
 
-                # Validate alignment
-                if not symbol_data.index.equals(all_sessions):
-                    print(f"Alignment mismatch for SID {sid}.")
-                    print(f"Index differences for SID {sid}:\n{symbol_data.index.difference(all_sessions)}")
-                    print(f"Extra sessions in symbol_data for SID {sid}:\n{all_sessions.difference(symbol_data.index)}")
-                    raise ValueError(f"Mismatch between symbol_data and all_sessions for SID {sid}.")
+                if symbol_data.empty:
+                    print(f"No valid data for symbol {symbol} after filtering. Skipping...")
+                    continue
 
-                # Add SID and reset index for writer compatibility
+                # Reset index for compatibility
                 symbol_data = symbol_data.reset_index()
                 symbol_data["sid"] = sid
-
                 daily_data.append((sid, symbol_data))
 
-            # Debug final data structure
+            # Debug final daily data structure
             print(f"DEBUG: Final daily_data structure:\n{daily_data}")
 
             # Write data to daily bar writer
             if not daily_data:
                 raise ValueError("No valid data available for any symbols.")
+            
             daily_bar_writer.write(
                 daily_data,
                 show_progress=show_progress,
@@ -170,18 +163,17 @@ class BacktesterZipline:
         print("Registering custom data bundle...")
         self._register_custom_bundle()
 
-        # Ensure the first trading day is naive
+        # Ensure the first trading day is aligned with the data
         first_trading_day = self.data.index.get_level_values(0).min()
-        first_trading_day = first_trading_day.normalize()
-        # print(f"First trading day (naive): {first_trading_day}")
+        last_trading_day = self.data.index.get_level_values(0).max()
 
         trading_calendar = get_calendar("XNYS")
 
         print("Running algorithm...")
         # Run the backtest
         results = run_algorithm(
-            start=self.start_date,
-            end=self.end_date,
+            start=first_trading_day,
+            end=last_trading_day,
             capital_base=self.capital,
             data_frequency="daily",
             initialize=self.strategy.initialize,
