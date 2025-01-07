@@ -7,7 +7,6 @@ from src.fetchers.google_trends_fetcher import fetch_google_trends
 from src.fetchers.reddit_fetcher import fetch_reddit_sentiment
 from src.fetchers.quiverquant_fetcher import process_congressional_trades
 from src.fetchers.symbol_fetcher import populate_symbols_table
-from src.fetchers.scraper import scrape_sources
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
 from src.processors.derived_metrics import populate_derived_metrics
@@ -17,14 +16,6 @@ import json
 
 DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA"]
 DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
-
-def run_scraper():
-    """
-    Run the scraper to collect financial data.
-    """
-    print("Starting the scraper...")
-    asyncio.run(scrape_sources())
-    print("Scraper run completed.")
 
 def populate_database(target):
     """
@@ -71,10 +62,6 @@ def run_analysis(analysis_type):
 def main():
     parser = argparse.ArgumentParser(description="Ishara Platform Manager")
     subparsers = parser.add_subparsers(dest="command")
-
-    # Command: Run Scraper
-    scraper_parser = subparsers.add_parser("scraper", help="Run the financial data scraper")
-    scraper_parser.set_defaults(func=run_scraper)
 
     # Subcommand: Populate Database
     populate_parser = subparsers.add_parser("populate", help="Populate the database with data.")
