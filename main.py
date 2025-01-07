@@ -14,24 +14,31 @@ from src.backtesting.backtester import BacktestManager
 from src.dashboard.app import run_dashboard
 
 # Default tickers and subreddits
-DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA", "KULR"]
+DEFAULT_TICKERS = [
+    "T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW",
+    "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA", "KULR"
+]
 DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
 
-def populate_database(target):
+def populate_database(target, start_date=None, end_date=None):
     """
     Populate the database with data from selected sources.
+    Args:
+        target (str): Target dataset to populate.
+        start_date (str): Start date for historical data (YYYY-MM-DD).
+        end_date (str): End date for historical data (YYYY-MM-DD).
     """
     if target == "all":
         populate_symbols_table()
-        insert_historical_data(DEFAULT_TICKERS)
+        insert_historical_data(DEFAULT_TICKERS, start_date, end_date)
         fetch_yahoo_finance_data(DEFAULT_TICKERS)
         fetch_google_trends(DEFAULT_TICKERS)
-        fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
+        fetch_reddit_sentiment(DEFAULT_SUBREDDITS, DEFAULT_TICKERS)
         populate_derived_metrics()
     elif target == "symbols":
         populate_symbols_table()
     elif target == "alpaca_historical":
-        insert_historical_data(DEFAULT_TICKERS)
+        insert_historical_data(DEFAULT_TICKERS, start_date, end_date)
     elif target == "alpaca_realtime":
         fetch_real_time_data()
     elif target == "yahoo_finance":
@@ -50,6 +57,8 @@ def populate_database(target):
 def run_analysis(analysis_type):
     """
     Run a specified analysis and display results.
+    Args:
+        analysis_type (str): Type of analysis to perform.
     """
     if analysis_type == "clustering":
         perform_clustering_analysis()
@@ -61,6 +70,12 @@ def run_analysis(analysis_type):
 def run_backtest(symbols, start_date, end_date, strategy_name, additional_args):
     """
     Run a backtest with the specified parameters.
+    Args:
+        symbols (list): List of stock symbols.
+        start_date (str): Start date for the backtest (YYYY-MM-DD).
+        end_date (str): End date for the backtest (YYYY-MM-DD).
+        strategy_name (str): Name of the strategy to backtest.
+        additional_args (dict): Additional arguments for the strategy.
     """
     print(f"Running backtest with strategy: {strategy_name}")
     backtester = BacktestManager()
@@ -78,6 +93,10 @@ def run_backtest(symbols, start_date, end_date, strategy_name, additional_args):
 def load_ticker_data(file_path):
     """
     Load ticker data from a JSON file.
+    Args:
+        file_path (str): Path to the JSON file.
+    Returns:
+        dict: Parsed ticker data.
     """
     with open(file_path, 'r') as file:
         data = json.load(file)
@@ -89,7 +108,20 @@ def main():
 
     # Subcommand: Populate Database
     populate_parser = subparsers.add_parser("populate", help="Populate the database with data.")
-    populate_parser.add_argument("target", choices=["all", "symbols", "alpaca_historical", "alpaca_realtime", "yahoo_finance", "google_trends", "reddit", "quiver", "derived"], help="Data source to populate.")
+    populate_parser.add_argument(
+        "target",
+        choices=[
+            "all", "symbols", "alpaca_historical", "alpaca_realtime",
+            "yahoo_finance", "google_trends", "reddit", "quiver", "derived"
+        ],
+        help="Data source to populate."
+    )
+    populate_parser.add_argument(
+        "--start-date", type=str, default="2024-01-01", help="Start date for historical data (YYYY-MM-DD)."
+    )
+    populate_parser.add_argument(
+        "--end-date", type=str, default="2024-12-31", help="End date for historical data (YYYY-MM-DD)."
+    )
 
     # Subcommand: Run Analyses
     analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")
@@ -113,17 +145,12 @@ def main():
     args = parser.parse_args()
 
     if args.command == "populate":
-        populate_database(args.target)
+        populate_database(args.target, args.start_date, args.end_date)
     elif args.command == "analyze":
         run_analysis(args.type)
     elif args.command == "backtest":
         symbols = [symbol.strip() for symbol in args.symbols.split(",")]
-        start_date = args.start_date
-        end_date = args.end_date
-        strategy_name = args.strategy
-        additional_args = args.args
-
-        run_backtest(symbols, start_date, end_date, strategy_name, additional_args)
+        run_backtest(symbols, args.start_date, args.end_date, args.strategy, args.args)
     elif args.command == "ui":
         run_dashboard()
     elif args.command == "load":
