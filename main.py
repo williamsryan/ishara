@@ -1,5 +1,5 @@
 import argparse
-import asyncio
+import json
 from src.fetchers.alpaca_historical import insert_historical_data
 from src.fetchers.alpaca_realtime import fetch_real_time_data
 from src.fetchers.yf_fetcher import fetch_yahoo_finance_data
@@ -12,9 +12,9 @@ from src.processors.regime_analysis import perform_regime_analysis
 from src.processors.derived_metrics import populate_derived_metrics
 from src.backtesting.backtester import BacktestManager
 from src.dashboard.app import run_dashboard
-import json
 
-DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA"]
+# Default tickers and subreddits
+DEFAULT_TICKERS = ["T", "PG", "F", "ACHR", "LUNR", "RKLB", "SNOW", "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA", "KULR"]
 DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
 
 def populate_database(target):
@@ -28,7 +28,6 @@ def populate_database(target):
         fetch_google_trends(DEFAULT_TICKERS)
         fetch_reddit_sentiment("stocks", DEFAULT_TICKERS)
         populate_derived_metrics()
-        # fetch_real_time_data()
     elif target == "symbols":
         populate_symbols_table()
     elif target == "alpaca_historical":
@@ -59,6 +58,31 @@ def run_analysis(analysis_type):
     else:
         print(f"⚠️ Unknown analysis type '{analysis_type}'.")
 
+def run_backtest(symbols, start_date, end_date, strategy_name, additional_args):
+    """
+    Run a backtest with the specified parameters.
+    """
+    print(f"Running backtest with strategy: {strategy_name}")
+    backtester = BacktestManager()
+
+    # Check if the strategy exists
+    if strategy_name in backtester.strategies:
+        try:
+            backtester.perform_backtest(strategy_name, symbols, start_date, end_date, **additional_args)
+            print(f"✅ Backtesting completed for strategy: {strategy_name}")
+        except Exception as e:
+            print(f"❌ Error during backtesting: {e}")
+    else:
+        print(f"❌ Strategy '{strategy_name}' not found. Please define it in the strategies dictionary.")
+
+def load_ticker_data(file_path):
+    """
+    Load ticker data from a JSON file.
+    """
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+    return data
+
 def main():
     parser = argparse.ArgumentParser(description="Ishara Platform Manager")
     subparsers = parser.add_subparsers(dest="command")
@@ -71,23 +95,13 @@ def main():
     analysis_parser = subparsers.add_parser("analyze", help="Run an analysis.")
     analysis_parser.add_argument("type", choices=["clustering", "regime"], help="Type of analysis to perform.")
 
+    # Subcommand: Backtest
     backtest_parser = subparsers.add_parser("backtest", help="Run a backtest.")
-    backtest_parser.add_argument(
-        "-s", "--symbols", type=str, required=True,
-        help="Comma-separated list of stock symbols (e.g., AAPL,MSFT,GOOGL)"
-    )
-    backtest_parser.add_argument(
-        "-sd", "--start-date", type=str, required=True,
-        help="Start date for the backtest in YYYY-MM-DD format"
-    )
-    backtest_parser.add_argument(
-        "-ed", "--end-date", type=str, required=True,
-        help="End date for the backtest in YYYY-MM-DD format"
-    )
-    backtest_parser.add_argument(
-        "-st", "--strategy", type=str, required=True,
-        help="Strategy to backtest (e.g., MovingAverageCrossover, MomentumStrategy)"
-    )
+    backtest_parser.add_argument("-s", "--symbols", type=str, required=True, help="Comma-separated list of stock symbols (e.g., AAPL,MSFT,GOOGL)")
+    backtest_parser.add_argument("-sd", "--start-date", type=str, required=True, help="Start date for the backtest in YYYY-MM-DD format")
+    backtest_parser.add_argument("-ed", "--end-date", type=str, required=True, help="End date for the backtest in YYYY-MM-DD format")
+    backtest_parser.add_argument("-st", "--strategy", type=str, required=True, help="Strategy to backtest (e.g., MovingAverageCrossover, MomentumStrategy)")
+    backtest_parser.add_argument("-a", "--args", type=json.loads, default={}, help="Additional arguments for the strategy (JSON format)")
 
     # Subcommand: Launch UI
     subparsers.add_parser("ui", help="Launch the Ishara dashboard UI.")
@@ -107,28 +121,12 @@ def main():
         start_date = args.start_date
         end_date = args.end_date
         strategy_name = args.strategy
+        additional_args = args.args
 
-        print(f"Running backtest with strategy: {strategy_name}")
-        backtester = BacktestManager()
-
-        # Check if the strategy name is predefined or dynamic
-        if strategy_name in backtester.strategies:
-            try:
-                backtester.perform_backtest(strategy_name, symbols, start_date, end_date)
-                print(f"Backtesting completed for strategy: {strategy_name}")
-            except Exception as e:
-                print(f"❌ Error during backtesting: {e}")
-        else:
-            print(f"❌ Strategy '{strategy_name}' not found. Please define it in the strategies dictionary.")
+        run_backtest(symbols, start_date, end_date, strategy_name, additional_args)
     elif args.command == "ui":
         run_dashboard()
     elif args.command == "load":
-        print(f"Loading data from input file: {args.file}")
-        def load_ticker_data(file_path):
-            with open(file_path, 'r') as file:
-                data = json.load(file)
-            return data
-
         ticker_data = load_ticker_data(args.file)
         print(f"Loaded ticker data: {ticker_data}")
     else:

@@ -16,10 +16,10 @@ db_password = POSTGRES["password"]
 SQLALCHEMY_DB_URI = f"postgresql+psycopg2://{POSTGRES['user']}:{POSTGRES['password']}@{POSTGRES['host']}/{POSTGRES['dbname']}"
 
 # Table Names
+# Updated Table Names
 TABLES = {
     "real_time": "real_time_market_data",
     "historical": "historical_market_data",
-    "alternative": "alternative_data",
     "yahoo_finance": "yahoo_finance_data",
     "trade_logs": "trade_logs",
     "backtest_results": "backtest_results",
@@ -27,6 +27,9 @@ TABLES = {
     "options": "options_data",
     "analysis_results": "analysis_results",
     "scraped_data": "scraped_data",
+    "google_trends": "google_trends_data",
+    "reddit_sentiment": "reddit_sentiment_data",  
+    "quiverquant": "quiverquant_data", 
 }
 
 # -------------------- CONTEXT MANAGER --------------------
@@ -142,15 +145,6 @@ def insert_historical_market_data(data):
         data (list): List of tuples [(symbol, datetime, open, high, low, close, volume), ...].
     """
     return insert_data(TABLES["historical"], data, ["symbol", "datetime", "open", "high", "low", "close", "volume"])
-
-def insert_alternative_data(data):
-    """
-    Insert alternative data into the database.
-
-    Args:
-        data (list): List of tuples [(source, symbol, datetime, metric, value, details), ...].
-    """
-    return insert_data(TABLES["alternative"], data, ["source", "symbol", "datetime", "metric", "value", "details"])
 
 def insert_yahoo_finance_data(data):
     """
@@ -365,6 +359,39 @@ def insert_symbols(data):
     table_name = "symbols"
     columns = ["symbol", "name", "sector", "exchange"]
 
+    return insert_data(table_name, data, columns)
+
+def insert_google_trends_data(data):
+    """
+    Insert Google Trends data into the `google_trends_data` table.
+
+    Args:
+        data (list of tuples): [(ticker, trend_date, trend_score), ...].
+    """
+    table_name = "google_trends_data"
+    columns = ["ticker", "trend_date", "trend_score"]
+    return insert_data(table_name, data, columns)
+
+def insert_reddit_sentiment_data(data):
+    """
+    Insert Reddit sentiment data into the `reddit_sentiment_data` table.
+
+    Args:
+        data (list of tuples): [(ticker, subreddit, sentiment_score, post_date), ...].
+    """
+    table_name = "reddit_sentiment_data"
+    columns = ["ticker", "subreddit", "sentiment_score", "post_date"]
+    return insert_data(table_name, data, columns)
+
+def insert_quiverquant_data(data):
+    """
+    Insert QuiverQuant data into the `quiverquant_data` table.
+
+    Args:
+        data (list of tuples): [(ticker, source, reported_date, metric_name, metric_value), ...].
+    """
+    table_name = "quiverquant_data"
+    columns = ["ticker", "source", "reported_date", "metric_name", "metric_value"]
     return insert_data(table_name, data, columns)
 
 def insert_scraped_data(data):

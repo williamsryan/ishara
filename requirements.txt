@@ -60,3 +60,7 @@ crawl4ai
 transformers
 torch
 torchvision
+
+zipline-reloaded
+TA-Lib
+textblob
