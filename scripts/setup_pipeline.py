@@ -17,17 +17,34 @@ def setup_postgres():
     """Set up the Postgres database schema using schema.sql."""
     try:
         print("[Postgres] Connecting to the database...")
-        conn = psycopg2.connect(**POSTGRES)
-        conn.autocommit = True  # Disable transaction block for DROP DATABASE
+        
+        # Connect to the default 'postgres' database
+        conn = psycopg2.connect(dbname="postgres", **{k: POSTGRES[k] for k in POSTGRES if k != "dbname"})
+        conn.autocommit = True
         cursor = conn.cursor()
 
-        # Load schema.sql and execute it
+        # Drop and recreate the 'ishara' database
+        cursor.execute("SELECT pg_terminate_backend(pg_stat_activity.pid) "
+                       "FROM pg_stat_activity WHERE pg_stat_activity.datname = 'ishara' "
+                       "AND pid <> pg_backend_pid();")
+        cursor.execute("DROP DATABASE IF EXISTS ishara;")
+        cursor.execute("CREATE DATABASE ishara;")
+
+        conn.close()
+
+        # Reconnect to the newly created database
+        POSTGRES["dbname"] = "ishara"
+        conn = psycopg2.connect(**POSTGRES)
+        conn.autocommit = True
+        cursor = conn.cursor()
+
+        # Load and execute schema.sql
         schema_path = os.path.join(project_root, "database/schema.sql")
         with open(schema_path, "r") as f:
             schema_sql = f.read()
         cursor.execute(schema_sql)
-        print("[Postgres] Schema setup complete.")
 
+        print("[Postgres] Schema setup complete.")
     except Exception as e:
         print(f"[Postgres] Error setting up schema: {e}")
     finally:
@@ -50,7 +67,6 @@ def setup_redis():
         }
         r.set(test_key, str(test_value), ex=3600)  # Expires in 1 hour
         print("[Redis] Added test session key.")
-
     except Exception as e:
         print(f"[Redis] Error setting up Redis: {e}")
 
@@ -75,7 +91,6 @@ def setup_kafka():
             print(f"[Kafka] Topics created: {topics}")
         else:
             print("[Kafka] Topics already exist.")
-
     except Exception as e:
         print(f"[Kafka] Error setting up Kafka: {e}")
 
@@ -117,7 +132,6 @@ def setup_elasticsearch():
         es.options(ignore_status=400).indices.create(index="analysis_results", body=analysis_results_index)
 
         print("[Elasticsearch] Indices created.")
-
     except Exception as e:
         print(f"[Elasticsearch] Error setting up Elasticsearch: {e}")
 
