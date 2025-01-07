@@ -10,7 +10,9 @@ from src.fetchers.symbol_fetcher import populate_symbols_table
 from src.processors.clustering_analysis import perform_clustering_analysis
 from src.processors.regime_analysis import perform_regime_analysis
 from src.processors.derived_metrics import populate_derived_metrics
-from src.backtesting.backtester import BacktestManager
+# from src.backtesting.backtester import BacktestManager
+from src.backtesting.backtester_zipline import BacktesterZipline
+from src.backtesting.strategies.macd_strategy import MACDStrategy
 from src.dashboard.app import run_dashboard
 
 # Default tickers and subreddits
@@ -19,6 +21,9 @@ DEFAULT_TICKERS = [
     "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KURA", "KULR"
 ]
 DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
+STRATEGY_REGISTRY = {
+    "MACDStrategy": MACDStrategy,
+}
 
 def populate_database(target, start_date=None, end_date=None):
     """
@@ -70,25 +75,28 @@ def run_analysis(analysis_type):
 def run_backtest(symbols, start_date, end_date, strategy_name, additional_args):
     """
     Run a backtest with the specified parameters.
-    Args:
-        symbols (list): List of stock symbols.
-        start_date (str): Start date for the backtest (YYYY-MM-DD).
-        end_date (str): End date for the backtest (YYYY-MM-DD).
-        strategy_name (str): Name of the strategy to backtest.
-        additional_args (dict): Additional arguments for the strategy.
     """
-    print(f"Running backtest with strategy: {strategy_name}")
-    backtester = BacktestManager()
+    print(f"⚙️ Running backtest with strategy: {strategy_name}")
 
-    # Check if the strategy exists
-    if strategy_name in backtester.strategies:
-        try:
-            backtester.perform_backtest(strategy_name, symbols, start_date, end_date, **additional_args)
-            print(f"✅ Backtesting completed for strategy: {strategy_name}")
-        except Exception as e:
-            print(f"❌ Error during backtesting: {e}")
-    else:
-        print(f"❌ Strategy '{strategy_name}' not found. Please define it in the strategies dictionary.")
+    try:
+        # Load the user-defined strategy
+        if strategy_name not in STRATEGY_REGISTRY:
+            raise ValueError(f"Strategy '{strategy_name}' is not registered.")
+        strategy = STRATEGY_REGISTRY[strategy_name]()
+
+        # Initialize and run the backtest
+        backtester = BacktesterZipline(
+            symbols=symbols,
+            start_date=start_date,
+            end_date=end_date,
+            strategy=strategy,
+            capital=additional_args.get("capital", 100000),
+        )
+        results = backtester.run()
+        print(f"✅ Backtesting completed successfully.")
+        print(f"📈 Results:\n{results}")
+    except Exception as e:
+        print(f"❌ Error during backtesting: {e}")
 
 def load_ticker_data(file_path):
     """
@@ -161,4 +169,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
