@@ -139,12 +139,12 @@ CREATE TABLE IF NOT EXISTS derived_metrics (
     symbol VARCHAR(10) NOT NULL,
     datetime TIMESTAMP NOT NULL,
     log_returns NUMERIC,
+    pe_ratio NUMERIC,
+    market_cap NUMERIC,
+    moving_avg_50 NUMERIC,
+    moving_avg_200 NUMERIC,
     rsi NUMERIC,
-    macd NUMERIC,
-    macd_signal NUMERIC,
-    macd_hist NUMERIC,
-    sma_50 NUMERIC,
-    sma_200 NUMERIC
+    macd NUMERIC
 );
 
 -- Table for backtest results
