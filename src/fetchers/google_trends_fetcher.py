@@ -6,7 +6,7 @@ from src.utils.database import insert_google_trends_data
 # Initialize PyTrends API
 pytrends = TrendReq(hl='en-US', tz=360)
 
-def fetch_google_trends(tickers, timeframe="now 14-d"):
+def fetch_google_trends(tickers, timeframe="now 7-d"):
     """
     Fetch Google Trends data for specified tickers.
 
@@ -27,7 +27,7 @@ def fetch_google_trends(tickers, timeframe="now 14-d"):
                 trends_data.append({"ticker": ticker, "date": date, "trend_score": score})
     return pd.DataFrame(trends_data)
 
-def insert_google_trends(tickers, timeframe="now 14-d"):
+def insert_google_trends(tickers, timeframe="now 7-d"):
     """
     Fetch and store Google Trends data.
 
