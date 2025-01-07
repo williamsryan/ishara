@@ -123,9 +123,11 @@ This was developed using v3.13 which didn't allow the scraper to work.
 #### Backtesting Commands
 ```bash
 python main.py backtest \
-    -s AAPL,MSFT,GOOGL \
+    -s QBTS,KULR,PLTR \
     -sd 2023-01-01 \
     -ed 2023-12-31 \
     -st MovingAverageCrossover \
     -a '{"short_window": 50, "long_window": 200}'
+
+python main.py backtest -s "QBTS" -sd "2024-12-01" -ed "2024-12-20" -st MACDStrategy -a '{"capital": 150000}'
 ```
