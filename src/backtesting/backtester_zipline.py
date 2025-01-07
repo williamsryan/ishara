@@ -1,5 +1,9 @@
 from zipline.api import order, record, symbol, schedule_function, date_rules, time_rules
 from zipline import run_algorithm
+from zipline.data.data_portal import DataPortal
+from zipline.data.bundles.core import load
+from zipline.data.us_equity_pricing import BcolzDailyBarReader
+from zipline.utils.calendars import get_calendar
 import pandas as pd
 from datetime import datetime
 from src.utils.database import fetch_data
@@ -50,7 +54,18 @@ class BacktesterZipline:
         """
         self.fetch_historical_data()
 
-        # Run the backtest with the strategy
+        # Create a Zipline-compatible calendar
+        trading_calendar = get_calendar("XNYS")  # Adjust to your market's calendar
+
+        # Create a DataPortal with the historical data
+        equity_daily_bar_reader = BcolzDailyBarReader(self.data)
+        data_portal = DataPortal(
+            asset_finder=None,  # Custom assets can be added here
+            trading_calendar=trading_calendar,
+            equity_daily_reader=equity_daily_bar_reader,
+        )
+
+        # Run the backtest
         results = run_algorithm(
             start=self.start_date,
             end=self.end_date,
@@ -58,7 +73,8 @@ class BacktesterZipline:
             data_frequency="daily",
             initialize=self.strategy.initialize,
             handle_data=self.strategy.handle_data,
-            bundle=None,  # Data is fetched directly from the database
+            trading_calendar=trading_calendar,
+            data_portal=data_portal,
         )
         return results
     
