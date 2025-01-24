@@ -1,9 +1,10 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import BacktestingPage from "./pages/BacktestingPage";
-import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import Dashboard from "./pages/Dashboard";
+import ChartingPage from "./pages/ChartingPage";
+import PortfolioPage from "./pages/PortfolioPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const App = () => {
   return (
@@ -11,10 +12,11 @@ const App = () => {
       <div style={{ display: "flex" }}>
         <Sidebar />
         <div style={{ flex: 1 }}>
-          <Header />
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/backtesting" element={<BacktestingPage />} />
+            <Route path="/charting" element={<ChartingPage />} />
+            <Route path="/portfolio" element={<PortfolioPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </div>
