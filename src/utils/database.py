@@ -4,30 +4,32 @@ from contextlib import contextmanager
 import pandas as pd
 import hashlib
 from sqlalchemy import create_engine
-from src.utils.config import DATABASE_HOST, DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD
+from src.utils.config import POSTGRES
 
 # Database Configuration
-DB_CONFIG = {
-    "host": DATABASE_HOST,
-    "dbname": DATABASE_NAME,
-    "user": DATABASE_USER,
-    "password": DATABASE_PASSWORD
-}
+db_host = POSTGRES["host"]
+db_name = POSTGRES["dbname"]
+db_user = POSTGRES["user"]
+db_password = POSTGRES["password"]
 
 # SQLAlchemy Connection String
-SQLALCHEMY_DB_URI = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
+SQLALCHEMY_DB_URI = f"postgresql+psycopg2://{POSTGRES['user']}:{POSTGRES['password']}@{POSTGRES['host']}/{POSTGRES['dbname']}"
 
 # Table Names
+# Updated Table Names
 TABLES = {
     "real_time": "real_time_market_data",
     "historical": "historical_market_data",
-    "alternative": "alternative_data",
     "yahoo_finance": "yahoo_finance_data",
     "trade_logs": "trade_logs",
     "backtest_results": "backtest_results",
     "derived_metrics": "derived_metrics",
     "options": "options_data",
     "analysis_results": "analysis_results",
+    "scraped_data": "scraped_data",
+    "google_trends": "google_trends_data",
+    "reddit_sentiment": "reddit_sentiment_data",  
+    "quiverquant": "quiverquant_data", 
 }
 
 # -------------------- CONTEXT MANAGER --------------------
@@ -39,7 +41,7 @@ def connect_to_db():
     """
     conn = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**POSTGRES)
         yield conn
     except Exception as e:
         print(f"❌ Database connection error: {e}")
@@ -143,15 +145,6 @@ def insert_historical_market_data(data):
         data (list): List of tuples [(symbol, datetime, open, high, low, close, volume), ...].
     """
     return insert_data(TABLES["historical"], data, ["symbol", "datetime", "open", "high", "low", "close", "volume"])
-
-def insert_alternative_data(data):
-    """
-    Insert alternative data into the database.
-
-    Args:
-        data (list): List of tuples [(source, symbol, datetime, metric, value, details), ...].
-    """
-    return insert_data(TABLES["alternative"], data, ["source", "symbol", "datetime", "metric", "value", "details"])
 
 def insert_yahoo_finance_data(data):
     """
@@ -368,6 +361,74 @@ def insert_symbols(data):
 
     return insert_data(table_name, data, columns)
 
+def insert_google_trends_data(data):
+    """
+    Insert Google Trends data into the `google_trends_data` table.
+
+    Args:
+        data (list of tuples): [(ticker, trend_date, trend_score), ...].
+    """
+    table_name = "google_trends_data"
+    columns = ["ticker", "trend_date", "trend_score"]
+    return insert_data(table_name, data, columns)
+
+def insert_reddit_sentiment_data(data):
+    """
+    Insert Reddit sentiment data into the `reddit_sentiment_data` table.
+
+    Args:
+        data (list of tuples): [(ticker, subreddit, sentiment_score, post_date), ...].
+    """
+    table_name = "reddit_sentiment_data"
+    columns = ["ticker", "subreddit", "sentiment_score", "post_date"]
+    return insert_data(table_name, data, columns)
+
+def insert_quiverquant_data(data):
+    """
+    Insert QuiverQuant data into the `quiverquant_data` table.
+
+    Args:
+        data (list of tuples): [(ticker, source, reported_date, metric_name, metric_value), ...].
+    """
+    table_name = "quiverquant_data"
+    columns = ["ticker", "source", "reported_date", "metric_name", "metric_value"]
+    return insert_data(table_name, data, columns)
+
+def insert_scraped_data(data):
+    """
+    Insert financial data into the scraped_data table.
+
+    Args:
+        data (list of tuples): List of tuples containing financial data. Each tuple should contain:
+            - source (str): Source of the data.
+            - symbol (str): Stock ticker symbol (optional).
+            - headline (str): Headline of the article or report.
+            - summary (str): Summary of the content (optional).
+            - sentiment (str): Sentiment label (e.g., 'positive', 'neutral', 'negative').
+            - publish_date (datetime): Publish date of the content.
+
+    Returns:
+        int: Number of rows successfully inserted.
+    """
+    table_name = "scraped_data"
+    columns = ["source", "symbol", "headline", "summary", "sentiment", "publish_date"]
+
+    # Ensure data is in the correct format
+    formatted_data = [
+        (
+            record.get("source"),
+            record.get("symbol"),
+            record.get("headline"),
+            record.get("summary"),
+            record.get("sentiment"),
+            record.get("publish_date"),
+        )
+        for record in data
+    ]
+
+    # Use the generic insert_data function
+    return insert_data(table_name, formatted_data, columns)
+
 # -------------------- FETCH METHODS --------------------
 
 def fetch_data(query, params=None):
@@ -389,6 +450,26 @@ def fetch_data(query, params=None):
         return results
     except Exception as e:
         print(f"❌ Error fetching data: {e}")
+        return pd.DataFrame()
+    
+def fetch_as_dataframe(query, params=None):
+    """
+    Fetch data from the database and return it as a Pandas DataFrame.
+    
+    Args:
+        query (str): SQL query to execute.
+        params (tuple): Parameters for the query.
+    
+    Returns:
+        pd.DataFrame: DataFrame containing query results.
+    """
+    engine = get_sqlalchemy_engine() 
+    try:
+        # Execute the query and fetch results as a DataFrame
+        df = pd.read_sql_query(query, con=engine, params=params)
+        return df
+    except Exception as e:
+        print(f"❌ Error fetching data as DataFrame: {e}")
         return pd.DataFrame()
 
 # -------------------- UTILITIES --------------------
@@ -416,24 +497,6 @@ def execute_query(query, params=None, fetch=False):
             print(f"❌ Query execution error: {e}")
             conn.rollback()
     return None
-
-def fetch_as_dataframe(query, params=None):
-    """
-    Fetch data from the database and return it as a Pandas DataFrame.
-    
-    Args:
-        query (str): SQL query to execute.
-        params (tuple): Parameters for the query.
-    
-    Returns:
-        pd.DataFrame: DataFrame containing query results.
-    """
-    with connect_to_db() as conn:
-        try:
-            return pd.read_sql_query(query, conn, params=params)
-        except Exception as e:
-            print(f"❌ Error fetching data as DataFrame: {e}")
-            return pd.DataFrame()
 
 def delete_duplicates(table_name, unique_columns):
     """

@@ -24,7 +24,7 @@ def populate_symbols_table():
     """
     Fetch symbols and populate the symbols table in the database.
     """
-    data = fetch_symbols()  # Assume fetch_symbols() fetches the data
+    data = fetch_symbols() 
     if not data:
         print("⚠️ No symbol data fetched.")
         return
