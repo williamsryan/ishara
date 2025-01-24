@@ -1,11 +1,14 @@
 import React from "react";
-import { List, ListItem, ListItemText, Divider, Button, Typography } from "@mui/material";
+import { List, ListItem, ListItemIcon, ListItemText, Divider } from "@mui/material";
+import { Home, ShowChart, AccountBalanceWallet, Settings } from "@mui/icons-material";
+import { Link } from "react-router-dom";
 
 const Sidebar = () => {
-    const watchlist = [
-        { name: "AAPL", change: "-0.38%" },
-        { name: "GOOG", change: "+0.81%" },
-        { name: "SPX", change: "+1.20%" },
+    const menuItems = [
+        { name: "Dashboard", icon: <Home />, route: "/" },
+        { name: "Charting", icon: <ShowChart />, route: "/charting" },
+        { name: "Portfolio", icon: <AccountBalanceWallet />, route: "/portfolio" },
+        { name: "Settings", icon: <Settings />, route: "/settings" },
     ];
 
     return (
@@ -17,23 +20,17 @@ const Sidebar = () => {
                 height: "100vh",
             }}
         >
-            <Typography variant="h6">My Watchlist</Typography>
             <List>
-                {watchlist.map((item, index) => (
+                {menuItems.map((item, index) => (
                     <React.Fragment key={item.name}>
-                        <ListItem>
-                            <ListItemText
-                                primary={`${item.name}`}
-                                secondary={`Change: ${item.change}`}
-                            />
+                        <ListItem button component={Link} to={item.route} style={{ padding: "10px 16px" }}>
+                            <ListItemIcon style={{ minWidth: "36px" }}>{item.icon}</ListItemIcon>
+                            <ListItemText primary={item.name} />
                         </ListItem>
-                        {index < watchlist.length - 1 && <Divider />}
+                        {index < menuItems.length - 1 && <Divider />}
                     </React.Fragment>
                 ))}
             </List>
-            <Button variant="contained" fullWidth>
-                Add Symbol
-            </Button>
         </div>
     );
 };
