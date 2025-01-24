@@ -1,5 +1,8 @@
 import React from "react";
-import { Grid2, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import GridLayout from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 const PortfolioPage = () => {
     const positions = [
@@ -8,50 +11,66 @@ const PortfolioPage = () => {
         { symbol: "TSLA", shares: 8, avgPrice: 700.0, currentPrice: 714.6 },
     ];
 
+    const layout = [
+        { i: "summary", x: 0, y: 0, w: 12, h: 4 }, // Summary: full width
+        { i: "positions", x: 0, y: 4, w: 12, h: 8 }, // Positions table: full width
+    ];
+
     return (
-        <Grid2 container spacing={2} style={{ padding: "16px" }}>
-            {/* Portfolio Summary */}
-            <Grid2 item xs={12}>
-                <Paper style={{ padding: "16px", height: "200px" }}>
-                    <Typography variant="h6">Portfolio Summary</Typography>
+        <GridLayout
+            className="layout"
+            layout={layout}
+            cols={12}
+            rowHeight={30}
+            width={1200}
+            isResizable
+            isDraggable
+            draggableHandle=".drag-handle"
+        >
+            {/* Portfolio Summary Tile */}
+            <div key="summary">
+                <Paper style={{ padding: "16px", height: "100%" }}>
+                    <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
+                        Portfolio Summary
+                    </Typography>
                     <p>Total Portfolio Value: $32,400</p>
                     <p>Today's Gain/Loss: +$180 (+0.56%)</p>
                 </Paper>
-            </Grid2>
+            </div>
 
-            {/* Open Positions */}
-            <Grid2 item xs={12}>
-                <TableContainer component={Paper}>
-                    <Typography variant="h6" style={{ padding: "16px" }}>
+            {/* Open Positions Tile */}
+            <div key="positions">
+                <Paper style={{ padding: "16px", height: "100%" }}>
+                    <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
                         Open Positions
                     </Typography>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Symbol</TableCell>
-                                <TableCell>Shares</TableCell>
-                                <TableCell>Avg Price</TableCell>
-                                <TableCell>Current Price</TableCell>
-                                <TableCell>Value</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {positions.map((position) => (
-                                <TableRow key={position.symbol}>
-                                    <TableCell>{position.symbol}</TableCell>
-                                    <TableCell>{position.shares}</TableCell>
-                                    <TableCell>${position.avgPrice.toFixed(2)}</TableCell>
-                                    <TableCell>${position.currentPrice.toFixed(2)}</TableCell>
-                                    <TableCell>
-                                        ${(position.shares * position.currentPrice).toFixed(2)}
-                                    </TableCell>
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell><strong>Symbol</strong></TableCell>
+                                    <TableCell align="right"><strong>Shares</strong></TableCell>
+                                    <TableCell align="right"><strong>Avg Price</strong></TableCell>
+                                    <TableCell align="right"><strong>Current Price</strong></TableCell>
+                                    <TableCell align="right"><strong>Value</strong></TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Grid2>
-        </Grid2>
+                            </TableHead>
+                            <TableBody>
+                                {positions.map((position) => (
+                                    <TableRow key={position.symbol}>
+                                        <TableCell>{position.symbol}</TableCell>
+                                        <TableCell align="right">{position.shares}</TableCell>
+                                        <TableCell align="right">${position.avgPrice.toFixed(2)}</TableCell>
+                                        <TableCell align="right">${position.currentPrice.toFixed(2)}</TableCell>
+                                        <TableCell align="right">${(position.shares * position.currentPrice).toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
+            </div>
+        </GridLayout>
     );
 };
 
