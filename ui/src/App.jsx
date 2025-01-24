@@ -1,31 +1,23 @@
 import React from "react";
-import { Layout } from "antd";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import BacktestingPage from "./pages/BacktestingPage";
-
-const { Content } = Layout;
+import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
 
 const App = () => {
   return (
     <Router>
-      <Layout style={{ minHeight: "100vh" }}>
-        {/* Sidebar Navigation */}
+      <div style={{ display: "flex" }}>
         <Sidebar />
-        <Layout>
-          {/* Header */}
+        <div style={{ flex: 1 }}>
           <Header />
-          {/* Content Area */}
-          <Content style={{ margin: "24px", background: "#fff", padding: "16px" }}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/backtesting" element={<BacktestingPage />} />
-            </Routes>
-          </Content>
-        </Layout>
-      </Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/backtesting" element={<BacktestingPage />} />
+          </Routes>
+        </div>
+      </div>
     </Router>
   );
 };

@@ -1,16 +1,10 @@
 import React from "react";
-import { Layout, Typography } from "antd";
-
-const { Header: AntHeader } = Layout;
-const { Title } = Typography;
 
 const Header = () => {
     return (
-        <AntHeader style={{ background: "#001529", padding: "0 16px" }}>
-            <Title level={3} style={{ color: "#fff", margin: 0 }}>
-                📊 Ishara Trading Dashboard
-            </Title>
-        </AntHeader>
+        <div style={{ backgroundColor: "#001529", color: "#fff", padding: "10px" }}>
+            <h1>Ishara: AI-Driven Financial Insights</h1>
+        </div>
     );
 };
 
