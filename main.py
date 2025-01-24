@@ -144,7 +144,7 @@ def main():
     backtest_parser.add_argument("-a", "--args", type=json.loads, default={}, help="Additional arguments for the strategy (JSON format)")
 
     # Subcommand: Launch UI
-    subparsers.add_parser("ui", help="Launch the Ishara dashboard UI.")
+    subparsers.add_parser("ui", help="[DEPRECATED] Launch the Ishara dashboard UI.")
 
     # Subcommand: Load Data
     load_parser = subparsers.add_parser("load", help="Specify input file to load ticker data (JSON)")
