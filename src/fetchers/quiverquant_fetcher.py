@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from src.utils.database import insert_alternative_data
+from src.utils.database import insert_quiverquant_data
 from src.utils.config import QUIVERQUANT_API_KEY
 
 def fetch_quiverquant_data(endpoint):
@@ -34,6 +34,6 @@ def process_congressional_trades():
 
 if __name__ == "__main__":
     data = process_congressional_trades()
-    insert_alternative_data(data.to_records(index=False))
+    insert_quiverquant_data(data.to_records(index=False))
     print("Congressional trades data inserted into database.")
     
