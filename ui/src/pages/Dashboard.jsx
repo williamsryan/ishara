@@ -1,6 +1,9 @@
 import React from "react";
-import { Grid2, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import Plot from "react-plotly.js";
+import GridLayout from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 const Dashboard = () => {
     const stockData = [
@@ -9,12 +12,29 @@ const Dashboard = () => {
         { symbol: "TSLA", price: 714.6, change: "+1.08%" },
     ];
 
+    // Layout definition for ReactGridLayout
+    const layout = [
+        { i: "watchlist", x: 0, y: 0, w: 4, h: 8 }, // Watchlist: 4 columns wide, 8 rows tall
+        { i: "chart", x: 4, y: 0, w: 8, h: 8 },     // Chart: 8 columns wide, 8 rows tall
+    ];
+
     return (
-        <Grid2 container spacing={2} style={{ padding: "16px" }}>
-            {/* Watchlist */}
-            <Grid2 item xs={4}>
-                <Paper style={{ padding: "16px", height: "400px" }}>
-                    <Typography variant="h6" style={{ marginBottom: "16px" }}>Watchlist</Typography>
+        <GridLayout
+            className="layout"
+            layout={layout}
+            cols={12} // Total columns
+            rowHeight={30} // Height of one grid row
+            width={1200} // Width of the grid in pixels
+            isResizable // Enable resizing
+            isDraggable // Enable dragging
+            draggableHandle=".drag-handle" // Only allow dragging by the handle
+        >
+            {/* Watchlist Tile */}
+            <div key="watchlist">
+                <Paper style={{ padding: "16px", height: "100%" }}>
+                    <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
+                        Watchlist
+                    </Typography>
                     <TableContainer>
                         <Table>
                             <TableHead>
@@ -38,36 +58,39 @@ const Dashboard = () => {
                         </Table>
                     </TableContainer>
                 </Paper>
-            </Grid2>
+            </div>
 
-            {/* Price Chart */}
-            <Grid2 item xs={8}>
-                <Paper style={{ padding: "16px", height: "400px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                    <Typography variant="h6" style={{ marginBottom: "16px" }}>
+            {/* Price Chart Tile */}
+            <div key="chart">
+                <Paper style={{ padding: "16px", height: "100%" }}>
+                    <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
                         Price Chart
                     </Typography>
-                    <Plot
-                        data={[
-                            {
-                                x: ["2025-01-01", "2025-01-02", "2025-01-03"],
-                                y: [222.5, 223.0, 224.0],
-                                type: "scatter",
-                                mode: "lines+markers",
-                                line: { color: "#3b82f6", width: 2 },
-                            },
-                        ]}
-                        layout={{
-                            title: "AAPL Stock Price",
-                            xaxis: { title: "Date" },
-                            yaxis: { title: "Price (USD)" },
-                            margin: { t: 30, r: 30, l: 30, b: 30 },
-                            responsive: true,
-                        }}
-                        style={{ width: "100%", height: "100%" }}
-                    />
+                    <div style={{ height: "calc(100% - 50px)" }}>
+                        <Plot
+                            data={[
+                                {
+                                    x: ["2025-01-01", "2025-01-02", "2025-01-03"],
+                                    y: [222.5, 223.0, 224.0],
+                                    type: "scatter",
+                                    mode: "lines+markers",
+                                    line: { color: "#3b82f6", width: 2 },
+                                },
+                            ]}
+                            layout={{
+                                title: "",
+                                xaxis: { title: "Date" },
+                                yaxis: { title: "Price (USD)" },
+                                margin: { t: 30, r: 30, l: 50, b: 50 },
+                                responsive: true,
+                            }}
+                            style={{ width: "100%", height: "100%" }}
+                            useResizeHandler={true}
+                        />
+                    </div>
                 </Paper>
-            </Grid2>
-        </Grid2>
+            </div>
+        </GridLayout>
     );
 };
 
