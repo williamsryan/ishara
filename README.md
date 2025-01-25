@@ -1,4 +1,4 @@
-# Ishara: Algorithmic Trading Platform
+# الإشارة: Algorithmic Trading Platform
 
 Ishara (الإشارة) is a modular algorithmic trading platform designed for:
 1. Fetching and integrating alternative data (QuiverQuant, Alpaca, etc.).
