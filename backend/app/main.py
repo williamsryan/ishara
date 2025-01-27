@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from app.routes import stocks, portfolio, charts, data_streams
 from app.database import init_db
 from app.config import settings
+from app.services.streaming_service import start_streaming
 import logging
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -15,21 +17,42 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Streaming task handle
+streaming_task = None
+
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     """
     Tasks to perform when the application starts.
     """
+    global streaming_task
     logger.info("🚀 Starting Ishara Backend...")
-    logger.info(f"🚀 Connecting to database: {settings.DATABASE_URL}")
+    logger.info("🚀 Connecting to database...")
     init_db()  # Initialize the database
 
+    # Start the streaming service as an asyncio task
+    logger.info("🚀 Starting streaming service...")
+    symbols = ["AAPL", "MSFT", "GOOGL"]  # Define symbols to stream
+    streaming_task = asyncio.create_task(start_streaming(symbols))
+    logger.info("🚀 Streaming service started.")
+
 @app.on_event("shutdown")
-def on_shutdown():
+async def on_shutdown():
     """
     Tasks to perform when the application shuts down.
     """
+    global streaming_task
     logger.info("🛑 Shutting down Ishara Backend...")
+
+    # Stop the streaming task gracefully
+    if streaming_task:
+        logger.info("🛑 Stopping streaming service...")
+        streaming_task.cancel()
+        try:
+            await streaming_task
+            logger.info("🛑 Streaming service stopped.")
+        except asyncio.CancelledError:
+            logger.info("🛑 Streaming service canceled.")
 
 # Include API routes
 app.include_router(data_streams.router, prefix="/api/stream", tags=["Data Streams"])
