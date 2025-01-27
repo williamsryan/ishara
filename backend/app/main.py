@@ -31,10 +31,10 @@ async def on_startup():
     init_db()  # Initialize the database
 
     # Start the streaming service as an asyncio task
-    logger.info("🚀 Starting streaming service...")
-    symbols = ["AAPL", "MSFT", "GOOGL"]  # Define symbols to stream
-    streaming_task = asyncio.create_task(start_streaming(symbols))
-    logger.info("🚀 Streaming service started.")
+    # logger.info("🚀 Starting streaming service...")
+    # symbols = ["AAPL", "MSFT", "GOOGL"]  # Define symbols to stream
+    # streaming_task = asyncio.create_task(start_streaming(symbols))
+    # logger.info("🚀 Streaming service started.")
 
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -56,6 +56,6 @@ async def on_shutdown():
 
 # Include API routes
 app.include_router(data_streams.router, prefix="/api/stream", tags=["Data Streams"])
-app.include_router(stocks.router, prefix="/api/stocks", tags=["Stocks"])
+app.include_router(stocks.router, prefix="/api", tags=["Stocks"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["Portfolio"])
 app.include_router(charts.router, prefix="/api/charts", tags=["Charts"])
