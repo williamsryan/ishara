@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import List
 
 # Stock schemas
 class StockBase(BaseModel):
@@ -34,3 +35,5 @@ class Portfolio(PortfolioBase):
     class Config:
         from_attributes = True
         
+class SymbolsRequest(BaseModel):
+    symbols: List[str]
