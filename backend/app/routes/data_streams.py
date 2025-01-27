@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.yahoo_service import YahooFinanceService
@@ -8,41 +8,56 @@ from app.schemas import Stock
 
 router = APIRouter()
 
-@router.get("/yahoo/{symbol}")
+@router.post("/yahoo/{symbol}")
 def fetch_yahoo_data(symbol: str, db: Session = Depends(get_db)):
-    """
-    Fetch stock data for a symbol from Yahoo Finance.
-    """
     yahoo_service = YahooFinanceService()
-    data = yahoo_service.fetch_stock_data(symbol)
-
-    # Save data to the database
-    for record in data:
-        db_record = StockPrice(
-            symbol=symbol,
-            price=record["Close"],
-            timestamp=record["Datetime"]
-        )
-        db.add(db_record)
-    db.commit()
-
-    return {"message": f"Stock data for {symbol} fetched successfully", "data": data}
+    try:
+        data = yahoo_service.fetch_stock_data(symbol)
+        # Save to database or return data
+        return {"message": f"Yahoo Finance data fetched for {symbol}", "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching data for {symbol}: {str(e)}")
 
 @router.get("/alpaca/account")
-def get_alpaca_account():
+def get_account_info():
     """
-    Fetch account information from Alpaca.
+    Fetch Alpaca account details.
     """
-    alpaca_service = AlpacaService()
-    account_info = alpaca_service.get_account_info()
-    return account_info
+    try:
+        alpaca_service = AlpacaService()
+        account_info = alpaca_service.get_account_info()
+        return {"account_info": account_info}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch account info: {str(e)}")
 
 @router.post("/alpaca/order")
-def place_alpaca_order(symbol: str, qty: float, side: str):
+def place_order(symbol: str, qty: int, side: str):
     """
-    Place a trade order via Alpaca.
+    Place an order via Alpaca.
+    Args:
+        symbol (str): Stock symbol.
+        qty (int): Quantity of shares.
+        side (str): 'buy' or 'sell'.
+
+    Returns:
+        Order confirmation details.
     """
-    alpaca_service = AlpacaService()
-    order = alpaca_service.place_order(symbol, qty, side)
-    return order
-    
+    try:
+        alpaca_service = AlpacaService()
+        order = alpaca_service.place_order(symbol, qty, side)
+        return {"message": "Order placed successfully", "order": order}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
+
+@router.get("/alpaca/historical/{symbol}")
+def get_historical_data(symbol: str, days: int = 1):
+    """
+    Fetch historical data for a symbol from Alpaca.
+    """
+    try:
+        alpaca_service = AlpacaService()
+        data = alpaca_service.get_historical_data(symbol, days)
+        return {"symbol": symbol, "data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch historical data: {str(e)}")
+        

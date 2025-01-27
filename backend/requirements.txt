@@ -3,7 +3,7 @@ psycopg2-binary
 sqlalchemy
 
 # # Yahoo Finance Fetcher
-# yfinance
+yfinance
 # yahoo_fin
 
 # # Google Trends Fetcher
@@ -25,7 +25,7 @@ requests
 
 # # Etc.
 # alpaca-trade-api # Alpaca API - DEPRECATED
-# alpaca-py
+alpaca-py
 # quiverquant
 # # dash
 pandas
@@ -53,7 +53,8 @@ networkx
 
 # confluent-kafka
 # elasticsearch
-pydantic 
+pydantic
+pydantic-settings
 
 # crawl4ai
 transformers

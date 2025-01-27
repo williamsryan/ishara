@@ -1,13 +1,4 @@
 services:
-  api:
-      build: .
-      volumes:
-        - ./app:/app
-      ports:
-        - "1337:1337"
-      depends_on:
-        - postgres
-
   # PostgreSQL Service
   postgres:
     image: postgres:14
@@ -15,7 +6,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Homertime3890!
-      POSTGRES_DB: ishara
+      POSTGRES_DB: ishara_db
     ports:
       - "5432:5432"
     volumes:
@@ -79,6 +70,20 @@ services:
   #   depends_on:
   #     - postgres
   #     - elasticsearch
+
+  # API Service
+  api:
+    build:
+      context: ./backend  
+    volumes:
+      - ./backend:/app    # Mount backend code for live changes
+    ports:
+      - "1337:1337"       # Expose FastAPI on port 1337
+    depends_on:
+      - postgres          # Wait for PostgreSQL to start
+    environment:
+      DATABASE_URL: postgresql://postgres:Homertime3890!@postgres:5432/ishara_db
+      # Add other environment variables if needed (e.g., API keys)
 
 volumes:
   postgres_data:

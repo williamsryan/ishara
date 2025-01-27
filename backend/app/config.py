@@ -1,8 +1,12 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Database
-    DATABASE_URL: str = "postgresql://user:password@db:5432/ishara_db"
+    # Database Configuration
+    DATABASE_URL: str  # Ensure this field is explicitly defined
+
+    # Optional: Other environment variables for your app
+    DEBUG: bool = False
+    APP_NAME: str = "Ishara Backend"
     
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"

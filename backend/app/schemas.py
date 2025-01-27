@@ -17,7 +17,7 @@ class Stock(StockBase):
     timestamp: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Portfolio schemas
 class PortfolioBase(BaseModel):
@@ -32,5 +32,5 @@ class Portfolio(PortfolioBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         
