@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -8,11 +9,18 @@ from app.schemas import Stock
 
 router = APIRouter()
 
+# Define the request schema using Pydantic
+class HistoricalDataRequest(BaseModel):
+    symbols: list[str]      # List of stock symbols
+    start_date: str         # Start date in YYYY-MM-DD format
+    end_date: str           # End date in YYYY-MM-DD format
+    timeframe: str = "1Day" # Timeframe, default is "1Day"
+
 @router.post("/yahoo/{symbol}")
 def fetch_yahoo_data(symbol: str, db: Session = Depends(get_db)):
     yahoo_service = YahooFinanceService()
     try:
-        data = yahoo_service.fetch_stock_data(symbol)
+        data = yahoo_service.fetch_yahoo_finance_data(symbol)
         # Save to database or return data
         return {"message": f"Yahoo Finance data fetched for {symbol}", "data": data}
     except Exception as e:
@@ -49,15 +57,25 @@ def place_order(symbol: str, qty: int, side: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to place order: {str(e)}")
 
-@router.get("/alpaca/historical/{symbol}")
-def get_historical_data(symbol: str, days: int = 1):
+@router.post("/alpaca/historical")
+def fetch_and_store_historical_data(
+    request: HistoricalDataRequest,  # Automatically validate request body
+    db: Session = Depends(get_db)
+):
     """
-    Fetch historical data for a symbol from Alpaca.
+    Fetch historical data from Alpaca for multiple symbols and store it in the database.
     """
+    alpaca_service = AlpacaService()
     try:
-        alpaca_service = AlpacaService()
-        data = alpaca_service.get_historical_data(symbol, days)
-        return {"symbol": symbol, "data": data}
+        # Call AlpacaService to fetch and store data
+        record_count = alpaca_service.insert_historical_data(
+            symbols=request.symbols,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            timeframe=request.timeframe,
+            db=db
+        )
+        return {"message": f"Historical data for {len(request.symbols)} symbols inserted successfully.", "count": record_count}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch historical data: {str(e)}")
-        
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
