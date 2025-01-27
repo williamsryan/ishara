@@ -10,4 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "1337"]
+# Set PYTHONPATH to ensure the app module is discoverable
+ENV PYTHONPATH=/app
+
+# Command to run FastAPI with uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "1337", "--reload"]
