@@ -5,10 +5,6 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.alpaca_service import AlpacaService
 
-# Define the Pydantic model
-class SymbolsRequest(BaseModel):
-    symbols: List[str]  # List of stock symbols
-
 router = APIRouter()
 
 @router.post("/stocks")
