@@ -65,37 +65,4 @@ class AlpacaService:
         except Exception as e:
             self.logger.error(f"Error fetching stock data: {e}")
             raise
-
-    async def stock_data_stream_handler(self, data):
-        """
-        Handle real-time streaming data and save to the database.
-        """
-        try:
-            record = StockPrice(
-                symbol=data.symbol,
-                price=data.bid_price or data.ask_price,
-                open=data.bid_price,  # Placeholder for real data
-                high=data.ask_price,  # Placeholder for real data
-                low=data.bid_price,   # Placeholder for real data
-                close=data.ask_price, # Placeholder for real data
-                volume=data.bid_size, # Placeholder for real data
-                timestamp=data.timestamp
-            )
-            self.db.add(record)
-            self.db.commit()
-            self.logger.info(f"Inserted real-time data for {data.symbol} into the database.")
-
-            print(f"""
-                ---- Trade Data ----
-                Symbol: {data.symbol}
-                Timestamp: {data.timestamp}
-                Bid: {data.bid_price} (Size: {data.bid_size}, Exchange: {data.bid_exchange})
-                Ask: {data.ask_price} (Size: {data.ask_size}, Exchange: {data.ask_exchange})
-                Conditions: {data.conditions}
-                Tape: {data.tape}
-                --------------------
-                """)
-
-        except Exception as e:
-            self.logger.error(f"Error processing streaming data: {e}")
         
