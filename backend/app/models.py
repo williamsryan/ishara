@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from app.database import Base
 
 class Stock(Base):
@@ -17,3 +17,18 @@ class Portfolio(Base):
     shares = Column(Float)
     avg_price = Column(Float)
     
+class StockPrice(Base):
+    __tablename__ = "stock_prices"
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True)
+    price = Column(Float)
+    timestamp = Column(DateTime)
+
+class Trade(Base):
+    __tablename__ = "trades"
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True)
+    action = Column(String)  # 'BUY' or 'SELL'
+    quantity = Column(Float)
+    price = Column(Float)
+    timestamp = Column(DateTime)

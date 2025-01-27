@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 # Stock schemas
 class StockBase(BaseModel):
@@ -11,6 +12,9 @@ class StockCreate(StockBase):
 
 class Stock(StockBase):
     id: int
+    symbol: str
+    price: float
+    timestamp: datetime
 
     class Config:
         orm_mode = True
