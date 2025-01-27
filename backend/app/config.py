@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Database Configuration
     DATABASE_URL: str  # Ensure this field is explicitly defined
+    ALPACA_WS_URL: str
 
     # Optional: Other environment variables for your app
     DEBUG: bool = False
