@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.alpaca_service import AlpacaService
+from app.services.yahoo_service import YahooFinanceService
 from app.schemas import SymbolsRequest
 
 router = APIRouter()
@@ -35,3 +36,22 @@ def fetch_options_data(
         return {"message": "Options data fetched and saved successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/historical")
+def fetch_historical(
+    symbols: list[str],
+    start_date: str,
+    end_date: str,
+    db: Session = Depends(get_db),
+):
+    yahoo_service = YahooFinanceService(db)
+    yahoo_service.fetch_historical_data(symbols, start_date, end_date)
+    return {"message": "Historical data fetched and saved successfully."}
+
+
+@router.post("/real-time")
+def fetch_real_time(symbols: list[str], db: Session = Depends(get_db)):
+    yahoo_service = YahooFinanceService(db)
+    yahoo_service.fetch_real_time_data(symbols)
+    return {"message": "Real-time data fetched and saved successfully."}
+    

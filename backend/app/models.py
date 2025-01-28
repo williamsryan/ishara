@@ -19,6 +19,30 @@ class Stock(Base):
     # Relationships
     prices = relationship("StockPrice", back_populates="stock")
 
+class Option(Base):
+    __tablename__ = "options"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True, nullable=False)  # Stock symbol (e.g., AAPL)
+    strike_price = Column(Float, nullable=False)         # Strike price of the option
+    expiration_date = Column(DateTime, nullable=False)   # Expiration date of the option
+    option_type = Column(String, nullable=False)         # Option type: 'call' or 'put'
+    last_price = Column(Float)                           # Last traded price
+    bid_price = Column(Float)                            # Bid price
+    ask_price = Column(Float)                            # Ask price
+    volume = Column(Integer)                             # Trading volume
+    open_interest = Column(Integer)                      # Open interest
+    implied_volatility = Column(Float)                   # Implied volatility
+    timestamp = Column(DateTime)                         # Timestamp of the data
+
+    def __repr__(self):
+        return (f"<Option(symbol={self.symbol}, strike_price={self.strike_price}, "
+                f"expiration_date={self.expiration_date}, option_type={self.option_type}, "
+                f"last_price={self.last_price}, bid_price={self.bid_price}, "
+                f"ask_price={self.ask_price}, volume={self.volume}, "
+                f"open_interest={self.open_interest}, "
+                f"implied_volatility={self.implied_volatility}, timestamp={self.timestamp})>")
+
 class StockPrice(Base):
     __tablename__ = "stock_prices"
 
@@ -57,21 +81,6 @@ class Trade(Base):
     total_cost = Column(Float, nullable=True)  # Total cost of the trade
     timestamp = Column(DateTime)  # Time of the trade
 
-class OptionData(Base):
-    __tablename__ = "option_data"
-
-    id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, index=True)  # Underlying stock symbol
-    expiration_date = Column(DateTime, index=True)  # Expiration date
-    option_type = Column(String)  # 'CALL' or 'PUT'
-    strike_price = Column(Float)
-    last_price = Column(Float, nullable=True)  # Last traded price
-    bid = Column(Float, nullable=True)  # Bid price
-    ask = Column(Float, nullable=True)  # Ask price
-    volume = Column(Integer, nullable=True)  # Option volume
-    open_interest = Column(Integer, nullable=True)  # Open interest
-    implied_volatility = Column(Float, nullable=True)  # Implied volatility percentage
-
 class Earnings(Base):
     __tablename__ = "earnings"
 
@@ -92,3 +101,23 @@ class KeyMetrics(Base):
     metric_name = Column(String, nullable=False)  # Name of the metric (e.g., P/E ratio, Debt/Equity)
     value = Column(Float, nullable=True)  # Metric value
     timestamp = Column(DateTime)  # Time when the metric was recorded
+
+class HistoricalPrice(Base):
+    __tablename__ = "historical_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True)
+    date = Column(DateTime)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    volume = Column(Integer)
+
+class RealTimePrice(Base):
+    __tablename__ = "real_time_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True)
+    price = Column(Float)
+    timestamp = Column(DateTime)

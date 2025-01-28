@@ -1,7 +1,15 @@
 import yfinance as yf
+import logging
 from datetime import datetime
+from sqlalchemy.orm import Session
+from app.models import HistoricalPrice, RealTimePrice
+
+logger = logging.getLogger("YahooFinanceService")
 
 class YahooFinanceService:
+    def __init__(self, db: Session):
+        self.db = db
+
     @staticmethod
     def convert_unix_to_datetime(unix_timestamp):
         """
@@ -26,6 +34,28 @@ class YahooFinanceService:
             return target_type(value)
         except (ValueError, TypeError):
             return default
+
+    def fetch_real_time_data(self, symbols):
+        """
+        Fetch real-time stock data and save to the database.
+        """
+        try:
+            for symbol in symbols:
+                logger.info(f"Fetching real-time data for {symbol}...")
+                ticker = yf.Ticker(symbol)
+                quote = ticker.info
+
+                record = RealTimePrice(
+                    symbol=symbol,
+                    price=quote.get("regularMarketPrice"),
+                    timestamp=datetime.utcnow(),
+                )
+                self.db.add(record)
+            self.db.commit()
+            logger.info("Real-time data fetched and saved successfully.")
+        except Exception as e:
+            logger.error(f"Error fetching real-time data: {e}")
+            raise
 
     def fetch_yahoo_finance_data(self, symbols):
         """
