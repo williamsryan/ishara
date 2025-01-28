@@ -27,7 +27,7 @@ DEFAULT_TICKERS = [
 ]
 DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
 
-@app.on_event("startup")
+@app.lifespan("startup")
 async def on_startup():
     """
     Tasks to perform when the application starts.
@@ -42,7 +42,7 @@ async def on_startup():
     streaming_task = asyncio.create_task(start_streaming(DEFAULT_TICKERS))
     logger.info("🚀 Streaming service started.")
 
-@app.on_event("shutdown")
+@app.lifespan("shutdown")
 async def on_shutdown():
     """
     Tasks to perform when the application shuts down.

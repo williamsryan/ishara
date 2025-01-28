@@ -2,11 +2,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database Configuration
-    DATABASE_URL: str  # Ensure this field is explicitly defined
+    DATABASE_URL: str 
     ALPACA_WS_URL: str
 
-    # Optional: Other environment variables for your app
-    DEBUG: bool = False
+    DEBUG: bool = True
     APP_NAME: str = "Ishara Backend"
     
     # Redis
@@ -24,7 +23,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     class Config:
-        env_file = ".env"  # Specify where to load environment variables from
+        env_file = ".env"
 
 # Instantiate the settings object
 settings = Settings()

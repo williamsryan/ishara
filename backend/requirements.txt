@@ -6,8 +6,8 @@ sqlalchemy
 yfinance
 # yahoo_fin
 
-# # Google Trends Fetcher
-# pytrends
+# Google Trends Fetcher
+pytrends
 
 # # Reddit Sentiment Fetcher
 requests
@@ -43,13 +43,7 @@ networkx
 # # dash_ace
 # # dash-deck
 
-# # User sessions and all that
-# Flask-Session
-# Flask-Redis
-# flask-bcrypt
-# python-dotenv
-# flask_httpauth
-# flask-login
+python-dotenv
 
 # confluent-kafka
 # elasticsearch
