@@ -1,10 +1,78 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.database import get_db
 from app.models import StockPrice
+from app.services.yahoo_service import fetch_historical_data as fetch_yahoo_data
+from app.services.alpaca_service import fetch_historical_data as fetch_alpaca_data
 
 router = APIRouter()
+
+@router.get("/historical")
+def fetch_and_store_historical_data(
+    symbols: str = Query(..., description="Comma-separated list of ticker symbols (e.g., 'AAPL,MSFT')"),
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch historical data for given symbols and date range. Pull missing data from external APIs if needed.
+
+    Args:
+        symbols (str): Comma-separated list of stock symbols.
+        start_date (str): Start date in YYYY-MM-DD format.
+        end_date (str): End date in YYYY-MM-DD format.
+
+    Returns:
+        dict: A dictionary containing dates and prices for each symbol.
+    """
+    try:
+        # Parse the input symbols and date range
+        symbol_list = symbols.split(",")
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+
+        # Query the database for existing data
+        db_data = (
+            db.query(StockPrice)
+            .filter(StockPrice.symbol.in_(symbol_list))
+            .filter(StockPrice.timestamp >= start, StockPrice.timestamp <= end)
+            .all()
+        )
+
+        # Organize existing data by symbol
+        existing_data = {symbol: [] for symbol in symbol_list}
+        for record in db_data:
+            existing_data[record.symbol].append(record)
+
+        # Determine which symbols/dates need to be fetched
+        missing_symbols = [symbol for symbol in symbol_list if not existing_data[symbol]]
+        fetched_data = []
+
+        if missing_symbols:
+            # Fetch data from external APIs
+            yahoo_data = fetch_yahoo_data(missing_symbols, start_date, end_date)
+            alpaca_data = fetch_alpaca_data(missing_symbols, start_date, end_date)
+
+            # Combine data from both sources
+            fetched_data = yahoo_data + alpaca_data
+
+            # Save fetched data to the database
+            db.bulk_save_objects(fetched_data)
+            db.commit()
+
+        # Combine database and fetched data into a response
+        all_data = db_data + fetched_data
+        response = {}
+        for record in all_data:
+            if record.symbol not in response:
+                response[record.symbol] = {"timestamps": [], "prices": []}
+            response[record.symbol]["timestamps"].append(record.timestamp.strftime("%Y-%m-%d"))
+            response[record.symbol]["prices"].append(record.price)
+
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching historical data: {str(e)}")
 
 @router.get("/{symbol}")
 def get_chart_data(symbol: str, db: Session = Depends(get_db)):
