@@ -12,13 +12,13 @@ class StockBase(BaseModel):
     low: Optional[float] = None  # Lowest price of the day
     close: Optional[float] = None  # Closing price
     volume: Optional[int] = None  # Trading volume
+    timestamp: datetime
 
 class StockCreate(StockBase):
     pass
 
 class Stock(StockBase):
     id: int
-    timestamp: datetime
 
     class Config:
         from_attributes = True

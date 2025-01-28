@@ -1,17 +1,17 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Stock
-from app.schemas import Stock, StockCreate
+from app.models import Stock  # SQLAlchemy model
+from app.schemas import Stock as StockSchema  # Pydantic schema
 
 router = APIRouter()
 
-@router.get("/stocks", response_model=list[Stock])
+@router.get("/stocks", response_model=list[StockSchema])
 def read_stocks(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     stocks = db.query(Stock).offset(skip).limit(limit).all()
     return stocks
 
-@router.get("/stocks/{stock_id}", response_model=Stock)
+@router.get("/stocks/{stock_id}", response_model=StockSchema)
 def read_stock(stock_id: int, db: Session = Depends(get_db)):
     stock = db.query(Stock).filter(Stock.id == stock_id).first()
     if stock is None:

@@ -1,68 +1,60 @@
-import logging
-import asyncio
-from alpaca.data.live import StockDataStream
-from alpaca.trading.client import TradingClient
-from alpaca.trading.stream import TradingStream
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
-from datetime import datetime
-from app.config import settings
-from app.models import StockPrice
+from alpaca.data.live import StockDataStream
+from datetime import datetime, timedelta
+import logging
 from sqlalchemy.orm import Session
-import pandas as pd
+from app.models import HistoricalPrice
+
+logger = logging.getLogger("AlpacaService")
 
 class AlpacaService:
-    def __init__(self, db: Session):
-        self.trading_client = TradingClient(
-            api_key=settings.ALPACA_API_KEY,
-            secret_key=settings.ALPACA_SECRET_KEY,
-            paper=True
-        )
+    def __init__(self, db: Session, api_key: str, secret_key: str):
         self.data_client = StockHistoricalDataClient(
-            api_key=settings.ALPACA_API_KEY,
-            secret_key=settings.ALPACA_SECRET_KEY
-        )
-        self.stock_stream_client = StockDataStream(
-            api_key=settings.ALPACA_API_KEY,
-            secret_key=settings.ALPACA_SECRET_KEY,
-            url_override=None
+            api_key=api_key,
+            secret_key=secret_key,
         )
         self.logger = logging.getLogger("AlpacaService")
         self.db = db
 
-    def fetch_stock_data(self, symbols, start_date, end_date, timeframe="1Day"):
+    def fetch_historical_data(self, symbols, start_date, end_date, timeframe="1Day"):
         """
-        Fetch historical stock data from Alpaca and save to the database.
+        Fetch and save historical stock data from Alpaca.
         """
         try:
-            self.logger.info(f"Fetching stock data for symbols: {symbols}")
-            timeframe_obj = TimeFrame.Day if timeframe == "1Day" else TimeFrame.Minute
-            stock_request = StockBarsRequest(
+            request_params = StockBarsRequest(
                 symbol_or_symbols=symbols,
-                timeframe=timeframe_obj,
-                start=datetime.fromisoformat(start_date),
-                end=datetime.fromisoformat(end_date),
+                start=start_date,
+                end=end_date,
+                timeframe=timeframe,
             )
-            bars = self.data_client.get_stock_bars(stock_request).df
-            bars["timestamp"] = pd.to_datetime(bars.index)
-            records = [
-                StockPrice(
-                    symbol=row["symbol"],
-                    price=row["close"],
+            bars = self.historical_client.get_stock_bars(request_params).df
+
+            for (symbol, date), row in bars.iterrows():
+                # Avoid duplicate entries
+                exists = self.db.query(HistoricalPrice).filter(
+                    HistoricalPrice.symbol == symbol,
+                    HistoricalPrice.date == date.to_pydatetime()
+                ).first()
+                if exists:
+                    logger.info(f"Skipping existing entry for {symbol} on {date}.")
+                    continue
+
+                # Insert new record
+                record = HistoricalPrice(
+                    symbol=symbol,
+                    date=date.to_pydatetime(),
                     open=row["open"],
                     high=row["high"],
                     low=row["low"],
                     close=row["close"],
                     volume=row["volume"],
-                    timestamp=row["timestamp"],
                 )
-                for _, row in bars.iterrows()
-            ]
-            self.db.add_all(records)
+                self.db.add(record)
+
             self.db.commit()
-            self.logger.info(f"Inserted {len(records)} stock price records into the database.")
+            logger.info("Historical data fetched and saved successfully.")
         except Exception as e:
-            self.logger.error(f"Error fetching stock data: {e}")
+            logger.error(f"Error fetching historical data: {e}")
             raise
         

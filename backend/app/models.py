@@ -106,18 +106,20 @@ class HistoricalPrice(Base):
     __tablename__ = "historical_prices"
 
     id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, index=True)
-    date = Column(DateTime)
-    open = Column(Float)
-    high = Column(Float)
-    low = Column(Float)
-    close = Column(Float)
-    volume = Column(Integer)
+    symbol = Column(String, nullable=False)
+    date = Column(DateTime, nullable=False)
+    open = Column(Float, nullable=True)
+    high = Column(Float, nullable=True)
+    low = Column(Float, nullable=True)
+    close = Column(Float, nullable=True)
+    volume = Column(Integer, nullable=True)
+    dividend = Column(Float, nullable=True) 
+    split = Column(Float, nullable=True) 
 
 class RealTimePrice(Base):
     __tablename__ = "real_time_prices"
 
     id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, index=True)
-    price = Column(Float)
-    timestamp = Column(DateTime)
+    symbol = Column(String, index=True, nullable=False)
+    price = Column(Float, nullable=True)
+    timestamp = Column(DateTime, nullable=False)
