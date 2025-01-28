@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import stocks, portfolio, charts, data_streams
+from app.routes import stocks, options, portfolio, charts, data_streams
 from app.database import init_db
 from app.config import settings
 from app.services.streaming_service import start_streaming
@@ -57,5 +57,6 @@ async def on_shutdown():
 # Include API routes
 app.include_router(data_streams.router, prefix="/api/stream", tags=["Data Streams"])
 app.include_router(stocks.router, prefix="/api", tags=["Stocks"])
+app.include_router(options.router, prefix="/api", tags=["Options"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["Portfolio"])
 app.include_router(charts.router, prefix="/api/charts", tags=["Charts"])
