@@ -4,7 +4,7 @@ import GridLayout from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const PortfolioPage = () => {
+const Portfolio = () => {
     const positions = [
         { symbol: "AAPL", shares: 10, avgPrice: 140.5, currentPrice: 145.2 },
         { symbol: "GOOG", shares: 5, avgPrice: 2800.0, currentPrice: 2843.5 },
@@ -74,4 +74,4 @@ const PortfolioPage = () => {
     );
 };
 
-export default PortfolioPage;
+export default Portfolio;
