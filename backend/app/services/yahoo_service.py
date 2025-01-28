@@ -84,7 +84,7 @@ class YahooFinanceService:
                         for _, row in data.iterrows():
                             options_data_to_insert.append(Option(
                                 symbol=symbol,
-                                strike_price=self.safe_convert(row.get("strike"), float),         # Match strike_price in model
+                                strike_price=self.safe_convert(row.get("strike"), float),        # Match strike_price in model
                                 expiration_date=datetime.strptime(expiration_date, "%Y-%m-%d"),  # Convert expiration_date to datetime
                                 option_type=option_type,                                         # 'call' or 'put'
                                 last_price=self.safe_convert(row.get("lastPrice"), float),       # Match last_price in model
