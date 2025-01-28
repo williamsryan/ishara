@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:8000/api";
+const BASE_URL = "http://localhost:1337/api";
 
 // Axios instance
 const api = axios.create({
@@ -11,6 +11,12 @@ const api = axios.create({
 // Fetch stock data
 export const fetchStockData = async () => {
     const response = await api.get("/stocks");
+    return response.data;
+};
+
+// Fetch options data
+export const fetchOptions = async () => {
+    const response = await api.get("/options");
     return response.data;
 };
 
