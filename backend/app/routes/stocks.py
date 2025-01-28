@@ -17,16 +17,3 @@ def read_stock(stock_id: int, db: Session = Depends(get_db)):
     if stock is None:
         raise HTTPException(status_code=404, detail="Stock not found")
     return stock
-
-@router.get("/options", response_model=list[Option])
-def read_options(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    options = db.query(Option).offset(skip).limit(limit).all()
-    return options
-
-@router.get("/options/{option_id}", response_model=Option)
-def read_option(option_id: int, db: Session = Depends(get_db)):
-    option = db.query(Option).filter(Option.id == option_id).first()
-    if option is None:
-        raise HTTPException(status_code=404, detail="Option not found")
-    return option
-    
