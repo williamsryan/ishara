@@ -27,8 +27,8 @@ export const fetchPortfolioData = async () => {
 };
 
 // Fetch chart data
-export const fetchChartData = async (symbol) => {
-    const response = await api.get(`/charts/${symbol}`);
+export const fetchChartData = async () => {
+    const response = await api.get(`/charts`);
     return response.data;
 };
 
