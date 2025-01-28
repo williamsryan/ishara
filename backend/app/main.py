@@ -20,6 +20,13 @@ app = FastAPI(
 # Streaming task handle
 streaming_task = None
 
+# Default tickers and subreddits
+DEFAULT_TICKERS = [
+    "PG", "ACHR", "LUNR", "RKLB", "SNOW",
+    "RGTI", "QBTS", "QUBT", "MSTR", "PLTR", "PL", "KULR", "SPY", "QQQ"
+]
+DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
+
 @app.on_event("startup")
 async def on_startup():
     """
@@ -31,10 +38,9 @@ async def on_startup():
     init_db()  # Initialize the database
 
     # Start the streaming service as an asyncio task
-    # logger.info("🚀 Starting streaming service...")
-    # symbols = ["AAPL", "MSFT", "GOOGL"]  # Define symbols to stream
-    # streaming_task = asyncio.create_task(start_streaming(symbols))
-    # logger.info("🚀 Streaming service started.")
+    logger.info("🚀 Starting streaming service...")
+    streaming_task = asyncio.create_task(start_streaming(DEFAULT_TICKERS))
+    logger.info("🚀 Streaming service started.")
 
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -55,7 +61,7 @@ async def on_shutdown():
             logger.info("🛑 Streaming service canceled.")
 
 # Include API routes
-app.include_router(data_streams.router, prefix="/api/streams", tags=["Streams"])
+# app.include_router(data_streams.router, prefix="/api/streams", tags=["Streams"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["Tasks"])
 app.include_router(stocks.router, prefix="/api", tags=["Stocks"])
 app.include_router(options.router, prefix="/api", tags=["Options"])
