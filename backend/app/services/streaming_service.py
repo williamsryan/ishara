@@ -5,11 +5,11 @@ from alpaca.data.live import StockDataStream
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from app.models import StockPrice
+from app.models import StockPrice, Trade
 from app.config import settings
 
-# Logger setup
-logging.basicConfig(level=logging.INFO)
+# Initialize logger
+logging.basicConfig(level=logging.DEBUG if settings.DEBUG else logging.WARN)
 logger = logging.getLogger("StreamingService")
 
 # Database setup
@@ -28,37 +28,77 @@ stock_stream_client = StockDataStream(
     url_override=None
 )
 
-# Handler for incoming data
-async def stock_data_stream_handler(data):
+# Handler for processing quote data
+async def quote_data_handler(data):
+    """Handles incoming quote data from Alpaca."""
     try:
-        # logger.info(f"Data received: {data}")
-        # Save data to database
-        record = StockPrice(
+        # Save quote data to the database
+        quote_record = StockPrice(
             symbol=data.symbol,
-            price=data.bid_price or data.ask_price,
-            open=data.bid_price,
-            high=data.ask_price,
-            low=data.bid_price,
-            close=data.ask_price,
-            volume=data.bid_size,
-            timestamp=datetime.now()
+            price=data.bid_price or data.ask_price,  # Use bid_price if available, otherwise ask_price
+            open=data.bid_price,  # Assign bid_price to open
+            high=data.ask_price,  # Assign ask_price to high
+            low=data.bid_price,   # Assign bid_price to low
+            close=data.ask_price,  # Assign ask_price to close
+            volume=data.bid_size,  # Assign bid_size to volume
+            timestamp=datetime.now()  # Use the current timestamp
         )
-        db.add(record)
+
+        if settings.DEBUG:
+            print(f"""
+            ---- Quote Data ----
+            Symbol: {data.symbol}
+            Timestamp: {data.timestamp}
+            Bid: {data.bid_price} (Size: {data.bid_size}, Exchange: {data.bid_exchange})
+            Ask: {data.ask_price} (Size: {data.ask_size}, Exchange: {data.ask_exchange})
+            Conditions: {data.conditions}
+            Tape: {data.tape}
+            --------------------
+            """)
+
+        db.add(quote_record)
         db.commit()
-        
-        print(f"""
-        ---- Trade Data ----
-        Symbol: {data.symbol}
-        Timestamp: {data.timestamp}
-        Bid: {data.bid_price} (Size: {data.bid_size}, Exchange: {data.bid_exchange})
-        Ask: {data.ask_price} (Size: {data.ask_size}, Exchange: {data.ask_exchange})
-        Conditions: {data.conditions}
-        Tape: {data.tape}
-        --------------------
-        """)
+        db.close()
 
     except Exception as e:
-        logger.error(f"Error saving data: {e}")
+        logger.error(f"Error processing quote data: {e}")
+
+# Handler for processing trade data
+async def trade_data_handler(data):
+    """Handles incoming trade data from Alpaca."""
+    try:
+        # Extract trade data attributes
+        symbol = getattr(data, "symbol", None)
+        price = getattr(data, "price", None)  # Trade price
+        size = getattr(data, "size", None)    # Trade size (volume)
+        timestamp = getattr(data, "timestamp", None)  # Timestamp
+        exchange = getattr(data, "exchange", None)  # Exchange where the trade occurred
+        conditions = getattr(data, "conditions", None)  # Trade conditions
+        tape = getattr(data, "tape", None)  # Trade tape identifier
+
+        # Debug: Print trade data if DEBUG mode is enabled
+        if settings.DEBUG:
+            print(
+                f"Trade Data -> Symbol: {symbol}, Price: {price}, Size: {size}, "
+                f"Timestamp: {timestamp}, Exchange: {exchange}, Conditions: {conditions}, Tape: {tape}"
+            )
+
+        # Save trade data to the database
+        trade_record = Trade(
+            symbol=symbol,
+            price=price,
+            size=size,
+            timestamp=timestamp,
+            exchange=exchange,
+            conditions=str(conditions),  # Store as a string for database compatibility
+            tape=tape,
+        )
+        db.add(trade_record)
+        db.commit()
+        db.close()
+
+    except Exception as e:
+        logger.error(f"Error processing trade data: {e}")
 
 def run_stock_stream_client():
     stock_stream_client.run()
@@ -70,8 +110,8 @@ async def start_streaming(symbols):
     """
     try:
         logger.info(f"Starting WebSocket streaming for symbols: {symbols}")
-        stock_stream_client.subscribe_quotes(stock_data_stream_handler, *symbols)
-        stock_stream_client.subscribe_trades(stock_data_stream_handler, *symbols)
+        stock_stream_client.subscribe_quotes(quote_data_handler, *symbols)
+        stock_stream_client.subscribe_trades(trade_data_handler, *symbols)
 
         # Run in a dedicated thread
         thread = Thread(target=run_stock_stream_client)

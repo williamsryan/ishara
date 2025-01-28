@@ -100,12 +100,13 @@ class Trade(Base):
     __tablename__ = "trades"
 
     id = Column(Integer, primary_key=True, index=True)
-    symbol = Column(String, index=True)  # Foreign key to Stock.symbol
-    action = Column(String)  # 'BUY' or 'SELL'
-    quantity = Column(Float)
-    price = Column(Float)
-    total_cost = Column(Float, nullable=True)  # Total cost of the trade
-    timestamp = Column(DateTime)  # Time of the trade
+    symbol = Column(String, nullable=False)  # Stock symbol (e.g., AAPL)
+    price = Column(Float, nullable=False)    # Trade price
+    size = Column(Integer, nullable=False)   # Trade size (volume)
+    timestamp = Column(DateTime, nullable=False)  # Trade timestamp
+    exchange = Column(String)  # Exchange where the trade occurred
+    conditions = Column(String)  # Trade conditions as a string (can store as JSON if needed)
+    tape = Column(String)  # Trade tape identifier
 
 class Earnings(Base):
     __tablename__ = "earnings"

@@ -3,6 +3,7 @@ from app.routes import stocks, options, portfolio, charts, data_streams, tasks
 from app.database import init_db
 from app.config import settings
 from app.services.streaming_service import start_streaming
+from contextlib import asynccontextmanager
 import logging
 import asyncio
 
@@ -27,7 +28,7 @@ DEFAULT_TICKERS = [
 ]
 DEFAULT_SUBREDDITS = ["stocks", "investing", "wallstreetbets"]
 
-@app.lifespan("startup")
+@app.on_event("startup")
 async def on_startup():
     """
     Tasks to perform when the application starts.
@@ -42,7 +43,7 @@ async def on_startup():
     streaming_task = asyncio.create_task(start_streaming(DEFAULT_TICKERS))
     logger.info("🚀 Streaming service started.")
 
-@app.lifespan("shutdown")
+@app.on_event("shutdown")
 async def on_shutdown():
     """
     Tasks to perform when the application shuts down.
