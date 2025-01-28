@@ -3,17 +3,27 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from app.database import get_db
 from app.models import StockPrice
-from app.services.yahoo_service import fetch_historical_data as fetch_yahoo_data
-from app.services.alpaca_service import fetch_historical_data as fetch_alpaca_data
+from app.services.yahoo_service import YahooFinanceService
+from app.services.alpaca_service import AlpacaService
 
 router = APIRouter()
 
-@router.get("/historical")
+def get_yahoo_service(db: Session = Depends(get_db)):
+    """Dependency to provide an instance of YahooFinanceService with a DB session."""
+    return YahooFinanceService(db=db)
+
+def get_alpaca_service(db: Session = Depends(get_db)):
+    """Dependency to provide an instance of AlpacaService with a DB session."""
+    return AlpacaService(db=db)
+
+@router.get("/historical/")
 def fetch_and_store_historical_data(
     symbols: str = Query(..., description="Comma-separated list of ticker symbols (e.g., 'AAPL,MSFT')"),
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
     db: Session = Depends(get_db),
+    yahoo_service: YahooFinanceService = Depends(get_yahoo_service),
+    alpaca_service: AlpacaService = Depends(get_alpaca_service),
 ):
     """
     Fetch historical data for given symbols and date range. Pull missing data from external APIs if needed.
@@ -50,9 +60,9 @@ def fetch_and_store_historical_data(
         fetched_data = []
 
         if missing_symbols:
-            # Fetch data from external APIs
-            yahoo_data = fetch_yahoo_data(missing_symbols, start_date, end_date)
-            alpaca_data = fetch_alpaca_data(missing_symbols, start_date, end_date)
+            # Fetch data from external APIs using service classes
+            yahoo_data = yahoo_service.fetch_historical_data(missing_symbols, start_date, end_date)
+            alpaca_data = alpaca_service.fetch_historical_data(missing_symbols, start_date, end_date)
 
             # Combine data from both sources
             fetched_data = yahoo_data + alpaca_data

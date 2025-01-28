@@ -28,7 +28,7 @@ class AlpacaService:
                 end=end_date,
                 timeframe=timeframe,
             )
-            bars = self.historical_client.get_stock_bars(request_params).df
+            bars = self.data_client.get_stock_bars(request_params).df
 
             for (symbol, date), row in bars.iterrows():
                 # Avoid duplicate entries
