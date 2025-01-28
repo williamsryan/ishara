@@ -7,7 +7,7 @@ const Header = () => {
         <AppBar position="static" style={{ backgroundColor: "#001529" }}>
             <Toolbar style={{ display: "flex", justifyContent: "space-between" }}>
                 <Typography variant="h6" style={{ color: "#fff" }}>
-                    Ishara: Paper Trading
+                    Ishara Dashboard
                 </Typography>
                 <div style={{ display: "flex", alignItems: "center" }}>
                     <SearchIcon style={{ color: "#fff", marginRight: "8px" }} />
