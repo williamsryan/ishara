@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routes import stocks, options, portfolio, charts, data_streams, tasks
 from app.database import init_db
 from app.config import settings
@@ -16,6 +17,14 @@ app = FastAPI(
     title="Ishara Backend",
     description="FastAPI backend for the Ishara platform, providing data analytics, portfolio management, and market insights.",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace with specific origins in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Streaming task handle
@@ -39,9 +48,9 @@ async def on_startup():
     init_db()  # Initialize the database
 
     # Start the streaming service as an asyncio task
-    logger.info("🚀 Starting streaming service...")
-    streaming_task = asyncio.create_task(start_streaming(DEFAULT_TICKERS))
-    logger.info("🚀 Streaming service started.")
+    # logger.info("🚀 Starting streaming service...")
+    # streaming_task = asyncio.create_task(start_streaming(DEFAULT_TICKERS))
+    # logger.info("🚀 Streaming service started.")
 
 @app.on_event("shutdown")
 async def on_shutdown():
