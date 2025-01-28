@@ -35,3 +35,28 @@ def get_chart_data(symbol: str, db: Session = Depends(get_db)):
     prices = [data.close for data in historical_data]
 
     return {"symbol": symbol, "dates": dates, "prices": prices}
+
+@router.get("/")
+@router.get("")
+def get_all_charts(db: Session = Depends(get_db)):
+    """
+    Fetch chart data for all symbols in the database.
+    """
+    try:
+        symbols_data = db.query(StockPrice).all()
+
+        # Format response: group by symbol
+        response = {}
+        for record in symbols_data:
+            if record.symbol not in response:
+                response[record.symbol] = {
+                    "timestamps": [],
+                    "prices": [],
+                }
+            response[record.symbol]["timestamps"].append(record.timestamp)
+            response[record.symbol]["prices"].append(record.price)
+
+        return response
+    except Exception as e:
+        return {"error": str(e)}
+    
