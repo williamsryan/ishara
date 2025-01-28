@@ -1,76 +1,158 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
-import GridLayout from "react-grid-layout";
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+import { fetchPortfolioData } from "../utils/api";
 
 const Portfolio = () => {
-    const positions = [
-        { symbol: "AAPL", shares: 10, avgPrice: 140.5, currentPrice: 145.2 },
-        { symbol: "GOOG", shares: 5, avgPrice: 2800.0, currentPrice: 2843.5 },
-        { symbol: "TSLA", shares: 8, avgPrice: 700.0, currentPrice: 714.6 },
-    ];
+    const [data, setData] = useState({
+        stocks: [],
+        stock_prices: [],
+        options: [],
+        trades: [],
+        earnings: [],
+        key_metrics: [],
+        historical_prices: [],
+        real_time_prices: [],
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const layout = [
-        { i: "summary", x: 0, y: 0, w: 12, h: 4 }, // Summary: full width
-        { i: "positions", x: 0, y: 4, w: 12, h: 8 }, // Positions table: full width
-    ];
+    useEffect(() => {
+        const getPortfolio = async () => {
+            try {
+                const result = await fetchPortfolioData();
+                setData(result);
+                setLoading(false);
+            } catch (err) {
+                setError("Failed to load portfolio data.");
+                setLoading(false);
+            }
+        };
+        getPortfolio();
+    }, []);
+
+    if (loading) return <div>Loading portfolio...</div>;
+    if (error) return <div>{error}</div>;
 
     return (
-        <GridLayout
-            className="layout"
-            layout={layout}
-            cols={12}
-            rowHeight={30}
-            width={1200}
-            isResizable
-            isDraggable
-            draggableHandle=".drag-handle"
-        >
-            {/* Portfolio Summary Tile */}
-            <div key="summary">
-                <Paper style={{ padding: "16px", height: "100%" }}>
-                    <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
-                        Portfolio Summary
-                    </Typography>
-                    <p>Total Portfolio Value: $32,400</p>
-                    <p>Today's Gain/Loss: +$180 (+0.56%)</p>
-                </Paper>
-            </div>
+        <div>
+            <Typography variant="h4">Portfolio Overview</Typography>
 
-            {/* Open Positions Tile */}
-            <div key="positions">
-                <Paper style={{ padding: "16px", height: "100%" }}>
-                    <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
-                        Open Positions
-                    </Typography>
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell><strong>Symbol</strong></TableCell>
-                                    <TableCell align="right"><strong>Shares</strong></TableCell>
-                                    <TableCell align="right"><strong>Avg Price</strong></TableCell>
-                                    <TableCell align="right"><strong>Current Price</strong></TableCell>
-                                    <TableCell align="right"><strong>Value</strong></TableCell>
+            {/* Stock Holdings */}
+            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
+                <Typography variant="h6">Stock Holdings</Typography>
+                <TableContainer>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Symbol</TableCell>
+                                <TableCell>Name</TableCell>
+                                <TableCell>Sector</TableCell>
+                                <TableCell>Market Cap</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {data.stocks.map((stock) => (
+                                <TableRow key={stock.symbol}>
+                                    <TableCell>{stock.symbol}</TableCell>
+                                    <TableCell>{stock.name}</TableCell>
+                                    <TableCell>{stock.sector}</TableCell>
+                                    <TableCell>${stock.market_cap?.toFixed(2)}</TableCell>
                                 </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {positions.map((position) => (
-                                    <TableRow key={position.symbol}>
-                                        <TableCell>{position.symbol}</TableCell>
-                                        <TableCell align="right">{position.shares}</TableCell>
-                                        <TableCell align="right">${position.avgPrice.toFixed(2)}</TableCell>
-                                        <TableCell align="right">${position.currentPrice.toFixed(2)}</TableCell>
-                                        <TableCell align="right">${(position.shares * position.currentPrice).toFixed(2)}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </Paper>
-            </div>
-        </GridLayout>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* Stock Prices */}
+            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
+                <Typography variant="h6">Stock Prices</Typography>
+                <TableContainer>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Symbol</TableCell>
+                                <TableCell>Open</TableCell>
+                                <TableCell>High</TableCell>
+                                <TableCell>Low</TableCell>
+                                <TableCell>Close</TableCell>
+                                <TableCell>Volume</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {data.stock_prices.map((price) => (
+                                <TableRow key={price.id}>
+                                    <TableCell>{price.symbol}</TableCell>
+                                    <TableCell>${price.open?.toFixed(2)}</TableCell>
+                                    <TableCell>${price.high?.toFixed(2)}</TableCell>
+                                    <TableCell>${price.low?.toFixed(2)}</TableCell>
+                                    <TableCell>${price.close?.toFixed(2)}</TableCell>
+                                    <TableCell>{price.volume}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* Options Data */}
+            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
+                <Typography variant="h6">Options Holdings</Typography>
+                <TableContainer>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Symbol</TableCell>
+                                <TableCell>Strike Price</TableCell>
+                                <TableCell>Expiration Date</TableCell>
+                                <TableCell>Type</TableCell>
+                                <TableCell>Last Price</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {data.options.map((option) => (
+                                <TableRow key={option.id}>
+                                    <TableCell>{option.symbol}</TableCell>
+                                    <TableCell>${option.strike_price.toFixed(2)}</TableCell>
+                                    <TableCell>{new Date(option.expiration_date).toLocaleDateString()}</TableCell>
+                                    <TableCell>{option.option_type}</TableCell>
+                                    <TableCell>${option.last_price.toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* Trades Data */}
+            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
+                <Typography variant="h6">Trade History</Typography>
+                <TableContainer>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Symbol</TableCell>
+                                <TableCell>Price</TableCell>
+                                <TableCell>Size</TableCell>
+                                <TableCell>Timestamp</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {data.trades.map((trade) => (
+                                <TableRow key={trade.id}>
+                                    <TableCell>{trade.symbol}</TableCell>
+                                    <TableCell>${trade.price.toFixed(2)}</TableCell>
+                                    <TableCell>{trade.size}</TableCell>
+                                    <TableCell>{new Date(trade.timestamp).toLocaleString()}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* Repeat similar sections for `earnings`, `key_metrics`, `historical_prices`, and `real_time_prices` */}
+        </div>
     );
 };
 

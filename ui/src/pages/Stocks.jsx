@@ -7,7 +7,7 @@ const Stocks = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const getStocks = async () => {
             try {
                 const data = await fetchStockData();
                 setStocks(data);
@@ -17,7 +17,7 @@ const Stocks = () => {
                 setLoading(false);
             }
         };
-        fetchData();
+        getStocks();
     }, []);
 
     if (loading) return <div>Loading stocks...</div>;
