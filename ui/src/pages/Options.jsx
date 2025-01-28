@@ -7,7 +7,7 @@ const Options = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const getOptions = async () => {
             try {
                 const data = await fetchOptions();
                 setOptions(data);
@@ -17,7 +17,7 @@ const Options = () => {
                 setLoading(false);
             }
         };
-        fetchData();
+        getOptions();
     }, []);
 
     if (loading) return <div>Loading options...</div>;
@@ -41,7 +41,7 @@ const Options = () => {
                         <tr key={`${option.symbol}-${option.strike}-${option.expiration}`}>
                             <td>{option.symbol}</td>
                             <td>{option.strike}</td>
-                            <td>{option.expiration}</td>
+                            <td>{new Date(option.expiration).toLocaleDateString()}</td>
                             <td>{option.type}</td>
                             <td>{option.last_price}</td>
                         </tr>
