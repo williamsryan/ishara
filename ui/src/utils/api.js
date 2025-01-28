@@ -32,4 +32,19 @@ export const fetchChartData = async () => {
     return response.data;
 };
 
+export const fetchHistoricalData = async (symbols, startDate, endDate) => {
+    const query = new URLSearchParams({
+        symbols,
+        start_date: startDate,
+        end_date: endDate,
+    });
+
+    const response = await fetch(`/api/charts/historical/?${query.toString()}`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch historical data");
+    }
+
+    return response.json();
+};
+
 export default api;
