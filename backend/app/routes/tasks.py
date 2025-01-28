@@ -42,6 +42,21 @@ def fetch_yahoo_options(symbols: list[str], db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching Yahoo Finance options data: {e}")
 
+@router.post("/yahoo/realtime")
+def fetch_yahoo_realtime_data(request: SymbolsRequest, db: Session = Depends(get_db)):
+    """
+    Fetch real-time data for given symbols.
+    """
+    if not request.symbols:
+        raise HTTPException(status_code=400, detail="No symbols provided.")
+    
+    yahoo_service = YahooFinanceService(db)
+    try:
+        yahoo_service.fetch_real_time_data(request.symbols)
+        return {"message": f"Real-time data for {', '.join(request.symbols)} fetched successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching real-time data: {e}")
+
 @router.post("/alpaca/historical")
 def fetch_alpaca_historical(symbols: list[str], start_date: str, end_date: str, db: Session = Depends(get_db)):
     """

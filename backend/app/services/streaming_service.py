@@ -31,7 +31,7 @@ stock_stream_client = StockDataStream(
 # Handler for incoming data
 async def stock_data_stream_handler(data):
     try:
-        logger.info(f"Data received: {data}")
+        # logger.info(f"Data received: {data}")
         # Save data to database
         record = StockPrice(
             symbol=data.symbol,
