@@ -1,6 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import {
+    Paper,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    TablePagination,
+} from "@mui/material";
+import Draggable from "react-draggable";
+import { ResizableBox } from "react-resizable";
 import { fetchPortfolioData } from "../utils/api";
+
+import "react-resizable/css/styles.css"; // Required for resizable components
 
 const Portfolio = () => {
     const [data, setData] = useState({
@@ -8,10 +22,6 @@ const Portfolio = () => {
         stock_prices: [],
         options: [],
         trades: [],
-        earnings: [],
-        key_metrics: [],
-        historical_prices: [],
-        real_time_prices: [],
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -33,125 +43,99 @@ const Portfolio = () => {
     if (loading) return <div>Loading portfolio...</div>;
     if (error) return <div>{error}</div>;
 
+    // Resizable Table Component
+    const ResizableTable = ({ title, rows, columns }) => (
+        <Draggable handle=".drag-handle">
+            <ResizableBox width={800} height={400} minConstraints={[400, 300]} maxConstraints={[1200, 800]}>
+                <Paper style={{ padding: "16px", marginBottom: "16px", height: "100%", overflow: "auto" }}>
+                    <Typography
+                        variant="h6"
+                        className="drag-handle"
+                        style={{ marginBottom: "16px", cursor: "move" }}
+                    >
+                        {title}
+                    </Typography>
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    {columns.map((col) => (
+                                        <TableCell key={col}>{col}</TableCell>
+                                    ))}
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {rows.map((row, index) => (
+                                    <TableRow key={index}>
+                                        {Object.values(row).map((cell, idx) => (
+                                            <TableCell key={idx}>{cell}</TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
+            </ResizableBox>
+        </Draggable>
+    );
+
     return (
         <div>
-            <Typography variant="h4">Portfolio Overview</Typography>
+            <Typography variant="h4" style={{ marginBottom: "16px" }}>
+                Portfolio Overview
+            </Typography>
 
             {/* Stock Holdings */}
-            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
-                <Typography variant="h6">Stock Holdings</Typography>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Symbol</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Sector</TableCell>
-                                <TableCell>Market Cap</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {data.stocks.map((stock) => (
-                                <TableRow key={stock.symbol}>
-                                    <TableCell>{stock.symbol}</TableCell>
-                                    <TableCell>{stock.name}</TableCell>
-                                    <TableCell>{stock.sector}</TableCell>
-                                    <TableCell>${stock.market_cap?.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+            <ResizableTable
+                title="Stock Holdings"
+                rows={data.stocks.map((stock) => ({
+                    Symbol: stock.symbol,
+                    Name: stock.name,
+                    Sector: stock.sector,
+                    MarketCap: `$${stock.market_cap?.toFixed(2)}`,
+                }))}
+                columns={["Symbol", "Name", "Sector", "Market Cap"]}
+            />
 
             {/* Stock Prices */}
-            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
-                <Typography variant="h6">Stock Prices</Typography>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Symbol</TableCell>
-                                <TableCell>Open</TableCell>
-                                <TableCell>High</TableCell>
-                                <TableCell>Low</TableCell>
-                                <TableCell>Close</TableCell>
-                                <TableCell>Volume</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {data.stock_prices.map((price) => (
-                                <TableRow key={price.id}>
-                                    <TableCell>{price.symbol}</TableCell>
-                                    <TableCell>${price.open?.toFixed(2)}</TableCell>
-                                    <TableCell>${price.high?.toFixed(2)}</TableCell>
-                                    <TableCell>${price.low?.toFixed(2)}</TableCell>
-                                    <TableCell>${price.close?.toFixed(2)}</TableCell>
-                                    <TableCell>{price.volume}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+            <ResizableTable
+                title="Stock Prices"
+                rows={data.stock_prices.map((price) => ({
+                    Symbol: price.symbol,
+                    Open: `$${price.open?.toFixed(2)}`,
+                    High: `$${price.high?.toFixed(2)}`,
+                    Low: `$${price.low?.toFixed(2)}`,
+                    Close: `$${price.close?.toFixed(2)}`,
+                    Volume: price.volume,
+                }))}
+                columns={["Symbol", "Open", "High", "Low", "Close", "Volume"]}
+            />
 
-            {/* Options Data */}
-            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
-                <Typography variant="h6">Options Holdings</Typography>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Symbol</TableCell>
-                                <TableCell>Strike Price</TableCell>
-                                <TableCell>Expiration Date</TableCell>
-                                <TableCell>Type</TableCell>
-                                <TableCell>Last Price</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {data.options.map((option) => (
-                                <TableRow key={option.id}>
-                                    <TableCell>{option.symbol}</TableCell>
-                                    <TableCell>${option.strike_price.toFixed(2)}</TableCell>
-                                    <TableCell>{new Date(option.expiration_date).toLocaleDateString()}</TableCell>
-                                    <TableCell>{option.option_type}</TableCell>
-                                    <TableCell>${option.last_price.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+            {/* Options Holdings */}
+            <ResizableTable
+                title="Options Holdings"
+                rows={data.options.map((option) => ({
+                    Symbol: option.symbol,
+                    StrikePrice: `$${option.strike_price.toFixed(2)}`,
+                    Expiration: new Date(option.expiration_date).toLocaleDateString(),
+                    Type: option.option_type,
+                    LastPrice: `$${option.last_price.toFixed(2)}`,
+                }))}
+                columns={["Symbol", "Strike Price", "Expiration", "Type", "Last Price"]}
+            />
 
-            {/* Trades Data */}
-            <Paper style={{ padding: "16px", marginBottom: "16px" }}>
-                <Typography variant="h6">Trade History</Typography>
-                <TableContainer>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Symbol</TableCell>
-                                <TableCell>Price</TableCell>
-                                <TableCell>Size</TableCell>
-                                <TableCell>Timestamp</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {data.trades.map((trade) => (
-                                <TableRow key={trade.id}>
-                                    <TableCell>{trade.symbol}</TableCell>
-                                    <TableCell>${trade.price.toFixed(2)}</TableCell>
-                                    <TableCell>{trade.size}</TableCell>
-                                    <TableCell>{new Date(trade.timestamp).toLocaleString()}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
-
-            {/* Repeat similar sections for `earnings`, `key_metrics`, `historical_prices`, and `real_time_prices` */}
+            {/* Trade History */}
+            <ResizableTable
+                title="Trade History"
+                rows={data.trades.map((trade) => ({
+                    Symbol: trade.symbol,
+                    Price: `$${trade.price.toFixed(2)}`,
+                    Size: trade.size,
+                    Timestamp: new Date(trade.timestamp).toLocaleString(),
+                }))}
+                columns={["Symbol", "Price", "Size", "Timestamp"]}
+            />
         </div>
     );
 };

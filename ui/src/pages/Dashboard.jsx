@@ -1,93 +1,144 @@
-import React from "react";
-import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Alert } from "@mui/material";
 import Plot from "react-plotly.js";
 import GridLayout from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { fetchPortfolioData, fetchChartData } from "../utils/api";
 
 const Dashboard = () => {
-    const stockData = [
-        { symbol: "AAPL", price: 145.2, change: "+0.38%" },
-        { symbol: "GOOG", price: 2843.5, change: "-0.12%" },
-        { symbol: "TSLA", price: 714.6, change: "+1.08%" },
-    ];
+    const [watchlist, setWatchlist] = useState([]);
+    const [selectedSymbol, setSelectedSymbol] = useState("SPY"); // Default stock for chart
+    const [chartData, setChartData] = useState(null);
+    const [portfolioError, setPortfolioError] = useState(null);
+    const [chartError, setChartError] = useState(null);
+    const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+    const [loadingChart, setLoadingChart] = useState(true);
 
-    // Layout definition for ReactGridLayout
+    useEffect(() => {
+        const getPortfolioData = async () => {
+            try {
+                const data = await fetchPortfolioData();
+                setWatchlist(data.stocks || []);
+                setLoadingPortfolio(false);
+            } catch (err) {
+                setPortfolioError("Failed to load portfolio data.");
+                setLoadingPortfolio(false);
+            }
+        };
+
+        getPortfolioData();
+    }, []);
+
+    useEffect(() => {
+        const getChartData = async () => {
+            try {
+                const data = await fetchChartData(selectedSymbol);
+                setChartData(data);
+                setChartError(null);
+                setLoadingChart(false);
+            } catch (err) {
+                setChartError("Failed to load chart data.");
+                setLoadingChart(false);
+            }
+        };
+
+        getChartData();
+    }, [selectedSymbol]);
+
     const layout = [
-        { i: "watchlist", x: 0, y: 0, w: 4, h: 8 }, // Watchlist: 4 columns wide, 8 rows tall
-        { i: "chart", x: 4, y: 0, w: 8, h: 8 },     // Chart: 8 columns wide, 8 rows tall
+        { i: "watchlist", x: 0, y: 0, w: 4, h: 8 },
+        { i: "chart", x: 4, y: 0, w: 8, h: 8 },
     ];
 
     return (
         <GridLayout
             className="layout"
             layout={layout}
-            cols={12} // Total columns
-            rowHeight={30} // Height of one grid row
-            width={1200} // Width of the grid in pixels
-            isResizable // Enable resizing
-            isDraggable // Enable dragging
-            draggableHandle=".drag-handle" // Only allow dragging by the handle
+            cols={12}
+            rowHeight={30}
+            width={1200}
+            isResizable
+            isDraggable
+            draggableHandle=".drag-handle"
         >
-            {/* Watchlist Tile */}
+            {/* Watchlist Section */}
             <div key="watchlist">
-                <Paper style={{ padding: "16px", height: "100%" }}>
+                <Paper style={{ padding: "16px", height: "100%", overflow: "auto" }}>
                     <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
                         Watchlist
                     </Typography>
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell><strong>Symbol</strong></TableCell>
-                                    <TableCell align="right"><strong>Price</strong></TableCell>
-                                    <TableCell align="right"><strong>Change</strong></TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {stockData.map((stock) => (
-                                    <TableRow key={stock.symbol}>
-                                        <TableCell>{stock.symbol}</TableCell>
-                                        <TableCell align="right">${stock.price.toFixed(2)}</TableCell>
-                                        <TableCell align="right" style={{ color: stock.change.startsWith("-") ? "red" : "green" }}>
-                                            {stock.change}
-                                        </TableCell>
+                    {loadingPortfolio ? (
+                        <CircularProgress />
+                    ) : portfolioError ? (
+                        <Alert severity="error">{portfolioError}</Alert>
+                    ) : (
+                        <TableContainer>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell><strong>Symbol</strong></TableCell>
+                                        <TableCell align="right"><strong>Price</strong></TableCell>
+                                        <TableCell align="right"><strong>Change</strong></TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {watchlist.map((stock) => (
+                                        <TableRow
+                                            key={stock.symbol}
+                                            onClick={() => setSelectedSymbol(stock.symbol)}
+                                            style={{ cursor: "pointer" }}
+                                        >
+                                            <TableCell>{stock.symbol}</TableCell>
+                                            <TableCell align="right">${stock.current_price?.toFixed(2)}</TableCell>
+                                            <TableCell
+                                                align="right"
+                                                style={{
+                                                    color: stock.change?.startsWith("-") ? "red" : "green",
+                                                }}
+                                            >
+                                                {stock.change || "0.00%"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
                 </Paper>
             </div>
 
-            {/* Price Chart Tile */}
+            {/* Price Chart Section */}
             <div key="chart">
                 <Paper style={{ padding: "16px", height: "100%" }}>
                     <Typography variant="h6" className="drag-handle" style={{ marginBottom: "16px", cursor: "move" }}>
-                        Price Chart
+                        Price Chart: {selectedSymbol}
                     </Typography>
-                    <div style={{ height: "calc(100% - 50px)" }}>
+                    {loadingChart ? (
+                        <CircularProgress />
+                    ) : chartError ? (
+                        <Alert severity="error">{chartError}</Alert>
+                    ) : (
                         <Plot
                             data={[
                                 {
-                                    x: ["2025-01-01", "2025-01-02", "2025-01-03"],
-                                    y: [222.5, 223.0, 224.0],
+                                    x: chartData.dates,
+                                    y: chartData.prices,
                                     type: "scatter",
                                     mode: "lines+markers",
                                     line: { color: "#3b82f6", width: 2 },
                                 },
                             ]}
                             layout={{
-                                title: "",
                                 xaxis: { title: "Date" },
                                 yaxis: { title: "Price (USD)" },
                                 margin: { t: 30, r: 30, l: 50, b: 50 },
                                 responsive: true,
                             }}
                             style={{ width: "100%", height: "100%" }}
-                            useResizeHandler={true}
+                            useResizeHandler
                         />
-                    </div>
+                    )}
                 </Paper>
             </div>
         </GridLayout>
