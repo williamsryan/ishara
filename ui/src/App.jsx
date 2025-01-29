@@ -1,34 +1,30 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Stocks from "./pages/Stocks";
-import Options from "./pages/Options";
-import Sidebar from "./components/Sidebar";
-import Dashboard from "./pages/Dashboard";
-import ChartingPage from "./pages/ChartingPage";
-import Portfolio from "./pages/Portfolio";
-import SettingsPage from "./pages/SettingsPage";
 import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
+import Dashboard from "./pages/DashboardPage";
+import Charting from "./pages/ChartingPage";
+import Portfolio from "./pages/PortfolioPage";
+import Settings from "./pages/SettingsPage";
 
 const App = () => {
   return (
     <Router>
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        <Header /> {/* Header at the top */}
-        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div className="app-container">
+        <Header />
+        <div className="main-content">
           <Sidebar />
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div className="page-content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/stocks" element={<Stocks />} />
-              <Route path="/options" element={<Options />} />
-              <Route path="/charting" element={<ChartingPage />} />
+              <Route path="/charting" element={<Charting />} />
               <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings" element={<Settings />} />
             </Routes>
           </div>
         </div>
-        <Footer /> {/* Footer at the bottom */}
+        <Footer />
       </div>
     </Router>
   );
