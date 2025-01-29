@@ -32,9 +32,19 @@ export const fetchChartData = async () => {
     return response.data;
 };
 
-export const fetchHistoricalData = async (symbols, startDate, endDate) => {
+// Fetch stock ticker autocomplete suggestions
+export const searchStockSymbols = async (query) => {
+    const response = await fetch(`/stocks/search?query=${query}`);
+    if (!response.ok) {
+        return [];
+    }
+    return await response.json();
+};
+
+// Fetch historical stock data
+export const fetchHistoricalData = async (symbol, startDate, endDate) => {
     const query = new URLSearchParams({
-        symbols,
+        symbols: symbol,
         start_date: startDate,
         end_date: endDate,
     });
