@@ -1,37 +1,35 @@
-import React from "react";
-import { List, ListItem, ListItemIcon, ListItemText, Divider } from "@mui/material";
-import { Home, ShowChart, AccountBalanceWallet, Settings } from "@mui/icons-material";
+import React, { useState } from "react";
+import { Drawer, List, ListItem, ListItemIcon, ListItemText, IconButton } from "@mui/material";
+import { Dashboard, ShowChart, AccountBalanceWallet, Settings, Menu } from "@mui/icons-material";
 import { Link } from "react-router-dom";
 
 const Sidebar = () => {
-    const menuItems = [
-        { name: "Dashboard", icon: <Home />, route: "/" },
-        { name: "Charting", icon: <ShowChart />, route: "/charting" },
-        { name: "Portfolio", icon: <AccountBalanceWallet />, route: "/portfolio" },
-        { name: "Settings", icon: <Settings />, route: "/settings" },
-    ];
+    const [open, setOpen] = useState(true);
 
     return (
-        <div
-            style={{
-                width: "250px",
-                backgroundColor: "#f0f2f5",
-                padding: "16px",
-                height: "100vh",
-            }}
-        >
+        <Drawer variant="permanent" open={open}>
+            <IconButton onClick={() => setOpen(!open)} style={{ margin: "10px" }}>
+                <Menu />
+            </IconButton>
             <List>
-                {menuItems.map((item, index) => (
-                    <React.Fragment key={item.name}>
-                        <ListItem button component={Link} to={item.route} style={{ padding: "10px 16px" }}>
-                            <ListItemIcon style={{ minWidth: "36px" }}>{item.icon}</ListItemIcon>
-                            <ListItemText primary={item.name} />
-                        </ListItem>
-                        {index < menuItems.length - 1 && <Divider />}
-                    </React.Fragment>
-                ))}
+                <ListItem button component={Link} to="/">
+                    <ListItemIcon><Dashboard /></ListItemIcon>
+                    {open && <ListItemText primary="Dashboard" />}
+                </ListItem>
+                <ListItem button component={Link} to="/charting">
+                    <ListItemIcon><ShowChart /></ListItemIcon>
+                    {open && <ListItemText primary="Charting" />}
+                </ListItem>
+                <ListItem button component={Link} to="/portfolio">
+                    <ListItemIcon><AccountBalanceWallet /></ListItemIcon>
+                    {open && <ListItemText primary="Portfolio" />}
+                </ListItem>
+                <ListItem button component={Link} to="/settings">
+                    <ListItemIcon><Settings /></ListItemIcon>
+                    {open && <ListItemText primary="Settings" />}
+                </ListItem>
             </List>
-        </div>
+        </Drawer>
     );
 };
 
