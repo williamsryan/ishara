@@ -79,7 +79,7 @@ def fetch_and_store_historical_data(
             if record.symbol not in response:
                 response[record.symbol] = {"timestamps": [], "prices": []}
             response[record.symbol]["timestamps"].append(record.timestamp.strftime("%Y-%m-%d"))
-            response[record.symbol]["prices"].append(record.price)
+            response[record.symbol]["prices"].append(record.close)
 
         return response
     except Exception as e:
