@@ -96,6 +96,7 @@ class YahooFinanceService:
                     volume=self.safe_convert(row.get("Volume"), int),
                     dividend=self.safe_convert(dividends.get(date, None), float),
                     split=self.safe_convert(splits.get(date, None), float),
+                    timestamp=datetime.utcnow(),
                     source="Yahoo Finance",
                 ))
 
