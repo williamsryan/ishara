@@ -62,8 +62,8 @@ def fetch_and_store_historical_data(
 
         if missing_symbols:
             # Fetch data from external APIs using service classes
-            yahoo_data = yahoo_service.fetch_historical_data(missing_symbols, start_date, end_date)
-            alpaca_data = alpaca_service.fetch_historical_data(missing_symbols, start_date, end_date)
+            yahoo_data = yahoo_service.fetch_historical_data(missing_symbols, (start_date, end_date))
+            alpaca_data = alpaca_service.fetch_historical_data(missing_symbols, (start_date, end_date))
 
             # Combine data from both sources
             fetched_data = yahoo_data + alpaca_data

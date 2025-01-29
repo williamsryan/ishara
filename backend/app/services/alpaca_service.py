@@ -2,6 +2,7 @@ from alpaca.data.requests import StockBarsRequest
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.live import StockDataStream
 from alpaca.trading.client import TradingClient
+from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 from datetime import datetime, timedelta
 import logging
 from sqlalchemy.orm import Session
@@ -47,44 +48,53 @@ class AlpacaService:
             self.logger.error(f"Error searching symbols: {e}")
             return []
 
-    def fetch_historical_data(self, symbols, start_date, end_date, timeframe="1Day"):
+    def fetch_historical_data(self, symbols: list, date_range: tuple):
         """
-        Fetch and save historical stock data from Alpaca.
+        Fetch historical stock data from Alpaca.
+
+        Args:
+            symbols (list): List of stock symbols.
+            date_range (tuple): Tuple containing start_date and end_date in YYYY-MM-DD format.
+
+        Returns:
+            List of StockPrice objects to be inserted into the database.
         """
+        start_date, end_date = date_range  # Unpack tuple
+
         try:
-            request_params = StockBarsRequest(
+            logger.info(f"📊 Fetching Alpaca historical data for {symbols} from {start_date} to {end_date}...")
+
+            request = StockBarsRequest(
                 symbol_or_symbols=symbols,
-                start=start_date,
-                end=end_date,
-                timeframe=timeframe,
+                timeframe=TimeFrame(amount=1, unit=TimeFrameUnit.Day),  # ✅ Correct TimeFrame format
+                start=datetime.strptime(start_date, "%Y-%m-%d"),
+                end=datetime.strptime(end_date, "%Y-%m-%d"),
             )
-            bars = self.data_client.get_stock_bars(request_params).df
 
-            for (symbol, date), row in bars.iterrows():
-                # Avoid duplicate entries
-                exists = self.db.query(HistoricalPrice).filter(
-                    HistoricalPrice.symbol == symbol,
-                    HistoricalPrice.date == date.to_pydatetime()
-                ).first()
-                if exists:
-                    logger.info(f"Skipping existing entry for {symbol} on {date}.")
-                    continue
+            bars = self.data_client.get_stock_bars(request).df
 
-                # Insert new record
-                record = HistoricalPrice(
-                    symbol=symbol,
-                    date=date.to_pydatetime(),
-                    open=row["open"],
-                    high=row["high"],
-                    low=row["low"],
-                    close=row["close"],
-                    volume=row["volume"],
-                )
-                self.db.add(record)
+            if bars.empty:
+                logger.warning(f"⚠️ No historical data found for {symbols}.")
+                return []
 
-            self.db.commit()
-            logger.info("Historical data fetched and saved successfully.")
+            # Convert DataFrame into StockPrice objects
+            stock_prices = []
+            for symbol in symbols:
+                if symbol in bars.index:
+                    for _, row in bars.loc[symbol].iterrows():
+                        stock_prices.append(HistoricalPrice(
+                            symbol=symbol,
+                            timestamp=row.name,  # Timestamp from the DataFrame index
+                            open=row["open"],
+                            high=row["high"],
+                            low=row["low"],
+                            close=row["close"],
+                            volume=row["volume"],
+                            source="Alpaca",
+                        ))
+
+            return stock_prices
         except Exception as e:
-            logger.error(f"Error fetching historical data: {e}")
-            raise
+            logger.error(f"❌ Error fetching Alpaca historical data: {e}")
+            return []
         
