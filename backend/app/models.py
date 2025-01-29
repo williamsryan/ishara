@@ -142,6 +142,8 @@ class HistoricalPrice(Base):
     volume = Column(Integer, nullable=True)
     dividend = Column(Float, nullable=True) 
     split = Column(Float, nullable=True) 
+    timestamp = Column(DateTime)
+    source = Column(String, nullable=False) 
 
 class RealTimePrice(Base):
     __tablename__ = "real_time_prices"
