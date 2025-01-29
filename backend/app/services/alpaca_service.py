@@ -5,6 +5,7 @@ from alpaca.trading.client import TradingClient
 from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 from datetime import datetime, timedelta
 import logging
+import numpy as np
 from sqlalchemy.orm import Session
 from app.models import HistoricalPrice
 
@@ -22,6 +23,31 @@ class AlpacaService:
         )
         self.logger = logging.getLogger("AlpacaService")
         self.db = db
+
+    @staticmethod
+    def safe_convert(value, target_type, default=None):
+        """
+        Safely convert a value to a specified type, handling NumPy types.
+
+        Args:
+            value: The value to convert.
+            target_type: The type to convert to (e.g., float, int).
+            default: The default value to return if conversion fails.
+
+        Returns:
+            Converted value in target_type or default if conversion fails.
+        """
+        try:
+            if value is None or isinstance(value, (list, dict)):  # Ensure value is not a complex type
+                return default
+            
+            # Handle NumPy numeric types
+            if isinstance(value, (np.float64, np.float32, np.int64, np.int32)):
+                value = value.item()  # Convert NumPy types to Python native
+
+            return target_type(value)
+        except (ValueError, TypeError):
+            return default
 
     def search_symbols(self, query: str):
         """
@@ -84,13 +110,14 @@ class AlpacaService:
                     for _, row in bars.loc[symbol].iterrows():
                         stock_prices.append(HistoricalPrice(
                             symbol=symbol,
-                            timestamp=row.name,  # Timestamp from the DataFrame index
-                            open=row["open"],
-                            high=row["high"],
-                            low=row["low"],
-                            close=row["close"],
-                            volume=row["volume"],
-                            source="Alpaca",
+                            date=row.name.to_pydatetime(),
+                            open=self.safe_convert(row["open"], float),
+                            high=self.safe_convert(row["high"], float),
+                            low=self.safe_convert(row["low"], float),
+                            close=self.safe_convert(row["close"], float),
+                            volume=self.safe_convert(row["volume"], int),
+                            timestamp=datetime.utcnow(),
+                            source="Alpaca"
                         ))
 
             return stock_prices

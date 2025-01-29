@@ -1,4 +1,5 @@
 import yfinance as yf
+import numpy as np
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -13,11 +14,24 @@ class YahooFinanceService:
     @staticmethod
     def safe_convert(value, target_type, default=None):
         """
-        Safely convert a value to a specified type.
+        Safely convert a value to a specified type, handling NumPy types.
+
+        Args:
+            value: The value to convert.
+            target_type: The type to convert to (e.g., float, int).
+            default: The default value to return if conversion fails.
+
+        Returns:
+            Converted value in target_type or default if conversion fails.
         """
         try:
-            if value is None or isinstance(value, (list, dict)):
+            if value is None or isinstance(value, (list, dict)):  # Ensure value is not a complex type
                 return default
+            
+            # Handle NumPy numeric types
+            if isinstance(value, (np.float64, np.float32, np.int64, np.int32)):
+                value = value.item()  # Convert NumPy types to Python native
+
             return target_type(value)
         except (ValueError, TypeError):
             return default
