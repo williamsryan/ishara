@@ -78,7 +78,13 @@ def fetch_and_store_historical_data(
         for record in all_data:
             if record.symbol not in response:
                 response[record.symbol] = {"timestamps": [], "prices": []}
-            response[record.symbol]["timestamps"].append(record.timestamp.strftime("%Y-%m-%d"))
+            
+            # Ensure timestamp is valid before calling .strftime()
+            if record.timestamp:
+                response[record.symbol]["timestamps"].append(record.timestamp.strftime("%Y-%m-%d"))
+            else:
+                response[record.symbol]["timestamps"].append("N/A")  # Placeholder for missing timestamps
+            
             response[record.symbol]["prices"].append(record.close)
 
         return response
