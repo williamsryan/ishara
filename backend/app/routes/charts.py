@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from app.database import get_db
 from app.models import StockPrice
+from app.config import settings
 from app.services.yahoo_service import YahooFinanceService
 from app.services.alpaca_service import AlpacaService
 
@@ -14,7 +15,7 @@ def get_yahoo_service(db: Session = Depends(get_db)):
 
 def get_alpaca_service(db: Session = Depends(get_db)):
     """Dependency to provide an instance of AlpacaService with a DB session."""
-    return AlpacaService(db=db)
+    return AlpacaService(db=db, api_key=settings.ALPACA_API_KEY, secret_key=settings.ALPACA_SECRET_KEY)
 
 @router.get("/historical/")
 def fetch_and_store_historical_data(

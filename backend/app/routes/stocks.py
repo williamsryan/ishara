@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from app.services.alpaca_service import AlpacaService
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Stock  # SQLAlchemy model
@@ -17,3 +18,12 @@ def read_stock(stock_id: int, db: Session = Depends(get_db)):
     if stock is None:
         raise HTTPException(status_code=404, detail="Stock not found")
     return stock
+
+@router.get("/stocks/search")
+def search_stocks(query: str = Query(..., description="Stock symbol search query"), db: Session = Depends(get_db)):
+    """
+    Search for stock symbols that match the query.
+    """
+    alpaca_service = AlpacaService(db)
+    results = alpaca_service.search_symbols(query)
+    return results
