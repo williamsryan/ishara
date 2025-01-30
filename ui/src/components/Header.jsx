@@ -1,52 +1,27 @@
-import React, { useState } from "react";
-import { AppBar, Toolbar, Typography, InputBase, Button } from "@mui/material";
-import { styled, alpha } from "@mui/material/styles";
+import React from "react";
+import { AppBar, Toolbar, Typography, IconButton } from "@mui/material";
+import { Menu } from "@mui/icons-material";
 
-const Search = styled("div")(({ theme }) => ({
-    position: "relative",
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor: alpha(theme.palette.common.white, 0.15),
-    "&:hover": { backgroundColor: alpha(theme.palette.common.white, 0.25) },
-    marginLeft: 0,
-    width: "auto",
-    display: "flex",
-    alignItems: "center",
-    padding: "5px 10px",
-}));
-
-const Header = ({ onSearch }) => {
-    const [ticker, setTicker] = useState("");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-
-    const handleSearch = () => {
-        onSearch(ticker, startDate, endDate);
-    };
-
+const Header = ({ sidebarOpen, toggleSidebar }) => {
     return (
-        <AppBar position="static">
+        <AppBar
+            position="fixed"
+            sx={{
+                backgroundColor: "#1c1e26",
+                color: "white",
+                transition: "width 0.3s ease-in-out",
+                width: sidebarOpen ? "calc(100% - 250px)" : "calc(100% - 60px)",
+                marginLeft: sidebarOpen ? "250px" : "60px",
+                zIndex: 1300, // Ensure it stays above other elements
+            }}
+        >
             <Toolbar>
-                <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                {/* <IconButton color="inherit" onClick={toggleSidebar} edge="start" sx={{ marginRight: 2 }}>
+                    <Menu />
+                </IconButton> */}
+                <Typography variant="h6" noWrap>
                     Ishara Dashboard
                 </Typography>
-                <Search>
-                    <InputBase
-                        placeholder="Search Ticker"
-                        onChange={(e) => setTicker(e.target.value)}
-                        value={ticker}
-                    />
-                    <InputBase
-                        type="date"
-                        onChange={(e) => setStartDate(e.target.value)}
-                        value={startDate}
-                    />
-                    <InputBase
-                        type="date"
-                        onChange={(e) => setEndDate(e.target.value)}
-                        value={endDate}
-                    />
-                    <Button onClick={handleSearch} variant="contained">Get Data</Button>
-                </Search>
             </Toolbar>
         </AppBar>
     );

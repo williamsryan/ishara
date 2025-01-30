@@ -2,59 +2,70 @@ import axios from "axios";
 
 const BASE_URL = "http://localhost:1337/api";
 
-// Axios instance
+// Axios instance with proper base URL
 const api = axios.create({
     baseURL: BASE_URL,
     timeout: 10000, // 10 seconds timeout
 });
 
-// Fetch stock data
-export const fetchStockData = async () => {
-    const response = await api.get("/stocks");
-    return response.data;
-};
-
-// Fetch options data
-export const fetchOptions = async () => {
-    const response = await api.get("/options");
-    return response.data;
-};
-
-// Fetch portfolio data
-export const fetchPortfolioData = async () => {
-    const response = await api.get("/portfolio");
-    return response.data;
-};
-
-// Fetch chart data
-export const fetchChartData = async () => {
-    const response = await api.get(`/charts`);
-    return response.data;
-};
-
-// Fetch stock ticker autocomplete suggestions
-export const searchStockSymbols = async (query) => {
-    const response = await fetch(`/stocks/search?query=${query}`);
-    if (!response.ok) {
+// Generic GET request with error handling
+const getRequest = async (endpoint) => {
+    try {
+        const response = await api.get(endpoint);
+        return response.data;
+    } catch (error) {
+        console.error(`Failed to fetch ${endpoint}:`, error);
         return [];
     }
-    return await response.json();
 };
 
-// Fetch historical stock data
-export const fetchHistoricalData = async (symbol, startDate, endDate) => {
-    const query = new URLSearchParams({
-        symbols: symbol,
-        start_date: startDate,
-        end_date: endDate,
-    });
+// **Stock Data**
+export const fetchStockData = () => getRequest("/stocks");
 
-    const response = await fetch(`/api/charts/historical/?${query.toString()}`);
-    if (!response.ok) {
-        throw new Error("Failed to fetch historical data");
+// **Options Data**
+export const fetchOptionsData = () => getRequest("/options");
+
+// **Portfolio Data**
+export const fetchPortfolioData = () => getRequest("/portfolio");
+
+// **Chart Data**
+export const fetchChartData = () => getRequest("/charts");
+
+// **Stock Ticker Autocomplete**
+export const searchStockSymbols = async (query) => {
+    try {
+        const response = await api.get(`/stocks/search`, { params: { query } });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch stock symbols:", error);
+        return [];
     }
-
-    return response.json();
 };
 
+// **Historical Stock Data**
+export const fetchHistoricalData = async (symbol, startDate, endDate) => {
+    try {
+        const response = await api.get(`/charts/historical`, {
+            params: { symbols: symbol, start_date: startDate, end_date: endDate },
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch historical data:", error);
+        throw new Error("Error fetching historical data");
+    }
+};
+
+// **Market News**
+export const fetchNews = () => getRequest("/news");
+
+// **Watchlist Data**
+export const fetchWatchlist = () => getRequest("/watchlist");
+
+// **Market Screener**
+export const fetchMarketData = () => getRequest("/market");
+
+// **Earnings Calendar**
+export const fetchEarningsCalendar = () => getRequest("/earnings");
+
+// Exporting API instance for general use if needed
 export default api;
