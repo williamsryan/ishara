@@ -1,45 +1,19 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { List, ListItem, ListItemText, Paper, Typography } from "@mui/material";
+import React from "react";
 
-const NewsFeed = () => {
-    const [news, setNews] = useState([]);
-
-    useEffect(() => {
-        const fetchNewsData = async () => {
-            try {
-                const response = await axios.get("/api/news");
-                setNews(response.data);
-            } catch (error) {
-                console.error("Error fetching news:", error);
-            }
-        };
-
-        fetchNewsData();
-    }, []);
-
+const NewsFeed = ({ news }) => {
     return (
-        <Paper style={{ padding: "15px", maxHeight: "300px", overflowY: "auto" }}>
-            <Typography variant="h6" gutterBottom>
-                Market News
-            </Typography>
-            <List>
-                {news.length > 0 ? (
-                    news.map((article, index) => (
-                        <ListItem key={index} component="a" href={article.url} target="_blank" rel="noopener noreferrer">
-                            <ListItemText
-                                primary={article.headline}
-                                secondary={`${article.source} | ${new Date(article.timestamp).toLocaleString()}`}
-                            />
-                        </ListItem>
-                    ))
-                ) : (
-                    <Typography variant="body2" style={{ textAlign: "center" }}>
-                        No news available
-                    </Typography>
-                )}
-            </List>
-        </Paper>
+        <div className="news-feed">
+            <h3>Market News</h3>
+            <ul>
+                {news.map((item, index) => (
+                    <li key={index}>
+                        <a href={item.url} target="_blank" rel="noopener noreferrer">
+                            {item.headline}
+                        </a>
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 };
 

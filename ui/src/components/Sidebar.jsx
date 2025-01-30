@@ -1,35 +1,36 @@
 import React, { useState } from "react";
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, IconButton } from "@mui/material";
-import { Dashboard, ShowChart, AccountBalanceWallet, Settings, Menu } from "@mui/icons-material";
 import { Link } from "react-router-dom";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ShowChartIcon from "@mui/icons-material/ShowChart";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import TuneIcon from "@mui/icons-material/Tune";
+import MenuIcon from "@mui/icons-material/Menu";
 
 const Sidebar = () => {
-    const [open, setOpen] = useState(true);
+    const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Drawer variant="permanent" open={open}>
-            <IconButton onClick={() => setOpen(!open)} style={{ margin: "10px" }}>
-                <Menu />
-            </IconButton>
-            <List>
-                <ListItem button component={Link} to="/">
-                    <ListItemIcon><Dashboard /></ListItemIcon>
-                    {open && <ListItemText primary="Dashboard" />}
-                </ListItem>
-                <ListItem button component={Link} to="/charting">
-                    <ListItemIcon><ShowChart /></ListItemIcon>
-                    {open && <ListItemText primary="Charting" />}
-                </ListItem>
-                <ListItem button component={Link} to="/portfolio">
-                    <ListItemIcon><AccountBalanceWallet /></ListItemIcon>
-                    {open && <ListItemText primary="Portfolio" />}
-                </ListItem>
-                <ListItem button component={Link} to="/settings">
-                    <ListItemIcon><Settings /></ListItemIcon>
-                    {open && <ListItemText primary="Settings" />}
-                </ListItem>
-            </List>
-        </Drawer>
+        <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
+            <button className="menu-button" onClick={() => setCollapsed(!collapsed)}>
+                <MenuIcon />
+            </button>
+            <nav>
+                <ul>
+                    <li>
+                        <Link to="/"><DashboardIcon /> Dashboard</Link>
+                    </li>
+                    <li>
+                        <Link to="/charting"><ShowChartIcon /> Charting</Link>
+                    </li>
+                    <li>
+                        <Link to="/portfolio"><AccountBalanceWalletIcon /> Portfolio</Link>
+                    </li>
+                    <li>
+                        <Link to="/screener"><TuneIcon /> Screener</Link>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
     );
 };
 

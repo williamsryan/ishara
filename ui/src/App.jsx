@@ -1,33 +1,33 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Header from "./components/Header";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
 import Footer from "./components/Footer";
-import Dashboard from "./pages/DashboardPage";
-import Charting from "./pages/ChartingPage";
-import Portfolio from "./pages/PortfolioPage";
-import Settings from "./pages/SettingsPage";
+import DashboardPage from "./pages/DashboardPage";
+import ChartingPage from "./pages/ChartingPage";
+import PortfolioPage from "./pages/PortfolioPage";
+import ScreenerPage from "./pages/ScreenerPage";
+import MarketPage from "./pages/MarketPage";
+import "./styles/global.css";
 
-const App = () => {
+function App() {
   return (
     <Router>
       <div className="app-container">
-        <Header />
+        <Sidebar />
         <div className="main-content">
-          <Sidebar />
-          <div className="page-content">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/charting" element={<Charting />} />
-              <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </div>
+          <Header />
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/charting" element={<ChartingPage />} />
+            <Route path="/portfolio" element={<PortfolioPage />} />
+            <Route path="/screener" element={<ScreenerPage />} />
+            <Route path="/market" element={<MarketPage />} />
+          </Routes>
+          <Footer />
         </div>
-        <Footer />
       </div>
     </Router>
   );
-};
+}
 
 export default App;
