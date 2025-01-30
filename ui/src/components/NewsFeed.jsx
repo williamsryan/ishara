@@ -19,7 +19,7 @@ const NewsFeed = () => {
     }, []);
 
     return (
-        <Paper style={{ padding: "15px", maxHeight: "300px", overflowY: "auto" }}>
+        <Paper style={{ padding: "15px", height: "100%", overflowY: "auto" }}>
             <Typography variant="h6" gutterBottom>
                 {/* Market News */}
             </Typography>
