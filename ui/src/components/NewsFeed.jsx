@@ -21,7 +21,7 @@ const NewsFeed = () => {
     return (
         <Paper style={{ padding: "15px", maxHeight: "300px", overflowY: "auto" }}>
             <Typography variant="h6" gutterBottom>
-                Market News
+                {/* Market News */}
             </Typography>
             <List>
                 {news.length > 0 ? (

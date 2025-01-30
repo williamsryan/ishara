@@ -11,7 +11,7 @@ const OrderPanel = () => {
                 boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             }}
         >
-            <Typography variant="h6">Place Order</Typography>
+            {/* <Typography variant="h6">Place Order</Typography> */}
             <TextField
                 label="Order Type"
                 select
