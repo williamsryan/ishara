@@ -28,33 +28,45 @@ export const fetchPortfolioData = async () => {
 
 // Fetch chart data
 export const fetchChartData = async () => {
-    const response = await api.get(`/charts`);
+    const response = await api.get("/charts");
     return response.data;
 };
 
 // Fetch stock ticker autocomplete suggestions
 export const searchStockSymbols = async (query) => {
-    const response = await fetch(`/stocks/search?query=${query}`);
-    if (!response.ok) {
-        return [];
-    }
-    return await response.json();
+    const response = await api.get(`/stocks/search`, {
+        params: { query },
+    });
+    return response.data;
 };
 
 // Fetch historical stock data
 export const fetchHistoricalData = async (symbol, startDate, endDate) => {
-    const query = new URLSearchParams({
-        symbols: symbol,
-        start_date: startDate,
-        end_date: endDate,
+    const response = await api.get(`/charts/historical`, {
+        params: { symbols: symbol, start_date: startDate, end_date: endDate },
     });
 
-    const response = await fetch(`/api/charts/historical/?${query.toString()}`);
-    if (!response.ok) {
-        throw new Error("Failed to fetch historical data");
-    }
+    return response.data;
+};
 
-    return response.json();
+export const fetchNews = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/news`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch news:", error);
+        return [];
+    }
+};
+
+export const fetchWatchlist = async () => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/watchlist`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to fetch watchlist:", error);
+        return [];
+    }
 };
 
 export default api;

@@ -1,18 +1,38 @@
 import React from "react";
-import { DataGrid } from "@mui/x-data-grid";
+import { Table, TableHead, TableBody, TableRow, TableCell, Paper, Typography } from "@mui/material";
 
-const columns = [
-    { field: "symbol", headerName: "Symbol", width: 100 },
-    { field: "price", headerName: "Price", width: 100 },
-    { field: "change", headerName: "Change", width: 100 },
-    { field: "volume", headerName: "Volume", width: 150 },
-];
+const MarketDataTable = () => {
+    const mockData = [
+        { symbol: "DIA", price: 340, change: 0.5 },
+        { symbol: "SPY", price: 450, change: -0.3 },
+        { symbol: "QQQ", price: 370, change: 0.2 }
+    ];
 
-const MarketDataTable = ({ data }) => {
     return (
-        <div className="data-table">
-            <DataGrid rows={data} columns={columns} pageSize={5} />
-        </div>
+        <Paper sx={{ padding: "15px", backgroundColor: "#161B22", color: "white", maxHeight: "250px", overflowY: "auto" }}>
+            <Typography variant="h6">Market Overview</Typography>
+            <Table>
+                <TableHead>
+                    <TableRow>
+                        <TableCell>Symbol</TableCell>
+                        <TableCell>Price</TableCell>
+                        <TableCell>Change</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {mockData.map((index) => (
+                        <TableRow key={index.symbol}>
+                            <TableCell>{index.symbol}</TableCell>
+                            <TableCell>${index.price.toFixed(2)}</TableCell>
+                            <TableCell style={{ color: index.change >= 0 ? "green" : "red" }}>
+                                {index.change >= 0 ? "+" : ""}
+                                {index.change}%
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </Paper>
     );
 };
 

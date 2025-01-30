@@ -1,84 +1,73 @@
-import React, { useState, useEffect } from "react";
-import StockChart from "../components/StockChart";
-import MarketDataTable from "../components/MarketDataTable";
-import NewsFeed from "../components/NewsFeed";
+import React, { useEffect, useState } from "react";
+import { Grid, Paper, Typography, Box } from "@mui/material";
 import Watchlist from "../components/Watchlist";
-import { Grid2, Paper } from "@mui/material";
-import axios from "axios";
-import Grid2Layout from "react-Grid-layout";
-import "react-resizable/css/styles.css";
-import "react-Grid-layout/css/styles.css";
+import StockChart from "../components/StockChart";
+import NewsFeed from "../components/NewsFeed";
+import api from "../utils/api"; // Ensure api.js is correctly implemented
 
 const DashboardPage = () => {
     const [marketData, setMarketData] = useState([]);
     const [news, setNews] = useState([]);
-    const [stockPrices, setStockPrices] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get("/api/stocks")
-            .then((res) => setMarketData(res.data))
-            .catch((err) => console.error("Error fetching stocks:", err));
-
-        axios.get("/api/news")
-            .then((res) => setNews(res.data))
-            .catch((err) => console.error("Error fetching news:", err));
-
-        axios.get("/api/charts/historical")
-            .then((res) => setStockPrices(res.data))
-            .catch((err) => console.error("Error fetching chart data:", err));
+        async function fetchData() {
+            try {
+                const [marketRes, newsRes] = await Promise.all([
+                    api.get("/market"), // Replace with actual API route
+                    api.get("/news"),
+                ]);
+                setMarketData(marketRes.data);
+                setNews(newsRes.data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
     }, []);
 
-    // Define Grid2 Layout for Movable Components
-    const layout = [
-        { i: "chart", x: 0, y: 0, w: 3, h: 2 },
-        { i: "watchlist", x: 3, y: 0, w: 1, h: 2 },
-        { i: "marketdata", x: 0, y: 2, w: 4, h: 2 },
-        { i: "news", x: 0, y: 4, w: 4, h: 2 },
-    ];
-
     return (
-        <Grid2 container spacing={3} sx={{ padding: 2 }}>
-            <Grid2Layout
-                className="react-Grid2-layout"
-                layout={layout}
-                cols={4}
-                rowHeight={140}
-                width={1200}
-                draggableHandle=".drag-handle"
-            >
-                {/* Stock Chart */}
-                <div key="chart" className="react-Grid2-item resizable-container">
-                    <Paper elevation={3} sx={{ padding: 2 }}>
-                        <div className="drag-handle">📈 Stock Chart</div>
-                        <StockChart data={stockPrices} />
-                    </Paper>
-                </div>
+        <Box sx={{ flexGrow: 1, padding: 2 }}>
+            <Typography variant="h4" gutterBottom>
+                Dashboard
+            </Typography>
 
+            <Grid container spacing={2}>
                 {/* Watchlist */}
-                <div key="watchlist" className="react-Grid2-item resizable-container">
+                <Grid item xs={12} md={3}>
                     <Paper elevation={3} sx={{ padding: 2 }}>
-                        <div className="drag-handle">📊 Watchlist</div>
+                        <Typography variant="h6">Watchlist</Typography>
                         <Watchlist />
                     </Paper>
-                </div>
+                </Grid>
 
-                {/* Market Data Table */}
-                <div key="marketdata" className="react-Grid2-item resizable-container">
+                {/* Stock Chart */}
+                <Grid item xs={12} md={9}>
                     <Paper elevation={3} sx={{ padding: 2 }}>
-                        <div className="drag-handle">📄 Market Data</div>
-                        <MarketDataTable data={marketData} />
+                        <Typography variant="h6">Portfolio Performance</Typography>
+                        <StockChart />
                     </Paper>
-                </div>
+                </Grid>
 
-                {/* News Feed */}
-                <div key="news" className="react-Grid2-item resizable-container">
+                {/* Market Data */}
+                <Grid item xs={12}>
                     <Paper elevation={3} sx={{ padding: 2 }}>
-                        <div className="drag-handle">📰 Market News</div>
-                        <NewsFeed news={news} />
+                        <Typography variant="h6">Market Data</Typography>
+                        {loading ? <p>Loading...</p> : <pre>{JSON.stringify(marketData, null, 2)}</pre>}
                     </Paper>
-                </div>
-            </Grid2Layout>
-        </Grid2>
+                </Grid>
+
+                {/* Market News */}
+                <Grid item xs={12}>
+                    <Paper elevation={3} sx={{ padding: 2 }}>
+                        <Typography variant="h6">Market News</Typography>
+                        <NewsFeed />
+                    </Paper>
+                </Grid>
+            </Grid>
+        </Box>
     );
 };
 

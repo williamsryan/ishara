@@ -1,34 +1,30 @@
 import React, { useState } from "react";
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, IconButton } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import ShowChartIcon from "@mui/icons-material/ShowChart";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import MenuIcon from "@mui/icons-material/Menu";
-import { useNavigate } from "react-router-dom";
+import { Dashboard, BarChart, ShowChart, Menu } from "@mui/icons-material";
 
-const Sidebar = () => {
-    const [open, setOpen] = useState(true);
-    const navigate = useNavigate();
-
-    const toggleDrawer = () => setOpen(!open);
+const Sidebar = ({ onCollapse }) => {
+    const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Drawer variant="permanent" open={open} sx={{ width: open ? 240 : 60, flexShrink: 0 }}>
-            <IconButton onClick={toggleDrawer} sx={{ margin: 1 }}>
-                <MenuIcon />
+        <Drawer variant="permanent" className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+            <IconButton onClick={() => {
+                setCollapsed(!collapsed);
+                onCollapse(!collapsed);
+            }}>
+                <Menu style={{ color: "white" }} />
             </IconButton>
             <List>
-                <ListItem button onClick={() => navigate("/")}>
-                    <ListItemIcon><DashboardIcon /></ListItemIcon>
-                    {open && <ListItemText primary="Dashboard" />}
+                <ListItem button>
+                    <ListItemIcon><Dashboard style={{ color: "white" }} /></ListItemIcon>
+                    {!collapsed && <ListItemText primary="Dashboard" />}
                 </ListItem>
-                <ListItem button onClick={() => navigate("/charting")}>
-                    <ListItemIcon><ShowChartIcon /></ListItemIcon>
-                    {open && <ListItemText primary="Charting" />}
+                <ListItem button>
+                    <ListItemIcon><ShowChart style={{ color: "white" }} /></ListItemIcon>
+                    {!collapsed && <ListItemText primary="Market" />}
                 </ListItem>
-                <ListItem button onClick={() => navigate("/portfolio")}>
-                    <ListItemIcon><AccountBalanceWalletIcon /></ListItemIcon>
-                    {open && <ListItemText primary="Portfolio" />}
+                <ListItem button>
+                    <ListItemIcon><BarChart style={{ color: "white" }} /></ListItemIcon>
+                    {!collapsed && <ListItemText primary="Portfolio" />}
                 </ListItem>
             </List>
         </Drawer>

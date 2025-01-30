@@ -1,0 +1,22 @@
+.order-book {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.order-book table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.order-book th,
+.order-book td {
+    border-bottom: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.order-book th {
+    background: #f5f5f5;
+}
