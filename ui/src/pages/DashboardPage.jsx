@@ -1,24 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { Box, Paper, Typography } from "@mui/material";
-import GridLayout from "react-grid-layout";
+import { Box, Paper, Typography, IconButton } from "@mui/material";
+import Grid2 from "@mui/material/Grid"; 
+import CloseIcon from "@mui/icons-material/Close";
+import { Responsive, WidthProvider } from "react-grid-layout";
+
 import PriceChart from "../components/PriceChart";
 import Watchlist from "../components/Watchlist";
 import DataTable from "../components/DataTable";
 import NewsFeed from "../components/NewsFeed";
 import PortfolioOverview from "../components/PortfolioOverview";
 import OrderPanel from "../components/OrderPanel";
+
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const DashboardPage = ({ sidebarOpen }) => {
     const [layout, setLayout] = useState([
         { i: "chart", x: 0, y: 0, w: 6, h: 4 },
         { i: "watchlist", x: 6, y: 0, w: 3, h: 4 },
         { i: "marketdata", x: 9, y: 0, w: 3, h: 4 },
-        { i: "news", x: 0, y: 4, w: 12, h: 3 },
-        { i: "portfolio", x: 0, y: 7, w: 6, h: 3 },
-        { i: "orderform", x: 6, y: 7, w: 6, h: 3 },
+        { i: "news", x: 0, y: 4, w: 12, h: 2 },  
+        { i: "portfolio", x: 0, y: 6, w: 6, h: 3 },
+        { i: "orderform", x: 6, y: 6, w: 6, h: 3 },
     ]);
+
+    // Handle Removing Components
+    const handleDelete = (key) => {
+        setLayout((prevLayout) => prevLayout.filter((item) => item.i !== key));
+    };
 
     useEffect(() => {
         setLayout((prevLayout) =>
@@ -32,6 +43,9 @@ const DashboardPage = ({ sidebarOpen }) => {
     return (
         <Box
             sx={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100vh",
                 flexGrow: 1,
                 transition: "margin 0.3s ease-in-out",
                 padding: "10px",
@@ -39,78 +53,52 @@ const DashboardPage = ({ sidebarOpen }) => {
                 width: sidebarOpen ? "calc(100% - 250px)" : "calc(100% - 60px)",
             }}
         >
-            <GridLayout
+            {/* Responsive Grid Layout */}
+            <ResponsiveGridLayout
                 className="layout"
-                layout={layout}
-                cols={12}
+                layouts={{ lg: layout, md: layout, sm: layout }}
+                breakpoints={{ lg: 1200, md: 996, sm: 768 }}
+                cols={{ lg: 12, md: 12, sm: 12 }}
                 rowHeight={80}
-                width={window.innerWidth - (sidebarOpen ? 250 : 80)}
                 draggableHandle=".drag-handle"
                 isResizable
                 isDraggable
                 onLayoutChange={(newLayout) => setLayout(newLayout)}
                 compactType="horizontal"
             >
-                {/* Stock Chart */}
-                <div key="chart">
-                    <Paper elevation={3} sx={{ padding: "10px", height: "100%" }}>
-                        <Typography variant="h6" className="drag-handle">
-                            SPY Price Chart
-                        </Typography>
-                        <PriceChart symbol="SPY" />
-                    </Paper>
-                </div>
+                {layout.map((item) => (
+                    <Grid2 key={item.i} xs={12} sm={6} md={4} lg={3}>
+                        <Paper elevation={3} sx={{ padding: "10px", height: "100%", position: "relative" }}>
+                            {/* Delete Button */}
+                            <IconButton
+                                onClick={() => handleDelete(item.i)}
+                                sx={{ position: "absolute", top: 5, right: 5 }}
+                                size="small"
+                            >
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
 
-                {/* Watchlist */}
-                <div key="watchlist">
-                    <Paper elevation={3} sx={{ padding: "10px", height: "100%" }}>
-                        <Typography variant="h6" className="drag-handle">
-                            Watchlist
-                        </Typography>
-                        <Watchlist />
-                    </Paper>
-                </div>
+                            {/* Title */}
+                            <Typography variant="h6" className="drag-handle">
+                                {item.i === "chart" && "SPY Price Chart"}
+                                {item.i === "watchlist" && "Watchlist"}
+                                {item.i === "marketdata" && "Market Data"}
+                                {item.i === "news" && "Market News"}
+                                {item.i === "portfolio" && "Portfolio Overview"}
+                                {item.i === "orderform" && "Place an Order"}
+                            </Typography>
 
-                {/* Market Data */}
-                <div key="marketdata">
-                    <Paper elevation={3} sx={{ padding: "10px", height: "100%" }}>
-                        <Typography variant="h6" className="drag-handle">
-                            Market Data
-                        </Typography>
-                        <DataTable />
-                    </Paper>
-                </div>
-
-                {/* Market News */}
-                <div key="news">
-                    <Paper elevation={3} sx={{ padding: "10px", height: "100%" }}>
-                        <Typography variant="h6" className="drag-handle">
-                            Market News
-                        </Typography>
-                        <NewsFeed />
-                    </Paper>
-                </div>
-
-                {/* Portfolio Overview */}
-                <div key="portfolio">
-                    <Paper elevation={3} sx={{ padding: "10px", height: "100%" }}>
-                        <Typography variant="h6" className="drag-handle">
-                            Portfolio Overview
-                        </Typography>
-                        <PortfolioOverview />
-                    </Paper>
-                </div>
-
-                {/* Order Form */}
-                <div key="orderform">
-                    <Paper elevation={3} sx={{ padding: "10px", height: "100%" }}>
-                        <Typography variant="h6" className="drag-handle">
-                            Place an Order
-                        </Typography>
-                        <OrderPanel />
-                    </Paper>
-                </div>
-            </GridLayout>
+                            {/* Component Rendering */}
+                            {item.i === "chart" && <PriceChart symbol="SPY" />}
+                            {item.i === "watchlist" && <Watchlist />}
+                            {item.i === "marketdata" && <DataTable />}
+                            {item.i === "news" && <NewsFeed />}
+                            {item.i === "portfolio" && <PortfolioOverview />}
+                            {item.i === "orderform" && <OrderPanel />}
+                        </Paper>
+                    </Grid2>
+                ))}
+            </ResponsiveGridLayout>
         </Box>
     );
 };
