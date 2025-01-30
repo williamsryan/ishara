@@ -1,26 +1,32 @@
 import React, { useState } from "react";
-import { TextField, Button } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
+import { AppBar, Toolbar, TextField, Button, Box } from "@mui/material";
+import axios from "axios";
 
 const Header = ({ onSearch }) => {
-    const [search, setSearch] = useState("");
+    const [ticker, setTicker] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+
+    const handleSearch = () => {
+        if (ticker && startDate && endDate) {
+            axios.get(`/api/charts/historical?ticker=${ticker}&start=${startDate}&end=${endDate}`)
+                .then((res) => onSearch(res.data))
+                .catch((err) => console.error("Error fetching historical data:", err));
+        }
+    };
 
     return (
-        <header className="header">
-            <h1>Ishara Dashboard</h1>
-            <div className="search-container">
-                <TextField
-                    variant="outlined"
-                    size="small"
-                    placeholder="Search Ticker"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-                <Button variant="contained" onClick={() => onSearch(search)}>
-                    <SearchIcon />
-                </Button>
-            </div>
-        </header>
+        <AppBar position="static">
+            <Toolbar>
+                <Box sx={{ flexGrow: 1 }}>
+                    <TextField label="Search Ticker" variant="outlined" size="small"
+                        value={ticker} onChange={(e) => setTicker(e.target.value)} sx={{ marginRight: 1 }} />
+                    <TextField type="date" size="small" onChange={(e) => setStartDate(e.target.value)} sx={{ marginRight: 1 }} />
+                    <TextField type="date" size="small" onChange={(e) => setEndDate(e.target.value)} sx={{ marginRight: 1 }} />
+                    <Button variant="contained" onClick={handleSearch}>Get Data</Button>
+                </Box>
+            </Toolbar>
+        </AppBar>
     );
 };
 

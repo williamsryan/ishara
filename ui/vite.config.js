@@ -7,7 +7,11 @@ export default defineConfig({
     host: true, // Listen on all interfaces (equivalent to 0.0.0.0)
     port: 5173, // Optional: Specify the port (default is 5173)
     proxy: {
-      '/api': 'http://localhost:1337',
+      '/api': {
+        target: 'http://localhost:1337',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });
