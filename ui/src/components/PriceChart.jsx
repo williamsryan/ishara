@@ -1,24 +1,38 @@
-import React from "react";
-import { Line } from "react-chartjs-2";
-import { Box, Paper } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Stage, Layer, Line, Text } from "react-konva";
 
-const PriceChart = ({ data }) => {
-    if (!data || Object.keys(data).length === 0) {
-        return <Paper sx={{ padding: 3 }}>No Chart Data Available</Paper>;
-    }
+const PriceChart = ({ symbol }) => {
+    const [data, setData] = useState([]);
+    const [width, setWidth] = useState(600);
+    const [height, setHeight] = useState(300);
 
-    const labels = Object.keys(data)[0] ? data[Object.keys(data)[0]].timestamps : [];
-    const datasets = Object.keys(data).map((symbol) => ({
-        label: symbol,
-        data: data[symbol].prices,
-        borderColor: "blue",
-        fill: false,
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await fetch(`https://api.example.com/stock/${symbol}`);
+                const json = await response.json();
+                setData(json.prices); // Assume it returns an array of price points
+            } catch (error) {
+                console.error("Error fetching stock data:", error);
+            }
+        };
+
+        fetchData();
+    }, [symbol]);
+
+    // Convert stock data into points for the chart
+    const chartPoints = data.map((point, index) => ({
+        x: (index / data.length) * width,
+        y: height - (point.price / Math.max(...data.map((p) => p.price))) * height,
     }));
 
     return (
-        <Paper sx={{ padding: 3 }}>
-            <Line data={{ labels, datasets }} />
-        </Paper>
+        <Stage width={width} height={height}>
+            <Layer>
+                <Text text={symbol} fontSize={18} x={10} y={10} fill="black" />
+                <Line points={chartPoints.flatMap((p) => [p.x, p.y])} stroke="blue" strokeWidth={2} />
+            </Layer>
+        </Stage>
     );
 };
 

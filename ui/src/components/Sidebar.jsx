@@ -1,113 +1,76 @@
 import React from "react";
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, IconButton, Toolbar } from "@mui/material";
-import { Home, BarChart, AccountBalanceWallet, Settings, Menu } from "@mui/icons-material";
+import { Box, IconButton } from "@mui/material";
+import { ChevronLeft, ChevronRight } from "@mui/icons-material";
 import { Link } from "react-router-dom";
-import { styled } from "@mui/material/styles";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import ShowChartIcon from "@mui/icons-material/ShowChart";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import SettingsIcon from "@mui/icons-material/Settings";
 
-const drawerWidth = 250;
+const drawerWidth = 200; // Reduce sidebar width
 const collapsedWidth = 60;
-
-const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(({ open }) => ({
-    marginLeft: open ? drawerWidth : collapsedWidth,
-    transition: "margin 0.3s ease-in-out",
-    padding: "20px",
-}));
 
 const Sidebar = ({ open, handleToggle }) => {
     return (
-        <Drawer
-            variant="permanent"
+        <Box
             sx={{
                 width: open ? drawerWidth : collapsedWidth,
-                flexShrink: 0,
-                "& .MuiDrawer-paper": {
-                    width: open ? drawerWidth : collapsedWidth,
-                    transition: "width 0.3s ease-in-out",
-                    backgroundColor: "#181a1f", // Darker background for better contrast
-                    color: "#d1d1d1", // Lighter gray text for better readability
-                    borderRight: "1px solid #333",
-                },
+                transition: "width 0.3s ease-in-out",
+                height: "100vh",
+                background: "#121212",
+                color: "#fff",
+                display: "flex",
+                flexDirection: "column",
+                position: "relative",
+                paddingTop: "10px",
             }}
         >
-            <Toolbar>
-                <IconButton onClick={handleToggle} sx={{ color: "#d1d1d1", margin: "10px" }}>
-                    <Menu />
-                </IconButton>
-            </Toolbar>
-            <List>
-                <ListItem
-                    button
-                    component={Link}
-                    to="/"
-                    sx={{
-                        color: "#d1d1d1", // Default lighter text
-                        "&:hover": { backgroundColor: "#292b33", color: "#ffffff" },
-                        "&.Mui-selected": { backgroundColor: "#3a3f4b", color: "#ffffff" },
-                        transition: "background 0.2s ease-in-out",
-                        borderRadius: "6px",
-                    }}
-                >
-                    <ListItemIcon sx={{ color: "#d1d1d1" }}>
-                        <Home />
-                    </ListItemIcon>
-                    {open && <ListItemText primary="Dashboard" sx={{ fontWeight: "bold" }} />}
-                </ListItem>
+            {/* Sidebar Icons & Links */}
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%", marginTop: "20px", paddingLeft: "12px" }}>
+                <Link to="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "8px", padding: "8px" }}>
+                    <DashboardIcon sx={{ fontSize: 20 }} />
+                    {open && <span style={{ fontSize: "14px" }}>Dashboard</span>}
+                </Link>
+                <Link to="/charting" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "8px", padding: "8px" }}>
+                    <ShowChartIcon sx={{ fontSize: 20 }} />
+                    {open && <span style={{ fontSize: "14px" }}>Charting</span>}
+                </Link>
+                <Link to="/portfolio" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "8px", padding: "8px" }}>
+                    <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />
+                    {open && <span style={{ fontSize: "14px" }}>Portfolio</span>}
+                </Link>
+                <Link to="/settings" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: "8px", padding: "8px" }}>
+                    <SettingsIcon sx={{ fontSize: 20 }} />
+                    {open && <span style={{ fontSize: "14px" }}>Settings</span>}
+                </Link>
+            </Box>
 
-                <ListItem
-                    button
-                    component={Link}
-                    to="/charting"
-                    sx={{
-                        color: "#d1d1d1",
-                        "&:hover": { backgroundColor: "#292b33", color: "#ffffff" },
-                        "&.Mui-selected": { backgroundColor: "#3a3f4b", color: "#ffffff" },
-                        transition: "background 0.2s ease-in-out",
-                        borderRadius: "6px",
-                    }}
-                >
-                    <ListItemIcon sx={{ color: "#d1d1d1" }}>
-                        <BarChart />
-                    </ListItemIcon>
-                    {open && <ListItemText primary="Charting" sx={{ fontWeight: "bold" }} />}
-                </ListItem>
-
-                <ListItem
-                    button
-                    component={Link}
-                    to="/portfolio"
-                    sx={{
-                        color: "#d1d1d1",
-                        "&:hover": { backgroundColor: "#292b33", color: "#ffffff" },
-                        "&.Mui-selected": { backgroundColor: "#3a3f4b", color: "#ffffff" },
-                        transition: "background 0.2s ease-in-out",
-                        borderRadius: "6px",
-                    }}
-                >
-                    <ListItemIcon sx={{ color: "#d1d1d1" }}>
-                        <AccountBalanceWallet />
-                    </ListItemIcon>
-                    {open && <ListItemText primary="Portfolio" sx={{ fontWeight: "bold" }} />}
-                </ListItem>
-
-                <ListItem
-                    button
-                    component={Link}
-                    to="/settings"
-                    sx={{
-                        color: "#d1d1d1",
-                        "&:hover": { backgroundColor: "#292b33", color: "#ffffff" },
-                        "&.Mui-selected": { backgroundColor: "#3a3f4b", color: "#ffffff" },
-                        transition: "background 0.2s ease-in-out",
-                        borderRadius: "6px",
-                    }}
-                >
-                    <ListItemIcon sx={{ color: "#d1d1d1" }}>
-                        <Settings />
-                    </ListItemIcon>
-                    {open && <ListItemText primary="Settings" sx={{ fontWeight: "bold" }} />}
-                </ListItem>
-            </List>
-        </Drawer>
+            {/* Webull-Style Toggle Arrow Button */}
+            <IconButton
+                className="sidebar-toggle"
+                onClick={handleToggle}
+                sx={{
+                    position: "absolute",
+                    top: "50%",
+                    right: "-12px",
+                    transform: "translateY(-50%)",
+                    background: "#fff",
+                    borderRadius: "6px",
+                    padding: "6px",
+                    border: "1px solid #ddd",
+                    width: "25px",
+                    height: "50px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    zIndex: 1000,
+                    "&:hover": { background: "#f0f0f0" },
+                }}
+            >
+                {open ? <ChevronLeft sx={{ color: "#000" }} /> : <ChevronRight sx={{ color: "#000" }} />}
+            </IconButton>
+        </Box>
     );
 };
 

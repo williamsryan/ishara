@@ -1,118 +1,114 @@
-import React, { useState, useEffect } from "react";
-import { Box, Paper, Typography, IconButton } from "@mui/material";
-import Grid2 from "@mui/material/Grid2";
-import CloseIcon from "@mui/icons-material/Close";
-import { Responsive, WidthProvider } from "react-grid-layout";
-
+import React, { useState } from "react";
+import { Box, Grid, Paper, Typography, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import PriceChart from "../components/PriceChart";
 import Watchlist from "../components/Watchlist";
 import DataTable from "../components/DataTable";
-import NewsFeed from "../components/NewsFeed";
 import PortfolioOverview from "../components/PortfolioOverview";
 import OrderPanel from "../components/OrderPanel";
-
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
 import "../styles/dashboardpage.css";
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
-const DashboardPage = ({ sidebarOpen }) => {
-    const [layout, setLayout] = useState([
-        { i: "chart", x: 0, y: 0, w: 6, h: 4 },
-        { i: "watchlist", x: 6, y: 0, w: 3, h: 4 },
-        { i: "marketdata", x: 9, y: 0, w: 3, h: 4 },
-        { i: "news", x: 0, y: 4, w: 12, h: 2 },
-        { i: "portfolio", x: 0, y: 6, w: 6, h: 3 },
-        { i: "orderform", x: 6, y: 6, w: 6, h: 3 },
-    ]);
-
-    // Handle Removing Components
-    const handleDelete = (key) => {
-        setLayout((prevLayout) => prevLayout.filter((item) => item.i !== key));
-    };
-
-    // Update layout when sidebar toggles
-    useEffect(() => {
-        setLayout((prevLayout) =>
-            prevLayout.map((item) => ({
-                ...item,
-                x: item.x,
-            }))
-        );
-    }, [sidebarOpen]);
+const DashboardPage = () => {
+    const [selectedTab, setSelectedTab] = useState(0);
 
     return (
-        <Box
-            sx={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100vh",
-                flexGrow: 1,
-                transition: "margin 0.3s ease-in-out",
-                padding: "10px",
-                marginLeft: sidebarOpen ? "250px" : "60px",
-                width: sidebarOpen ? "calc(100% - 250px)" : "calc(100% - 60px)",
-            }}
-        >
-            {/* Responsive Grid Layout */}
-            <ResponsiveGridLayout
-                className="layout"
-                layouts={{ lg: layout, md: layout, sm: layout }}
-                breakpoints={{ lg: 1200, md: 996, sm: 768 }}
-                cols={{ lg: 12, md: 12, sm: 12 }}
-                rowHeight={80}
-                draggableHandle=".drag-handle"
-                isResizable
-                isDraggable
-                onLayoutChange={(newLayout) => setLayout(newLayout)}
-                compactType="horizontal"
-            >
-                {layout.map((item) => (
-                    <Grid2 key={item.i} xs={12} sm={6} md={4} lg={3}>
-                        <Paper
-                            elevation={3}
-                            sx={{
-                                padding: "10px",
-                                height: "100%",
-                                display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "space-between",
-                                position: "relative",
-                            }}
-                        >
-                            {/* Delete Button */}
-                            <IconButton
-                                onClick={() => handleDelete(item.i)}
-                                sx={{ position: "absolute", top: 5, right: 5 }}
-                                size="small"
-                            >
-                                <CloseIcon fontSize="small" />
-                            </IconButton>
+        <Box className="dashboard-container">
+            <Grid container spacing={1}>
 
-                            {/* Title */}
-                            <Typography variant="h6" className="drag-handle">
-                                {item.i === "chart" && "SPY Price Chart"}
-                                {item.i === "watchlist" && "Watchlist"}
-                                {item.i === "marketdata" && "Market Data"}
-                                {item.i === "news" && "Market News"}
-                                {item.i === "portfolio" && "Portfolio Overview"}
-                                {item.i === "orderform" && "Place an Order"}
-                            </Typography>
+                {/* Left Sidebar */}
+                <Grid item xs={2.5}>
+                    <Paper className="dashboard-widget sidebar-container">
+                        <Typography variant="h6">Top Options</Typography>
+                        <Watchlist />
+                    </Paper>
+                    <Paper className="dashboard-widget sidebar-container">
+                        <Typography variant="h6">Market Data</Typography>
+                        <DataTable />
+                    </Paper>
+                </Grid>
 
-                            {/* Component Rendering */}
-                            {item.i === "chart" && <PriceChart symbol="SPY" />}
-                            {item.i === "watchlist" && <Watchlist />}
-                            {item.i === "marketdata" && <DataTable />}
-                            {item.i === "news" && <NewsFeed />}
-                            {item.i === "portfolio" && <PortfolioOverview />}
-                            {item.i === "orderform" && <OrderPanel />}
-                        </Paper>
-                    </Grid2>
-                ))}
-            </ResponsiveGridLayout>
+                {/* Center Panel */}
+                <Grid item xs={7}>
+                    <Paper className="dashboard-widget chart-container">
+                        <Typography variant="h6">Stock Price Chart</Typography>
+                        <PriceChart symbol="SPY" />
+                    </Paper>
+                    <Paper className="dashboard-widget options-table">
+                        <Tabs value={selectedTab} onChange={(_, newValue) => setSelectedTab(newValue)}>
+                            <Tab label="Options Chain" />
+                            <Tab label="Time & Sales" />
+                        </Tabs>
+                        {selectedTab === 0 ? <OptionsTable /> : <TimeSales />}
+                    </Paper>
+                </Grid>
+
+                {/* Right Sidebar */}
+                <Grid item xs={2.5}>
+                    <Paper className="dashboard-widget sidebar-container">
+                        <Typography variant="h6">Quote</Typography>
+                        <Typography variant="body1">NVDA $130 31 Jan 25 (W) Call 100</Typography>
+                        <Typography variant="body2">0.01 -96.55%</Typography>
+                    </Paper>
+                    <Paper className="dashboard-widget sidebar-container">
+                        <Typography variant="h6">Key Statistics</Typography>
+                        <TableContainer>
+                            <Table size="small">
+                                <TableBody>
+                                    <TableRow><TableCell>Open</TableCell><TableCell>0.20</TableCell></TableRow>
+                                    <TableRow><TableCell>High</TableCell><TableCell>0.27</TableCell></TableRow>
+                                    <TableRow><TableCell>Low</TableCell><TableCell>0.01</TableCell></TableRow>
+                                    <TableRow><TableCell>Impl Vol</TableCell><TableCell>3.77%</TableCell></TableRow>
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    </Paper>
+                    <Paper className="dashboard-widget sidebar-container">
+                        <Typography variant="h6">Order Book (BBO)</Typography>
+                        <Typography variant="body2">Please login to view details.</Typography>
+                    </Paper>
+                </Grid>
+
+            </Grid>
         </Box>
     );
 };
+
+/* Placeholder Options Table */
+const OptionsTable = () => (
+    <TableContainer>
+        <Table size="small">
+            <TableHead>
+                <TableRow>
+                    <TableCell>Strike</TableCell>
+                    <TableCell>Bid</TableCell>
+                    <TableCell>Ask</TableCell>
+                    <TableCell>IV</TableCell>
+                </TableRow>
+            </TableHead>
+            <TableBody>
+                <TableRow><TableCell>117</TableCell><TableCell>0.30</TableCell><TableCell>0.45</TableCell><TableCell>29.5%</TableCell></TableRow>
+                <TableRow><TableCell>120</TableCell><TableCell>0.15</TableCell><TableCell>0.20</TableCell><TableCell>31.2%</TableCell></TableRow>
+            </TableBody>
+        </Table>
+    </TableContainer>
+);
+
+/* Placeholder Time & Sales */
+const TimeSales = () => (
+    <TableContainer>
+        <Table size="small">
+            <TableHead>
+                <TableRow>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Price</TableCell>
+                    <TableCell>Size</TableCell>
+                </TableRow>
+            </TableHead>
+            <TableBody>
+                <TableRow><TableCell>15:59:32</TableCell><TableCell>0.01</TableCell><TableCell>100</TableCell></TableRow>
+                <TableRow><TableCell>15:58:20</TableCell><TableCell>0.02</TableCell><TableCell>50</TableCell></TableRow>
+            </TableBody>
+        </Table>
+    </TableContainer>
+);
 
 export default DashboardPage;
