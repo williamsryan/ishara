@@ -23,4 +23,6 @@ def read_option(option_id: int, db: Session = Depends(get_db)):
     if option is None:
         raise HTTPException(status_code=404, detail="Option not found")
     return option
+
+# TODO: include historical options data (https://docs.alpaca.markets/reference/optiontrades)
     
