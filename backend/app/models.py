@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
+from datetime import datetime
 import enum
 
 class DataType(enum.Enum):
@@ -152,3 +153,34 @@ class RealTimePrice(Base):
     symbol = Column(String, index=True, nullable=False)
     price = Column(Float, nullable=True)
     timestamp = Column(DateTime, nullable=False)
+
+class TradeData(Base):
+    __tablename__ = "trade_data"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True)
+    price = Column(Float)
+    volume = Column(Integer)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+class OrderData(Base):
+    __tablename__ = "order_data"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(String, unique=True, index=True)
+    symbol = Column(String)
+    qty = Column(Integer)
+    filled_qty = Column(Integer, default=0)
+    price = Column(Float)
+    side = Column(String)
+    status = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Watchlist(Base):
+    __tablename__ = "watchlist"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, unique=True, index=True)  # Stock symbol (e.g., AAPL, TSLA)
+    name = Column(String)  # Full company name (optional)
+    added_at = Column(DateTime, default=datetime.utcnow)  # Timestamp when added
+    

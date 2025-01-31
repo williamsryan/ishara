@@ -45,7 +45,7 @@ export const searchStockSymbols = async (query) => {
 // **Historical Stock Data**
 export const fetchHistoricalData = async (symbol, startDate, endDate) => {
     try {
-        const response = await api.get(`/charts/historical`, {
+        const response = await api.get(`/charts/historical/`, {
             params: { symbols: symbol, start_date: startDate, end_date: endDate },
         });
         return response.data;
@@ -60,6 +60,22 @@ export const fetchNews = () => getRequest("/news");
 
 // **Watchlist Data**
 export const fetchWatchlist = () => getRequest("/watchlist");
+
+export const addToWatchlist = async (symbol) => {
+    const response = await fetch(`${BASE_URL}/watchlist?symbol=${symbol}`, {
+        method: "POST"
+    });
+    if (!response.ok) throw new Error("Failed to add stock to watchlist");
+    return response.json();
+};
+
+export const removeFromWatchlist = async (symbol) => {
+    const response = await fetch(`${BASE_URL}/watchlist/${symbol}`, {
+        method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Failed to remove stock from watchlist");
+    return response.json();
+};
 
 // **Market Screener**
 export const fetchMarketData = () => getRequest("/market");

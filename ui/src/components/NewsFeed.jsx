@@ -1,45 +1,53 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { List, ListItem, ListItemText, Paper, Typography } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { fetchNews } from "../utils/api";
+import CircularProgress from "@mui/material/CircularProgress";
+import "../styles/newsfeed.css";
 
-const NewsFeed = () => {
+const NewsFeed = ({ symbols = [] }) => {
     const [news, setNews] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchNewsData = async () => {
+        const fetchMarketNews = async () => {
+            setLoading(true);
             try {
-                const response = await axios.get("/api/news");
-                setNews(response.data);
-            } catch (error) {
-                console.error("Error fetching news:", error);
+                const data = await fetchNews(symbols);
+                setNews(data.news || []);
+            } catch (err) {
+                setError("Failed to load news.");
             }
+            setLoading(false);
         };
 
-        fetchNewsData();
-    }, []);
+        fetchMarketNews();
+        const interval = setInterval(fetchMarketNews, 10000); // Refresh every 10 sec
+        return () => clearInterval(interval);
+    }, [symbols]);
 
     return (
-        <Paper style={{ padding: "15px", height: "100%", overflowY: "auto" }}>
-            <Typography variant="h6" gutterBottom>
-                {/* Market News */}
-            </Typography>
-            <List>
-                {news.length > 0 ? (
-                    news.map((article, index) => (
-                        <ListItem key={index} component="a" href={article.url} target="_blank" rel="noopener noreferrer">
-                            <ListItemText
-                                primary={article.headline}
-                                secondary={`${article.source} | ${new Date(article.timestamp).toLocaleString()}`}
-                            />
-                        </ListItem>
-                    ))
+        <div className="news-widget">
+            {/* <h2 className="news-title">Market News</h2> */}
+            {loading && <CircularProgress />}
+            {error && <p className="error">{error}</p>}
+            <div className="news-container">
+                {news.length === 0 && !loading ? (
+                    <p>No news available.</p>
                 ) : (
-                    <Typography variant="body2" style={{ textAlign: "center" }}>
-                        No news available
-                    </Typography>
+                    news.map((article, index) => (
+                        <div key={index} className="news-item">
+                            <h3 className="news-headline">{article.headline}</h3>
+                            <p className="news-summary">{article.summary}</p>
+                            <a className="news-link" href={article.url} target="_blank" rel="noopener noreferrer">
+                                Read more
+                            </a>
+                            <p className="news-source">Source: {article.source}</p>
+                            <p className="news-date">{new Date(article.created_at).toLocaleString()}</p>
+                        </div>
+                    ))
                 )}
-            </List>
-        </Paper>
+            </div>
+        </div>
     );
 };
 

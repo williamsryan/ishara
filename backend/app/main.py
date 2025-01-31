@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import stocks, options, portfolio, charts, data_streams, tasks
+from app.routes import stocks, options, portfolio, charts, data_streams, tasks, watchlist, news, alpaca_stream
 from app.database import init_db
 from app.config import settings
 from app.services.streaming_service import StreamingService
@@ -54,43 +54,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# @app.on_event("startup")
-# async def on_startup():
-#     """
-#     Tasks to perform when the application starts.
-#     """
-#     global streaming_task
-#     logger.info("🚀 Starting Ishara Backend...")
-#     logger.info("🚀 Connecting to database...")
-#     init_db()  # Initialize the database
-
-#     # Start the streaming service as an asyncio task
-#     logger.info("🚀 Starting streaming service...")
-#     streaming_task = asyncio.create_task(start_streaming(DEFAULT_TICKERS))
-#     logger.info("🚀 Streaming service started.")
-
-# @app.on_event("shutdown")
-# async def on_shutdown():
-#     """
-#     Tasks to perform when the application shuts down.
-#     """
-#     global streaming_task
-#     logger.info("🛑 Shutting down Ishara Backend...")
-
-#     # Stop the streaming task gracefully
-#     if streaming_task:
-#         logger.info("🛑 Stopping streaming service...")
-#         streaming_task.cancel()
-#         try:
-#             await streaming_task
-#             logger.info("🛑 Streaming service stopped.")
-#         except asyncio.CancelledError:
-#             logger.info("🛑 Streaming service canceled.")
-
 # Include API routes
 # app.include_router(data_streams.router, prefix="/api/streams", tags=["Streams"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["Tasks"])
-app.include_router(stocks.router, prefix="/api", tags=["Stocks"])
+app.include_router(stocks.router, prefix="/api/stocks", tags=["Stocks"])
 app.include_router(options.router, prefix="/api", tags=["Options"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["Portfolio"])
 app.include_router(charts.router, prefix="/api/charts", tags=["Charts"])
+app.include_router(watchlist.router, prefix="/api/watchlist", tags=["Watchlist"])
+app.include_router(news.router, prefix="/api/news", tags=["News"])
+app.include_router(alpaca_stream.router, prefix="/api/alpaca", tags=["Alpaca"])

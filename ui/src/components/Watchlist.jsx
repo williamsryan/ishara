@@ -1,52 +1,67 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
+import { fetchWatchlist, addToWatchlist, removeFromWatchlist } from "../utils/api";
+import "../styles/Watchlist.css";
 
 const Watchlist = () => {
     const [watchlist, setWatchlist] = useState([]);
+    const [symbol, setSymbol] = useState("");
+    const [error, setError] = useState(null);
+
+    const loadWatchlist = async () => {
+        try {
+            const data = await fetchWatchlist();
+            setWatchlist(data);
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleAddStock = async () => {
+        if (!symbol.trim()) return;
+        try {
+            await addToWatchlist(symbol);
+            setSymbol("");
+            loadWatchlist();
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    const handleRemoveStock = async (stockSymbol) => {
+        try {
+            await removeFromWatchlist(stockSymbol);
+            loadWatchlist();
+        } catch (err) {
+            setError(err.message);
+        }
+    };
 
     useEffect(() => {
-        const fetchWatchlistData = async () => {
-            try {
-                const response = await axios.get("/api/stocks/watchlist");
-                setWatchlist(response.data);
-            } catch (error) {
-                console.error("Error fetching watchlist data:", error);
-            }
-        };
-
-        fetchWatchlistData();
+        loadWatchlist();
     }, []);
 
     return (
-        <TableContainer component={Paper}>
-            <Table>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Symbol</TableCell>
-                        <TableCell>Price</TableCell>
-                        <TableCell>Change</TableCell>
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {watchlist.length > 0 ? (
-                        watchlist.map((stock) => (
-                            <TableRow key={stock.symbol}>
-                                <TableCell>{stock.symbol}</TableCell>
-                                <TableCell>${stock.price.toFixed(2)}</TableCell>
-                                <TableCell style={{ color: stock.change >= 0 ? "green" : "red" }}>
-                                    {stock.change.toFixed(2)}%
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={3} style={{ textAlign: "center" }}>No Data Available</TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </TableContainer>
+        <div className="watchlist-widget">
+            <h2 className="watchlist-title">Watchlist</h2>
+            {error && <p className="error">{error}</p>}
+            <div className="watchlist-input">
+                <input
+                    type="text"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                    placeholder="Add stock symbol"
+                />
+                <button onClick={handleAddStock}>Add</button>
+            </div>
+            <ul className="watchlist-container">
+                {watchlist.length === 0 ? <p>No stocks in watchlist.</p> : watchlist.map((stock) => (
+                    <li key={stock.symbol} className="watchlist-item">
+                        {stock.symbol}
+                        <button className="remove-button" onClick={() => handleRemoveStock(stock.symbol)}>X</button>
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 };
 
