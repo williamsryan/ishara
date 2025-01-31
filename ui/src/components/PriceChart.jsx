@@ -1,41 +1,25 @@
 import React from "react";
 import { Line } from "react-chartjs-2";
-import "chart.js/auto";
+import { Box, Paper } from "@mui/material";
 
 const PriceChart = ({ data }) => {
-    if (!data || !data.timestamps || !data.prices) {
-        return <p>No Chart Data Available</p>;
+    if (!data || Object.keys(data).length === 0) {
+        return <Paper sx={{ padding: 3 }}>No Chart Data Available</Paper>;
     }
 
-    const chartData = {
-        labels: data.timestamps,
-        datasets: [
-            {
-                label: "Stock Price",
-                data: data.prices,
-                borderColor: "rgba(75,192,192,1)",
-                backgroundColor: "rgba(75,192,192,0.2)",
-                fill: true,
-                tension: 0.3,
-            },
-        ],
-    };
+    const labels = Object.keys(data)[0] ? data[Object.keys(data)[0]].timestamps : [];
+    const datasets = Object.keys(data).map((symbol) => ({
+        label: symbol,
+        data: data[symbol].prices,
+        borderColor: "blue",
+        fill: false,
+    }));
 
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-            x: {
-                grid: { display: false },
-            },
-            y: {
-                beginAtZero: false,
-                grid: { color: "rgba(200,200,200,0.2)" },
-            },
-        },
-    };
-
-    return <div style={{ height: "350px", width: "100%" }}><Line data={chartData} options={options} /></div>;
+    return (
+        <Paper sx={{ padding: 3 }}>
+            <Line data={{ labels, datasets }} />
+        </Paper>
+    );
 };
 
 export default PriceChart;
