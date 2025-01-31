@@ -1,28 +1,21 @@
 import React, { useEffect, useState } from "react";
-import {
-    Paper,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TablePagination,
-} from "@mui/material";
-import Draggable from "react-draggable";
-import { ResizableBox } from "react-resizable";
 import { fetchPortfolioData } from "../utils/api";
+import { DataGrid } from "@mui/x-data-grid";
+import { Box, Typography, Paper } from "@mui/material";
 
-import "react-resizable/css/styles.css"; // Required for resizable components
-
-const Portfolio = () => {
+const PortfolioPage = () => {
     const [data, setData] = useState({
         stocks: [],
         stock_prices: [],
         options: [],
         trades: [],
+        portfolio: [],
+        earnings: [],
+        key_metrics: [],
+        historical_prices: [],
+        real_time_prices: [],
     });
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -30,9 +23,20 @@ const Portfolio = () => {
         const getPortfolio = async () => {
             try {
                 const result = await fetchPortfolioData();
-                setData(result);
+                setData(result || {
+                    stocks: [],
+                    stock_prices: [],
+                    options: [],
+                    trades: [],
+                    portfolio: [],
+                    earnings: [],
+                    key_metrics: [],
+                    historical_prices: [],
+                    real_time_prices: [],
+                });
                 setLoading(false);
             } catch (err) {
+                console.error("Error fetching portfolio data:", err);
                 setError("Failed to load portfolio data.");
                 setLoading(false);
             }
@@ -40,104 +44,113 @@ const Portfolio = () => {
         getPortfolio();
     }, []);
 
-    if (loading) return <div>Loading portfolio...</div>;
-    if (error) return <div>{error}</div>;
-
-    // Resizable Table Component
-    const ResizableTable = ({ title, rows, columns }) => (
-        <Draggable handle=".drag-handle">
-            <ResizableBox width={800} height={400} minConstraints={[400, 300]} maxConstraints={[1200, 800]}>
-                <Paper style={{ padding: "16px", marginBottom: "16px", height: "100%", overflow: "auto" }}>
-                    <Typography
-                        variant="h6"
-                        className="drag-handle"
-                        style={{ marginBottom: "16px", cursor: "move" }}
-                    >
-                        {title}
-                    </Typography>
-                    <TableContainer>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    {columns.map((col) => (
-                                        <TableCell key={col}>{col}</TableCell>
-                                    ))}
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {rows.map((row, index) => (
-                                    <TableRow key={index}>
-                                        {Object.values(row).map((cell, idx) => (
-                                            <TableCell key={idx}>{cell}</TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </Paper>
-            </ResizableBox>
-        </Draggable>
-    );
+    if (loading) return <Typography>Loading...</Typography>;
+    if (error) return <Typography color="error">{error}</Typography>;
 
     return (
-        <div>
-            <Typography variant="h4" style={{ marginBottom: "16px" }}>
+        <Box sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>
                 Portfolio Overview
             </Typography>
 
-            {/* Stock Holdings */}
-            <ResizableTable
-                title="Stock Holdings"
-                rows={data.stocks.map((stock) => ({
-                    Symbol: stock.symbol,
-                    Name: stock.name,
-                    Sector: stock.sector,
-                    MarketCap: `$${stock.market_cap?.toFixed(2)}`,
-                }))}
-                columns={["Symbol", "Name", "Sector", "Market Cap"]}
-            />
+            {/* Stocks Table */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="h6">Stocks</Typography>
+                <DataGrid
+                    rows={data.stocks || []}
+                    columns={[
+                        { field: "symbol", headerName: "Symbol", width: 100 },
+                        { field: "name", headerName: "Company", width: 200 },
+                        { field: "sector", headerName: "Sector", width: 150 },
+                        { field: "market_cap", headerName: "Market Cap", width: 150 },
+                    ]}
+                    pageSize={5}
+                    autoHeight
+                />
+            </Paper>
 
-            {/* Stock Prices */}
-            <ResizableTable
-                title="Stock Prices"
-                rows={data.stock_prices.map((price) => ({
-                    Symbol: price.symbol,
-                    Open: `$${price.open?.toFixed(2)}`,
-                    High: `$${price.high?.toFixed(2)}`,
-                    Low: `$${price.low?.toFixed(2)}`,
-                    Close: `$${price.close?.toFixed(2)}`,
-                    Volume: price.volume,
-                }))}
-                columns={["Symbol", "Open", "High", "Low", "Close", "Volume"]}
-            />
+            {/* Options Table */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="h6">Options</Typography>
+                <DataGrid
+                    rows={data.options || []}
+                    columns={[
+                        { field: "symbol", headerName: "Symbol", width: 100 },
+                        { field: "strike_price", headerName: "Strike Price", width: 130 },
+                        { field: "expiration_date", headerName: "Expiration Date", width: 150 },
+                        { field: "option_type", headerName: "Type", width: 100 },
+                    ]}
+                    pageSize={5}
+                    autoHeight
+                />
+            </Paper>
 
-            {/* Options Holdings */}
-            <ResizableTable
-                title="Options Holdings"
-                rows={data.options.map((option) => ({
-                    Symbol: option.symbol,
-                    StrikePrice: `$${option.strike_price.toFixed(2)}`,
-                    Expiration: new Date(option.expiration_date).toLocaleDateString(),
-                    Type: option.option_type,
-                    LastPrice: `$${option.last_price.toFixed(2)}`,
-                }))}
-                columns={["Symbol", "Strike Price", "Expiration", "Type", "Last Price"]}
-            />
+            {/* Trades Table */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="h6">Trade History</Typography>
+                <DataGrid
+                    rows={data.trades || []}
+                    columns={[
+                        { field: "symbol", headerName: "Symbol", width: 100 },
+                        { field: "trade_date", headerName: "Date", width: 150 },
+                        { field: "quantity", headerName: "Quantity", width: 100 },
+                        { field: "price", headerName: "Price", width: 100 },
+                    ]}
+                    pageSize={5}
+                    autoHeight
+                />
+            </Paper>
 
-            {/* Trade History */}
-            <ResizableTable
-                title="Trade History"
-                rows={data.trades.map((trade) => ({
-                    Symbol: trade.symbol,
-                    Price: `$${trade.price.toFixed(2)}`,
-                    Size: trade.size,
-                    Timestamp: new Date(trade.timestamp).toLocaleString(),
-                }))}
-                columns={["Symbol", "Price", "Size", "Timestamp"]}
-            />
-        </div>
+            {/* Portfolio Table */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="h6">Portfolio Holdings</Typography>
+                <DataGrid
+                    rows={data.portfolio || []}
+                    columns={[
+                        { field: "symbol", headerName: "Symbol", width: 100 },
+                        { field: "shares", headerName: "Shares", width: 100 },
+                        { field: "average_cost", headerName: "Avg Cost", width: 100 },
+                        { field: "current_price", headerName: "Current Price", width: 120 },
+                        { field: "value", headerName: "Value", width: 120 },
+                    ]}
+                    pageSize={5}
+                    autoHeight
+                />
+            </Paper>
+
+            {/* Earnings Table */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="h6">Earnings</Typography>
+                <DataGrid
+                    rows={data.earnings || []}
+                    columns={[
+                        { field: "symbol", headerName: "Symbol", width: 100 },
+                        { field: "report_date", headerName: "Report Date", width: 150 },
+                        { field: "actual_eps", headerName: "EPS", width: 100 },
+                        { field: "consensus_eps", headerName: "Consensus EPS", width: 150 },
+                    ]}
+                    pageSize={5}
+                    autoHeight
+                />
+            </Paper>
+
+            {/* Real-Time Prices Table */}
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Typography variant="h6">Real-Time Prices</Typography>
+                <DataGrid
+                    rows={data.real_time_prices || []}
+                    columns={[
+                        { field: "symbol", headerName: "Symbol", width: 100 },
+                        { field: "price", headerName: "Current Price", width: 150 },
+                        { field: "change", headerName: "Change", width: 100 },
+                        { field: "percent_change", headerName: "% Change", width: 120 },
+                    ]}
+                    pageSize={5}
+                    autoHeight
+                />
+            </Paper>
+        </Box>
     );
 };
 
-export default Portfolio;
+export default PortfolioPage;

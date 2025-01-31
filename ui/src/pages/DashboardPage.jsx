@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Paper, Typography, IconButton } from "@mui/material";
-import Grid2 from "@mui/material/Grid"; 
+import Grid2 from "@mui/material/Grid2";
 import CloseIcon from "@mui/icons-material/Close";
 import { Responsive, WidthProvider } from "react-grid-layout";
 
@@ -21,7 +21,7 @@ const DashboardPage = ({ sidebarOpen }) => {
         { i: "chart", x: 0, y: 0, w: 6, h: 4 },
         { i: "watchlist", x: 6, y: 0, w: 3, h: 4 },
         { i: "marketdata", x: 9, y: 0, w: 3, h: 4 },
-        { i: "news", x: 0, y: 4, w: 12, h: 2 },  
+        { i: "news", x: 0, y: 4, w: 12, h: 2 },
         { i: "portfolio", x: 0, y: 6, w: 6, h: 3 },
         { i: "orderform", x: 6, y: 6, w: 6, h: 3 },
     ]);
@@ -31,6 +31,7 @@ const DashboardPage = ({ sidebarOpen }) => {
         setLayout((prevLayout) => prevLayout.filter((item) => item.i !== key));
     };
 
+    // Update layout when sidebar toggles
     useEffect(() => {
         setLayout((prevLayout) =>
             prevLayout.map((item) => ({
@@ -68,7 +69,17 @@ const DashboardPage = ({ sidebarOpen }) => {
             >
                 {layout.map((item) => (
                     <Grid2 key={item.i} xs={12} sm={6} md={4} lg={3}>
-                        <Paper elevation={3} sx={{ padding: "10px", height: "100%", position: "relative" }}>
+                        <Paper
+                            elevation={3}
+                            sx={{
+                                padding: "10px",
+                                height: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                                justifyContent: "space-between",
+                                position: "relative",
+                            }}
+                        >
                             {/* Delete Button */}
                             <IconButton
                                 onClick={() => handleDelete(item.i)}
