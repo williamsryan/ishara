@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     ALPACA_API_KEY: str
     ALPACA_SECRET_KEY: str
     ALPACA_BASE_URL: str = "https://paper-api.alpaca.markets"
+    ALPACA_STREAM_URL: str = "wss://stream.data.alpaca.markets/v2/iex"
 
     # General Settings
     DEBUG: bool = False
