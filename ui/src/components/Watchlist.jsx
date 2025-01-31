@@ -42,7 +42,7 @@ const Watchlist = () => {
 
     return (
         <div className="watchlist-widget">
-            <h2 className="watchlist-title">Watchlist</h2>
+            {/* <h2 className="watchlist-title">Watchlist</h2> */}
             {error && <p className="error">{error}</p>}
             <div className="watchlist-input">
                 <input

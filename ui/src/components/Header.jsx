@@ -1,25 +1,19 @@
 import React from "react";
-import { AppBar, Toolbar, Typography, IconButton } from "@mui/material";
-import { Menu } from "@mui/icons-material";
+import { AppBar, Toolbar, Typography, Box } from "@mui/material";
 
-const Header = ({ sidebarOpen, toggleSidebar }) => {
+const Header = ({ sidebarOpen }) => {
     return (
         <AppBar
             position="fixed"
             sx={{
-                backgroundColor: "#1c1e26",
-                color: "white",
-                transition: "width 0.3s ease-in-out",
-                width: sidebarOpen ? "calc(100% - 250px)" : "calc(100% - 60px)",
-                marginLeft: sidebarOpen ? "250px" : "60px",
-                zIndex: 1300, // Ensure it stays above other elements
+                width: "100%", // Remove left margin to prevent empty space
+                background: "#121212",
+                color: "#fff",
+                boxShadow: "none",
             }}
         >
             <Toolbar>
-                {/* <IconButton color="inherit" onClick={toggleSidebar} edge="start" sx={{ marginRight: 2 }}>
-                    <Menu />
-                </IconButton> */}
-                <Typography variant="h6" noWrap>
+                <Typography variant="h6" noWrap component="div">
                     Ishara Dashboard
                 </Typography>
             </Toolbar>

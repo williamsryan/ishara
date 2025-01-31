@@ -9,11 +9,11 @@ import ChartingPage from "./pages/ChartingPage";
 import PortfolioPage from "./pages/PortfolioPage";
 import SettingsPage from "./pages/SettingsPage";
 
-const drawerWidth = 250;
+const drawerWidth = 200; // Adjusted sidebar width
 const collapsedWidth = 60;
 
 const App = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -23,7 +23,7 @@ const App = () => {
     <Router>
       <CssBaseline />
       <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <Header sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+        <Header />
         <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden", marginTop: "64px" }}>
           <Sidebar open={sidebarOpen} handleToggle={toggleSidebar} />
           <Box
@@ -45,7 +45,7 @@ const App = () => {
             </Routes>
           </Box>
         </Box>
-        <Footer sidebarOpen={sidebarOpen} />
+        <Footer />
       </Box>
     </Router>
   );

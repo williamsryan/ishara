@@ -21,8 +21,8 @@ const NewsFeed = ({ symbols = [] }) => {
         };
 
         fetchMarketNews();
-        const interval = setInterval(fetchMarketNews, 10000); // Refresh every 10 sec
-        return () => clearInterval(interval);
+        // const interval = setInterval(fetchMarketNews, 10000); // Refresh every 10 sec
+        // return () => clearInterval(interval);
     }, [symbols]);
 
     return (
