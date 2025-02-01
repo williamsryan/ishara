@@ -9,7 +9,7 @@ import ChartingPage from "./pages/ChartingPage";
 import PortfolioPage from "./pages/PortfolioPage";
 import SettingsPage from "./pages/SettingsPage";
 
-const drawerWidth = 200; // Adjusted sidebar width
+const drawerWidth = 200;
 const collapsedWidth = 60;
 
 const App = () => {
@@ -19,12 +19,17 @@ const App = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Function to refresh data
+  const refreshData = () => {
+    window.location.reload(); // Simple refresh for now
+  };
+
   return (
     <Router>
       <CssBaseline />
       <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <Header />
-        <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden", marginTop: "64px" }}>
+        <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden", marginTop: "35px" }}>
           <Sidebar open={sidebarOpen} handleToggle={toggleSidebar} />
           <Box
             component="main"
@@ -45,7 +50,7 @@ const App = () => {
             </Routes>
           </Box>
         </Box>
-        <Footer />
+        <Footer refreshData={refreshData} />
       </Box>
     </Router>
   );
