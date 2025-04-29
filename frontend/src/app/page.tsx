@@ -1,9 +1,42 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
+interface Sheet {
+  id: string
+  name: string
+}
+
 export default function HomePage() {
+  const [connected, setConnected] = useState(false)
+  const [sheets, setSheets] = useState<Sheet[]>([])
+  const [selectedSheet, setSelectedSheet] = useState<string>('')
+
+  useEffect(() => {
+    // Simulate checking if user is already connected
+    const checkConnected = async () => {
+      // This will later check a real backend session
+      const token = localStorage.getItem('google_token')
+      if (token) {
+        setConnected(true)
+        fetchSheets()
+      }
+    }
+    checkConnected()
+  }, [])
+
+  const fetchSheets = async () => {
+    try {
+      const res = await fetch('http://localhost:8080/api/sheets/list')
+      const data = await res.json()
+      setSheets(data)
+    } catch (err) {
+      console.error('Error fetching sheets:', err)
+    }
+  }
+
   return (
     <div className="min-h-full flex flex-col items-center justify-center px-6 py-16 bg-gradient-to-br from-gray-50 to-white text-gray-900">
       {/* Welcome Section */}
@@ -12,16 +45,44 @@ export default function HomePage() {
           Welcome to <span className="text-blue-600">Ishara</span>
         </h1>
         <p className="text-lg text-gray-600">
-          Unified personal finance, strategy management, and trading intelligence. Connect Sheets, define workflows, and execute trades — all in one interface.
+          Unified personal finance, strategy management, and trading intelligence.
         </p>
 
         <div className="flex gap-4 justify-center pt-4">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow transition font-medium">
-            Connect Google
-          </button>
-          <button className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow transition font-medium">
-            Select Sheet
-          </button>
+          {!connected ? (
+            <a
+              href="http://localhost:8080/api/auth/google/login"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow transition font-medium flex items-center gap-2"
+            >
+              Connect Google <ArrowRight className="w-4 h-4" />
+            </a>
+          ) : (
+            <div className="flex flex-col items-center space-y-2">
+              <select
+                className="border rounded-md px-4 py-2"
+                value={selectedSheet}
+                onChange={(e) => setSelectedSheet(e.target.value)}
+              >
+                <option value="">Select a Sheet</option>
+                {sheets.map((sheet) => (
+                  <option key={sheet.id} value={sheet.id}>
+                    {sheet.name}
+                  </option>
+                ))}
+              </select>
+              {selectedSheet && (
+                <button
+                  onClick={() => {
+                    // Save selectedSheet wherever you want
+                    localStorage.setItem('selected_sheet', selectedSheet)
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md shadow text-sm"
+                >
+                  Confirm Sheet
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
