@@ -1,65 +1,63 @@
 'use client'
 
-import Link from 'next/link';
-import { ReactNode, useState } from 'react';
+import Link from 'next/link'
+import { ReactNode } from 'react'
+import {
+    Home,
+    BarChart3,
+    Layers,
+    Database,
+    Settings,
+} from 'lucide-react'
+
+const navItems = [
+    { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Budget', href: '/budget', icon: Database },
+    { name: 'Strategy', href: '/strategy', icon: BarChart3 },
+    { name: 'Broker', href: '/broker', icon: Layers },
+    { name: 'Settings', href: '/settings', icon: Settings },
+]
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-    const [menuOpen, setMenuOpen] = useState(false);
-
     return (
-        <div className="flex flex-col h-screen bg-gray-50 text-gray-900">
-            {/* Top Navbar */}
-            <header className="flex items-center justify-between p-4 bg-white shadow-md">
-                <div className="flex items-center gap-6">
-                    <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-800 transition">
-                        Ishara
+        <div className="flex h-screen bg-gray-100 text-gray-800 font-sans">
+            {/* Sidebar */}
+            <aside className="w-20 bg-white border-r flex flex-col items-center py-6 space-y-8 shadow-sm">
+                {navItems.map(({ name, href, icon: Icon }) => (
+                    <Link
+                        key={name}
+                        href={href}
+                        title={name}
+                        className="hover:text-blue-600 flex flex-col items-center gap-1 text-sm text-gray-500"
+                    >
+                        <Icon className="w-6 h-6" />
+                        <span className="text-xs">{name}</span>
                     </Link>
+                ))}
+            </aside>
 
-                    {/* Dropdown Menu */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setMenuOpen(!menuOpen)}
-                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700"
-                        >
-                            Modules ▾
+            {/* Main */}
+            <div className="flex flex-col flex-1">
+                {/* Top nav */}
+                <header className="flex items-center justify-between px-6 py-4 bg-white border-b shadow-sm">
+                    <h1 className="text-xl font-bold tracking-tight text-blue-600">Ishara</h1>
+                    <div className="space-x-2">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                            Login
                         </button>
-                        {menuOpen && (
-                            <div className="absolute mt-2 w-48 bg-white rounded-md shadow-lg z-50">
-                                <Link href="/budget" className="block px-4 py-2 hover:bg-gray-100">Budget</Link>
-                                <Link href="/strategy" className="block px-4 py-2 hover:bg-gray-100">Strategy</Link>
-                                <Link href="/broker" className="block px-4 py-2 hover:bg-gray-100">Broker</Link>
-                                <Link href="/logs" className="block px-4 py-2 hover:bg-gray-100">Logs</Link>
-                            </div>
-                        )}
+                        {/* <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                            Select Sheet
+                        </button> */}
                     </div>
-                </div>
+                </header>
 
-                {/* Future: User Section */}
-                <div>
-                    {/* Placeholder for future user login/avatar */}
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-                        Login
-                    </button>
-                </div>
-            </header>
-
-            {/* Body */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar (Desktop Only) */}
-                <aside className="hidden md:flex flex-col w-64 bg-white border-r shadow-inner p-6">
-                    <nav className="flex flex-col gap-6">
-                        <Link href="/budget" className="hover:text-blue-500">Budget</Link>
-                        <Link href="/strategy" className="hover:text-blue-500">Strategy</Link>
-                        <Link href="/broker" className="hover:text-blue-500">Broker</Link>
-                        <Link href="/logs" className="hover:text-blue-500">Logs</Link>
-                    </nav>
-                </aside>
-
-                {/* Main Content */}
-                <main className="flex-1 overflow-y-auto p-8">
-                    {children}
+                {/* Main content */}
+                <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+                    <div className="max-w-screen-xl mx-auto space-y-6">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>
-    );
+    )
 }
