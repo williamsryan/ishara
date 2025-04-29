@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 
@@ -41,6 +42,7 @@ func GoogleCallback(c *gin.Context) {
 
 	token, err := config.Exchange(ctx, code)
 	if err != nil {
+		log.Println("OAuth token exchange error:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
 		return
 	}
