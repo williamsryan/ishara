@@ -166,4 +166,7 @@ src/utils/config.py
 lean/data/
 lean/lean.json
 
+<<<<<<< HEAD
 node_modules/
+=======
+>>>>>>> b3ebafc428b983414fb9552fc810d712fda6a330

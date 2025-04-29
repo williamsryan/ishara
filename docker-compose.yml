@@ -1,10 +1,18 @@
 services:
+<<<<<<< HEAD
   backend:
+=======
+  api:
+>>>>>>> b3ebafc428b983414fb9552fc810d712fda6a330
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
+<<<<<<< HEAD
       - "8080:8080"
+=======
+      - "1337:1337"
+>>>>>>> b3ebafc428b983414fb9552fc810d712fda6a330
     volumes:
       - ./backend:/app
     environment:
@@ -14,6 +22,7 @@ services:
       - postgres
       - redis
 
+<<<<<<< HEAD
   frontend:
     build:
       context: ./frontend
@@ -28,6 +37,21 @@ services:
     depends_on:
       - backend
 
+=======
+  # frontend:
+  #   build:
+  #     context: ./ui
+  #     dockerfile: Dockerfile
+  #   container_name: ishara-frontend
+  #   ports:
+  #     - "5173:5173"
+  #   environment:
+  #     VITE_BACKEND_URL: http://localhost:1337/api
+  #   stdin_open: true
+  #   tty: true
+
+  # PostgreSQL Service
+>>>>>>> b3ebafc428b983414fb9552fc810d712fda6a330
   postgres:
     image: postgres:15
     container_name: ishara_postgres
@@ -40,6 +64,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+<<<<<<< HEAD
+=======
+  # Redis Service
+>>>>>>> b3ebafc428b983414fb9552fc810d712fda6a330
   redis:
     image: redis:7
     container_name: ishara-redis
@@ -49,3 +77,7 @@ services:
 
 volumes:
   postgres_data:
+<<<<<<< HEAD
+=======
+  elasticsearch_data:
+>>>>>>> b3ebafc428b983414fb9552fc810d712fda6a330
