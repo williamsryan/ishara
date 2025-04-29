@@ -1,0 +1,65 @@
+# # Core Python Libraries
+psycopg2-binary
+sqlalchemy
+
+# # Yahoo Finance Fetcher
+yfinance
+# yahoo_fin
+
+# Google Trends Fetcher
+pytrends
+
+# # Reddit Sentiment Fetcher
+requests
+# vaderSentiment
+
+# # Real-time WebSocket Streaming
+# websocket-client
+
+# # Data Processing and Serialization
+# numpy
+# scipy
+
+# # Optional for JSON Parsing/Backtesting Extensions
+# python-dateutil
+
+# # Etc.
+# alpaca-trade-api # Alpaca API - DEPRECATED
+alpaca-py
+# quiverquant
+# # dash
+pandas
+fastapi
+matplotlib
+plotly
+# backtrader
+# praw
+# # dash-bootstrap-components
+# scikit-learn
+# hmmlearn
+networkx
+# requests_html
+# # umap-learn
+# # dash_ace
+# # dash-deck
+
+python-dotenv
+
+# confluent-kafka
+# elasticsearch
+pydantic
+pydantic-settings
+
+# crawl4ai
+transformers
+torch
+torchvision
+
+# # Zipline-reloaded and all necessary components
+# zipline-reloaded[all]==2.4.0
+# trading-calendars>=2.0.0
+
+# TA-Lib
+# textblob
+
+uvicorn
